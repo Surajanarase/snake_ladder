@@ -17,8 +17,12 @@ class HealthSnakeLadderApp extends StatelessWidget {
       create: (_) => GameService(),
       child: MaterialApp(
         title: 'Health Heroes',
-        theme: ThemeData.from(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF667eea),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
         ),
         debugShowCheckedModeBanner: false,
         home: const HomeShell(),

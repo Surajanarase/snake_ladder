@@ -17,111 +17,131 @@ class _ControlPanelState extends State<ControlPanel> {
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Players info
-        Row(
-          children: [
-            Expanded(child: _playerCard('👤 You', game.humanPosition, game.humanScore, isActive: game.currentPlayer == 'human')),
-            const SizedBox(width: 8),
-            Expanded(child: _playerCard('🤖 Health Bot', game.aiPosition, game.aiScore, isActive: game.currentPlayer == 'ai')),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // Dice
-        Center(
-          child: GestureDetector(
-            onTap: () async {
-              if (!game.gameActive) {
-                widget.onNotify('Start a game first', '⚠️');
-                return;
-              }
-              if (game.isRolling || game.currentPlayer != 'human') return;
-              final roll = await game.rollDice();
-              if (roll == 0) return;
-              widget.onNotify('You rolled $roll', '🎲');
-              game.movePlayer('human', roll, onNotify: widget.onNotify);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF667eea), Color(0xFF764ba2)]),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [BoxShadow(blurRadius: 8, offset: Offset(0, 6), color: Colors.black26)],
-              ),
-              alignment: Alignment.center,
-              child: game.isRolling ? const CircularProgressIndicator(color: Colors.white) : const Text('🎲', style: TextStyle(fontSize: 36)),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        const Text('Your Health Knowledge', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-
-        // Health categories
-        Expanded(
-          child: GridView(
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 3),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Players info
+          Row(
             children: [
-              _categoryCard('🍎', 'Nutrition', game.healthProgress['nutrition'] ?? 0),
-              _categoryCard('💪', 'Exercise', game.healthProgress['exercise'] ?? 0),
-              _categoryCard('😴', 'Sleep', game.healthProgress['sleep'] ?? 0),
-              _categoryCard('🧘', 'Mental', game.healthProgress['mental'] ?? 0),
+              Expanded(
+                child: _playerCard(
+                  '👤 You',
+                  game.humanPosition,
+                  game.humanScore,
+                  isActive: game.currentPlayer == 'human',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _playerCard(
+                  '🤖 Health Bot',
+                  game.aiPosition,
+                  game.aiScore,
+                  isActive: game.currentPlayer == 'ai',
+                ),
+              ),
             ],
           ),
-        ),
-      ],
-    );
-  }
 
-  Widget _playerCard(String title, int position, int score, {required bool isActive}) {
-    return Card(
-      color: isActive ? Colors.deepPurple.shade50 : Colors.grey.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            Text('Position: ${position == 0 ? 'Start' : position}'),
-            const SizedBox(height: 6),
-            Text('❤️ $score', style: const TextStyle(color: Colors.green)),
-          ],
-        ),
+          const SizedBox(height: 20),
+
+          // Dice
+          Center(
+            child: GestureDetector(
+              onTap: () async {
+                if (!game.gameActive) {
+                  widget.onNotify('Start a game first', '⚠️');
+                  return;
+                }
+                if (game.isRolling || game.currentPlayer != 'human') return;
+                final roll = await game.rollDice();
+                if (roll == 0) return;
+                await game.movePlayer('human', roll, onNotify: widget.onNotify);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: const [
+                    BoxShadow(
+                      blurRadius: 15,
+                      offset: Offset(0, 5),
+                      color: Colors.black26,
+                    )
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: game.isRolling
+                    ? const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      )
+                    : Text(
+                        game.lastRoll > 0 ? game.getDiceEmoji(game.lastRoll) : '🎲',
+                        style: const TextStyle(fontSize: 35),
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _categoryCard(String icon, String name, int value) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(value: value / 100, minHeight: 8),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text('$value%'),
-          ],
+  Widget _playerCard(String title, int position, int score, {required bool isActive}) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: isActive ? const Color(0xFFF3E5F5) : const Color(0xFFf8f9fa),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isActive ? const Color(0xFF667eea) : Colors.transparent,
+          width: 2,
         ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF667eea).withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                )
+              ]
+            : null,
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Position: ${position == 0 ? 'Start' : position}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '❤️ $score',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF4CAF50),
+            ),
+          ),
+        ],
       ),
     );
   }
