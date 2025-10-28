@@ -17,8 +17,13 @@ class _ControlPanelState extends State<ControlPanel> {
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
+
+    // Responsive dice size
+    final screenWidth = MediaQuery.of(context).size.width;
+    final diceSize = (screenWidth * 0.16).clamp(56.0, 110.0);
+
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -45,7 +50,7 @@ class _ControlPanelState extends State<ControlPanel> {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // Dice
           Center(
@@ -61,18 +66,18 @@ class _ControlPanelState extends State<ControlPanel> {
                 await game.movePlayer('human', roll, onNotify: widget.onNotify);
               },
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: 70,
-                height: 70,
+                duration: const Duration(milliseconds: 250),
+                width: diceSize,
+                height: diceSize,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF667eea), Color(0xFF764ba2)],
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: const [
                     BoxShadow(
-                      blurRadius: 15,
-                      offset: Offset(0, 5),
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
                       color: Colors.black26,
                     )
                   ],
@@ -83,9 +88,19 @@ class _ControlPanelState extends State<ControlPanel> {
                         color: Colors.white,
                         strokeWidth: 3,
                       )
-                    : Text(
-                        game.lastRoll > 0 ? game.getDiceEmoji(game.lastRoll) : '🎲',
-                        style: const TextStyle(fontSize: 35),
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            game.lastRoll > 0 ? game.getDiceEmoji(game.lastRoll) : '🎲',
+                            style: TextStyle(fontSize: diceSize * 0.45),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Tap to roll',
+                            style: TextStyle(fontSize: 12, color: Colors.white70),
+                          ),
+                        ],
                       ),
               ),
             ),
@@ -97,7 +112,7 @@ class _ControlPanelState extends State<ControlPanel> {
 
   Widget _playerCard(String title, int position, int score, {required bool isActive}) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isActive ? const Color(0xFFF3E5F5) : const Color(0xFFf8f9fa),
         borderRadius: BorderRadius.circular(10),
@@ -108,9 +123,10 @@ class _ControlPanelState extends State<ControlPanel> {
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: const Color(0xFF667eea).withValues(alpha: 0.2),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
+                  color: const Color(0xFF667eea).withAlpha((0.12 * 255).round()),
+
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 )
               ]
             : null,
@@ -119,27 +135,17 @@ class _ControlPanelState extends State<ControlPanel> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           Text(
             'Position: ${position == 0 ? 'Start' : position}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           Text(
             '❤️ $score',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF4CAF50),
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
           ),
         ],
       ),

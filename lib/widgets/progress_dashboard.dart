@@ -11,48 +11,66 @@ class ProgressDashboard extends StatelessWidget {
     final game = Provider.of<GameService>(context);
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: const BoxDecoration(
-        color: Color(0xFFf8f9fa),
+        color: Color(0xFFF5F7FA),
+        border: Border(
+          top: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Your Health Knowledge',
+            '🏆 Your Health Knowledge Progress',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Color(0xFF2C3E50),
             ),
           ),
-          const SizedBox(height: 15),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.5,
+          const SizedBox(height: 14),
+          Row(
             children: [
-              _categoryCard(
-                '🍎',
-                'Nutrition',
-                game.healthProgress['nutrition'] ?? 0,
+              Expanded(
+                child: _buildProgressBar(
+                  '🎯',
+                  'Nutrition',
+                  game.healthProgress['nutrition'] ?? 0,
+                  const Color(0xFF4CAF50),
+                ),
               ),
-              _categoryCard(
-                '💪',
-                'Exercise',
-                game.healthProgress['exercise'] ?? 0,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildProgressBar(
+                  '💪',
+                  'Exercise',
+                  game.healthProgress['exercise'] ?? 0,
+                  const Color(0xFF2196F3),
+                ),
               ),
-              _categoryCard(
-                '😴',
-                'Sleep',
-                game.healthProgress['sleep'] ?? 0,
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildProgressBar(
+                  '😴',
+                  'Sleep',
+                  game.healthProgress['sleep'] ?? 0,
+                  const Color(0xFF9C27B0),
+                ),
               ),
-              _categoryCard(
-                '🧘',
-                'Mental Health',
-                game.healthProgress['mental'] ?? 0,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildProgressBar(
+                  '🧘',
+                  'Mental',
+                  game.healthProgress['mental'] ?? 0,
+                  const Color(0xFFFF9800),
+                ),
               ),
             ],
           ),
@@ -61,50 +79,88 @@ class ProgressDashboard extends StatelessWidget {
     );
   }
 
-  Widget _categoryCard(String icon, String name, int progress) {
+  Widget _buildProgressBar(String icon, String label, int progress, Color color) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
             color: Colors.black12,
-            blurRadius: 5,
+            blurRadius: 4,
             offset: Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            icon,
-            style: const TextStyle(fontSize: 24),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              color: const Color(0xFFe0e0e0),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress / 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50),
-                  borderRadius: BorderRadius.circular(4),
+          Row(
+            children: [
+              Text(
+                icon,
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C3E50),
+                  ),
                 ),
+              ),
+              Text(
+                '$progress%',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 8,
+              child: Stack(
+                children: [
+                  // Background
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  // Progress bar
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: progress / 100,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            color,
+                            color.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
