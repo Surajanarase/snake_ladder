@@ -130,14 +130,12 @@ class ProgressDashboard extends StatelessWidget {
               height: 8,
               child: Stack(
                 children: [
-                  // Background
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  // Progress bar
                   FractionallySizedBox(
                     alignment: Alignment.centerLeft,
                     widthFactor: progress / 100,
@@ -146,13 +144,13 @@ class ProgressDashboard extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: [
                             color,
-                            color.withValues(alpha: 0.7),
+                            color.withAlpha((0.7 * 255).round()),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(4),
                         boxShadow: [
                           BoxShadow(
-                            color: color.withValues(alpha: 0.3),
+                            color: color.withAlpha((0.3 * 255).round()),
                             blurRadius: 4,
                             offset: const Offset(0, 1),
                           ),

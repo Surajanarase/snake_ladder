@@ -4,13 +4,29 @@ import 'dart:math';
 
 class GameService extends ChangeNotifier {
   // Game state
-  String currentPlayer = 'human';
-  int humanPosition = 0;
-  int aiPosition = 0;
-  int humanScore = 0;
-  int aiScore = 0;
+  String currentPlayer = 'player1';
+  int numberOfPlayers = 2; // Can be 2 or 3
+  Map<String, int> playerPositions = {
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+  Map<String, int> playerScores = {
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+  Map<String, Color> playerColors = {
+    'player1': const Color(0xFF4A90E2),
+    'player2': const Color(0xFFE74C3C),
+    'player3': const Color(0xFF2ECC71),
+  };
+  Map<String, String> playerNames = {
+    'player1': '👤 Player 1',
+    'player2': '👤 Player 2',
+    'player3': '👤 Player 3',
+  };
   bool isRolling = false;
-  String aiDifficulty = 'easy';
   int moveCount = 0;
   bool gameActive = false;
   int lastRoll = 0;
@@ -51,14 +67,20 @@ class GameService extends ChangeNotifier {
   };
 
   // Start game
-  void startGame(String difficulty) {
-    aiDifficulty = difficulty;
+  void startGame(int numPlayers) {
+    numberOfPlayers = numPlayers;
     gameActive = true;
-    currentPlayer = 'human';
-    humanPosition = 0;
-    aiPosition = 0;
-    humanScore = 0;
-    aiScore = 0;
+    currentPlayer = 'player1';
+    playerPositions = {
+      'player1': 0,
+      'player2': 0,
+      'player3': 0,
+    };
+    playerScores = {
+      'player1': 0,
+      'player2': 0,
+      'player3': 0,
+    };
     moveCount = 0;
     lastRoll = 0;
     healthProgress = {
@@ -72,12 +94,18 @@ class GameService extends ChangeNotifier {
 
   // Reset game
   void resetGame() {
-    humanPosition = 0;
-    aiPosition = 0;
-    humanScore = 0;
-    aiScore = 0;
+    playerPositions = {
+      'player1': 0,
+      'player2': 0,
+      'player3': 0,
+    };
+    playerScores = {
+      'player1': 0,
+      'player2': 0,
+      'player3': 0,
+    };
     moveCount = 0;
-    currentPlayer = 'human';
+    currentPlayer = 'player1';
     gameActive = false;
     lastRoll = 0;
     healthProgress = {
@@ -91,7 +119,7 @@ class GameService extends ChangeNotifier {
 
   // Roll dice
   Future<int> rollDice() async {
-    if (isRolling || !gameActive || currentPlayer != 'human') return 0;
+    if (isRolling || !gameActive) return 0;
     
     isRolling = true;
     notifyListeners();
@@ -109,7 +137,7 @@ class GameService extends ChangeNotifier {
   // Move player
   Future<void> movePlayer(String player, int steps, {required Function(String, String) onNotify}) async {
     moveCount++;
-    int oldPosition = player == 'human' ? humanPosition : aiPosition;
+    int oldPosition = playerPositions[player]!;
     int newPosition = oldPosition + steps;
 
     // Check if exact landing on 100
@@ -120,11 +148,7 @@ class GameService extends ChangeNotifier {
     }
 
     // Update position
-    if (player == 'human') {
-      humanPosition = newPosition;
-    } else {
-      aiPosition = newPosition;
-    }
+    playerPositions[player] = newPosition;
     notifyListeners();
 
     // Check for snakes or ladders
@@ -139,11 +163,7 @@ class GameService extends ChangeNotifier {
       onNotify(snake['message'], snake['icon']);
 
       await Future.delayed(const Duration(milliseconds: 1000));
-      if (player == 'human') {
-        humanPosition = snake['end'];
-      } else {
-        aiPosition = snake['end'];
-      }
+      playerPositions[player] = snake['end'];
       notifyListeners();
       checkWinCondition(onNotify);
       
@@ -152,20 +172,12 @@ class GameService extends ChangeNotifier {
       onNotify(ladder['message'], ladder['icon']);
 
       // Update score and progress
-      if (player == 'human') {
-        humanScore += 10;
-        updateHealthProgress(ladder['category']);
-      } else {
-        aiScore += 10;
-      }
+      playerScores[player] = playerScores[player]! + 10;
+      updateHealthProgress(ladder['category']);
       notifyListeners();
 
       await Future.delayed(const Duration(milliseconds: 1000));
-      if (player == 'human') {
-        humanPosition = ladder['end'];
-      } else {
-        aiPosition = ladder['end'];
-      }
+      playerPositions[player] = ladder['end'];
       notifyListeners();
       checkWinCondition(onNotify);
       
@@ -190,62 +202,40 @@ class GameService extends ChangeNotifier {
 
   // Check win condition
   void checkWinCondition(Function(String, String) onNotify) {
-    if (humanPosition == 100 || aiPosition == 100) {
-      gameActive = false;
-      notifyListeners();
-    } else {
-      switchTurn(onNotify);
+    for (var entry in playerPositions.entries) {
+      if (entry.value == 100) {
+        gameActive = false;
+        notifyListeners();
+        return;
+      }
     }
+    switchTurn(onNotify);
   }
 
   // Switch turn
   void switchTurn(Function(String, String) onNotify) {
-    if (currentPlayer == 'human') {
-      currentPlayer = 'ai';
-      notifyListeners();
-
-      // AI takes turn after delay
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (gameActive) {
-          aiTakeTurn(onNotify);
-        }
-      });
+    if (numberOfPlayers == 2) {
+      currentPlayer = currentPlayer == 'player1' ? 'player2' : 'player1';
     } else {
-      currentPlayer = 'human';
-      notifyListeners();
+      if (currentPlayer == 'player1') {
+        currentPlayer = 'player2';
+      } else if (currentPlayer == 'player2') {
+        currentPlayer = 'player3';
+      } else {
+        currentPlayer = 'player1';
+      }
     }
+    notifyListeners();
   }
 
-  // AI turn logic
-  Future<void> aiTakeTurn(Function(String, String) onNotify) async {
-    if (!gameActive) return;
-    
-    isRolling = true;
-    notifyListeners();
-
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    int roll;
-    if (aiDifficulty == 'hard') {
-      // Smart AI: slightly better rolls when behind
-      if (aiPosition < humanPosition - 10) {
-        roll = Random().nextDouble() < 0.6 
-            ? Random().nextInt(3) + 4 
-            : Random().nextInt(6) + 1;
-      } else {
-        roll = Random().nextInt(6) + 1;
+  // Get winner
+  String? getWinner() {
+    for (var entry in playerPositions.entries) {
+      if (entry.value == 100) {
+        return entry.key;
       }
-    } else {
-      // Easy AI: random rolls
-      roll = Random().nextInt(6) + 1;
     }
-
-    lastRoll = roll;
-    isRolling = false;
-    notifyListeners();
-
-    onNotify('AI rolled $roll!', '🤖');
-    await movePlayer('ai', roll, onNotify: onNotify);
+    return null;
   }
 
   // Get total knowledge progress

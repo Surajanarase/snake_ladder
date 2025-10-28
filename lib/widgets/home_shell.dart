@@ -45,7 +45,7 @@ class _HomeShellState extends State<HomeShell> {
                 ),
                 child: Stack(
                   children: [
-                    // Main game content with SingleChildScrollView for full visibility
+                    // Main game content
                     Column(
                       children: [
                         // Header
@@ -77,7 +77,7 @@ class _HomeShellState extends State<HomeShell> {
                                   width: 34,
                                   height: 34,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.16),
+                                    color: Colors.white.withAlpha((0.2 * 255).round()),
                                     shape: BoxShape.circle,
                                     border: Border.all(color: Colors.white, width: 2),
                                   ),
@@ -98,11 +98,11 @@ class _HomeShellState extends State<HomeShell> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // Board area - now with proper sizing
+                                // Board area
                                 const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                                   child: AspectRatio(
-                                    aspectRatio: 1.0, // Perfect square
+                                    aspectRatio: 1.0,
                                     child: BoardWidget(),
                                   ),
                                 ),
@@ -133,36 +133,33 @@ class _HomeShellState extends State<HomeShell> {
                               const Text('Health Heroes', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
                               const SizedBox(height: 8),
                               const Text('Learn health tips while playing!', style: TextStyle(fontSize: 16, color: Colors.black54)),
-                              const SizedBox(height: 22),
+                              const SizedBox(height: 30),
+                              const Text(
+                                'Select Number of Players',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 20),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  ElevatedButton(
-                                    onPressed: () {
+                                  _buildPlayerButton(
+                                    context,
+                                    '2 Players',
+                                    const Color(0xFF4A90E2),
+                                    () {
                                       setState(() => _showStartScreen = false);
-                                      game.startGame('easy');
+                                      game.startGame(2);
                                     },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                      backgroundColor: const Color(0xFF667eea),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Easy AI', style: TextStyle(fontSize: 16)),
                                   ),
                                   const SizedBox(width: 14),
-                                  ElevatedButton(
-                                    onPressed: () {
+                                  _buildPlayerButton(
+                                    context,
+                                    '3 Players',
+                                    const Color(0xFF2ECC71),
+                                    () {
                                       setState(() => _showStartScreen = false);
-                                      game.startGame('hard');
+                                      game.startGame(3);
                                     },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                      backgroundColor: const Color(0xFF764ba2),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Smart AI', style: TextStyle(fontSize: 16)),
                                   ),
                                 ],
                               ),
@@ -172,11 +169,11 @@ class _HomeShellState extends State<HomeShell> {
                       ),
 
                     // Win overlay
-                    if (!game.gameActive && !_showStartScreen && (game.humanPosition == 100 || game.aiPosition == 100))
+                    if (!game.gameActive && !_showStartScreen && game.getWinner() != null)
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.85),
+                            color: Colors.black.withAlpha((0.85 * 255).round()),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: Center(
@@ -191,8 +188,9 @@ class _HomeShellState extends State<HomeShell> {
                                     const Text('🏆', style: TextStyle(fontSize: 72)),
                                     const SizedBox(height: 14),
                                     Text(
-                                      game.humanPosition == 100 ? 'You Win! 🎉' : 'AI Wins! Try Again!',
-                                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                                      '${game.playerNames[game.getWinner()]} Wins! 🎉',
+                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
                                     ),
                                     const SizedBox(height: 14),
                                     Container(
@@ -200,9 +198,9 @@ class _HomeShellState extends State<HomeShell> {
                                       decoration: BoxDecoration(color: const Color(0xFFf8f9fa), borderRadius: BorderRadius.circular(10)),
                                       child: Column(
                                         children: [
-                                          _statRow('Winner:', game.humanPosition == 100 ? '👤 You' : '🤖 Health Bot'),
+                                          _statRow('Winner:', game.playerNames[game.getWinner()]!),
                                           const SizedBox(height: 8),
-                                          _statRow('Health Points:', '${game.humanPosition == 100 ? game.humanScore : game.aiScore}'),
+                                          _statRow('Health Points:', '${game.playerScores[game.getWinner()]}'),
                                           const SizedBox(height: 8),
                                           _statRow('Moves Taken:', '${game.moveCount}'),
                                           const SizedBox(height: 8),
@@ -241,6 +239,23 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
+  Widget _buildPlayerButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        elevation: 5,
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   Widget _statRow(String label, String value) {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       Text(label, style: const TextStyle(fontSize: 14, color: Colors.black54)),
@@ -265,9 +280,10 @@ class _HomeShellState extends State<HomeShell> {
                   const Text('Game Guide', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
                   _legendItem('🎲', 'How to Play', 'Tap the dice to roll. Race to reach square 100.'),
-                  _legendItem('🪜', 'Green Ladders', 'Good health choices that move you forward.'),
-                  _legendItem('🐍', 'Green Snakes', 'Poor health choices that set you back.'),
+                  _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward.'),
+                  _legendItem('🐍', 'Colorful Snakes', 'Poor health choices that set you back.'),
                   _legendItem('❤️', 'Health Points', 'Earn points by landing on ladders.'),
+                  _legendItem('🎯', 'Transparent Design', 'All numbers are visible through snakes and ladders.'),
                   const SizedBox(height: 14),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
