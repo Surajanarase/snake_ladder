@@ -73,13 +73,11 @@ class _BoardWidgetState extends State<BoardWidget> {
 
             // Check if any player is on this cell
             bool hasPlayer = false;
-            Color? playerColor;
             for (var entry in game.playerPositions.entries) {
               if (entry.value == cellNumber && entry.value > 0) {
                 final playerIndex = int.parse(entry.key.replaceAll('player', ''));
                 if (playerIndex <= game.numberOfPlayers) {
                   hasPlayer = true;
-                  playerColor = game.playerColors[entry.key];
                   break;
                 }
               }
@@ -88,42 +86,75 @@ class _BoardWidgetState extends State<BoardWidget> {
             const Color lightCell = Color(0xFFFFFFFF);
             const Color altCell = Color(0xFFF8F8F8);
             final bool isAlt = (row + col) % 2 == 0;
-            final Color bg = hasPlayer ? playerColor!.withAlpha((0.3 * 255).round()) : (isAlt ? altCell : lightCell);
+            final Color bg = hasPlayer ? const Color(0xFFFFF9E6) : (isAlt ? altCell : lightCell);
+
+            // Special cells
+            final bool isSnake = game.snakes.containsKey(cellNumber);
+            final bool isLadder = game.ladders.containsKey(cellNumber);
 
             return Container(
               decoration: BoxDecoration(
                 color: bg,
                 border: Border.all(
-                  color: hasPlayer ? playerColor!.withAlpha((0.8 * 255).round()) : const Color(0xFFDDDDDD),
+                  color: hasPlayer 
+                      ? const Color(0xFFFFB300)
+                      : const Color(0xFFDDDDDD),
                   width: hasPlayer ? 2.0 : 0.5,
                 ),
               ),
-              child: Center(
-                child: Text(
-                  '$cellNumber',
-                  style: TextStyle(
-                    fontSize: (boardSize / 300) * 12,
-                    color: hasPlayer ? playerColor : const Color(0xFF333333),
-                    fontWeight: hasPlayer ? FontWeight.w900 : FontWeight.bold,
+              child: Stack(
+                children: [
+                  // Cell number - always visible
+                  Center(
+                    child: Text(
+                      '$cellNumber',
+                      style: TextStyle(
+                        fontSize: (boardSize / 300) * 11,
+                        color: const Color(0xFF333333),
+                        fontWeight: FontWeight.bold,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.white,
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  // Special cell indicator
+                  if (isSnake || isLadder)
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: Container(
+                        width: boardSize / 50,
+                        height: boardSize / 50,
+                        decoration: BoxDecoration(
+                          color: isLadder 
+                              ? Colors.green.withAlpha(179)
+                              : Colors.red.withAlpha(179),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             );
           },
         ),
 
-        // CustomPaint for snakes and ladders (transparent)
+        // CustomPaint for snakes and ladders - more visible
         Positioned.fill(
           child: CustomPaint(
             painter: _BoardConnectionsPainter(game, boardSize),
           ),
         ),
 
-        // Player tokens
+        // Player tokens - smaller and with cell number visible
         Positioned.fill(
           child: LayoutBuilder(builder: (context, box) {
             final cellSize = box.maxWidth / 10;
-            final tokenSize = cellSize * 0.35;
+            final tokenSize = cellSize * 0.28;
 
             List<Widget> tokens = [];
             
@@ -153,23 +184,25 @@ class _BoardWidgetState extends State<BoardWidget> {
     
     final rc = _cellToRowCol(pos);
     
-    // Offset tokens slightly if multiple players on same cell
-    double offsetX = 0;
-    double offsetY = 0;
+    // Position tokens at top-left corner to keep numbers visible
+    double offsetX = 2;
+    double offsetY = 2;
+    
     if (totalPlayers == 2) {
-      offsetX = (playerIndex - 1) * (tokenSize * 0.3);
+      offsetX = playerIndex == 1 ? 2 : cellSize - tokenSize - 2;
     } else if (totalPlayers == 3) {
       if (playerIndex == 1) {
-        offsetX = -tokenSize * 0.2;
+        offsetX = 2;
       } else if (playerIndex == 2) {
-        offsetX = tokenSize * 0.2;
+        offsetX = cellSize - tokenSize - 2;
       } else {
-        offsetY = tokenSize * 0.2;
+        offsetX = (cellSize - tokenSize) / 2;
+        offsetY = cellSize - tokenSize - 2;
       }
     }
     
-    final left = rc['col']! * cellSize + (cellSize - tokenSize) / 2 + offsetX;
-    final top = rc['row']! * cellSize + (cellSize - tokenSize) / 2 + offsetY;
+    final left = rc['col']! * cellSize + offsetX;
+    final top = rc['row']! * cellSize + offsetY;
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 600),
@@ -188,21 +221,21 @@ class _BoardWidgetState extends State<BoardWidget> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: color,
-                border: Border.all(color: Colors.white, width: 2.5),
+                border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withAlpha((0.5 * 255).round()),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 3),
+                    color: color.withAlpha(127),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               alignment: Alignment.center,
               child: Text(
-                'P$playerIndex',
+                playerIndex == 3 ? '🤖' : 'P$playerIndex',
                 style: TextStyle(
-                  fontSize: tokenSize * 0.4,
+                  fontSize: tokenSize * 0.35,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -245,22 +278,22 @@ class _BoardConnectionsPainter extends CustomPainter {
       return Offset(col * cellSize + cellSize / 2, row * cellSize + cellSize / 2);
     }
 
-    // Draw ladders FIRST (more transparent)
+    // Draw ladders - MORE VISIBLE
     for (var e in game.ladders.entries) {
       final start = centerOf(e.key);
       final end = centerOf((e.value['end'] ?? e.value) as int);
-      _drawTransparentLadder(canvas, start, end, cellSize, e.key);
+      _drawVisibleLadder(canvas, start, end, cellSize, e.key);
     }
 
-    // Draw snakes SECOND (more transparent)
+    // Draw snakes - MORE VISIBLE
     for (var e in game.snakes.entries) {
       final head = centerOf(e.key);
       final tail = centerOf((e.value['end'] ?? e.value) as int);
-      _drawTransparentSnake(canvas, head, tail, cellSize, e.key);
+      _drawVisibleSnake(canvas, head, tail, cellSize, e.key);
     }
   }
 
-  void _drawTransparentLadder(Canvas canvas, Offset start, Offset end, double cellSize, int startPos) {
+  void _drawVisibleLadder(Canvas canvas, Offset start, Offset end, double cellSize, int startPos) {
     final colors = [
       const Color(0xFFFF6B6B),
       const Color(0xFF4ECDC4),
@@ -273,7 +306,7 @@ class _BoardConnectionsPainter extends CustomPainter {
     ];
     
     final colorIndex = startPos % colors.length;
-    final ladderColor = colors[colorIndex].withAlpha((0.4 * 255).round()); // More transparent
+    final ladderColor = colors[colorIndex].withAlpha(204); // 80% opacity - MORE VISIBLE
 
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
@@ -283,24 +316,24 @@ class _BoardConnectionsPainter extends CustomPainter {
     
     final ux = dx / len;
     final uy = dy / len;
-    final railWidth = cellSize * 0.10;
+    final railWidth = cellSize * 0.12;
     final perp = Offset(-uy, ux) * railWidth;
 
-    // Side rails (transparent)
+    // Side rails
     final railPaint = Paint()
       ..color = ladderColor
-      ..strokeWidth = cellSize * 0.08
+      ..strokeWidth = cellSize * 0.09
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     canvas.drawLine(start + perp, end + perp, railPaint);
     canvas.drawLine(start - perp, end - perp, railPaint);
 
-    // Rungs (transparent)
+    // Rungs
     final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
     final rungPaint = Paint()
-      ..color = ladderColor.withAlpha((0.3 * 255).round())
-      ..strokeWidth = cellSize * 0.06
+      ..color = ladderColor.withAlpha(179) // 70% opacity
+      ..strokeWidth = cellSize * 0.07
       ..strokeCap = StrokeCap.round;
 
     for (int i = 0; i <= rungCount; i++) {
@@ -310,7 +343,7 @@ class _BoardConnectionsPainter extends CustomPainter {
     }
   }
 
-  void _drawTransparentSnake(Canvas canvas, Offset head, Offset tail, double cellSize, int startPos) {
+  void _drawVisibleSnake(Canvas canvas, Offset head, Offset tail, double cellSize, int startPos) {
     final snakeColors = [
       const Color(0xFF6BCB77),
       const Color(0xFFFFC93C),
@@ -323,7 +356,7 @@ class _BoardConnectionsPainter extends CustomPainter {
     ];
     
     final colorIndex = startPos % snakeColors.length;
-    final snakeColor = snakeColors[colorIndex].withAlpha((0.35 * 255).round()); // More transparent
+    final snakeColor = snakeColors[colorIndex].withAlpha(191); // 75% opacity - MORE VISIBLE
     final darkSnakeColor = Color.lerp(snakeColor, Colors.black, 0.2)!;
 
     final distance = (head - tail).distance;
@@ -350,30 +383,30 @@ class _BoardConnectionsPainter extends CustomPainter {
       path.lineTo(points[i].dx, points[i].dy);
     }
 
-    // Main body (transparent)
+    // Main body
     final bodyPaint = Paint()
       ..color = snakeColor
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = cellSize * 0.15;
+      ..strokeWidth = cellSize * 0.16;
     canvas.drawPath(path, bodyPaint);
 
-    // Snake head (semi-transparent)
-    final headSize = cellSize * 0.14;
+    // Snake head
+    final headSize = cellSize * 0.15;
     canvas.drawCircle(head, headSize, Paint()..color = snakeColor);
     canvas.drawCircle(head, headSize, Paint()
       ..color = darkSnakeColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = cellSize * 0.02);
+      ..strokeWidth = cellSize * 0.025);
 
     // Eyes
-    final eyeSize = cellSize * 0.03;
-    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white.withAlpha((0.8 * 255).round()));
-    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white.withAlpha((0.8 * 255).round()));
+    final eyeSize = cellSize * 0.035;
+    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
+    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
     
-    final pupilSize = eyeSize * 0.55;
-    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black.withAlpha((0.6 * 255).round()));
-    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black.withAlpha((0.6 * 255).round()));
+    final pupilSize = eyeSize * 0.6;
+    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
+    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
   }
 
   @override

@@ -50,41 +50,65 @@ class _HomeShellState extends State<HomeShell> {
                       children: [
                         // Header
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: const BoxDecoration(
-                            gradient: LinearGradient(colors: [Color(0xFF667eea), Color(0xFF764ba2)]),
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                            ),
                             borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                           ),
                           child: Row(
                             children: [
                               Container(
-                                width: 34,
-                                height: 34,
-                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                width: 40,
+                                height: 40,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
                                 alignment: Alignment.center,
-                                child: const Text('❤️', style: TextStyle(fontSize: 20)),
+                                child: const Text('❤️', style: TextStyle(fontSize: 22)),
                               ),
                               const SizedBox(width: 12),
                               const Expanded(
-                                child: Text(
-                                  'Health Heroes',
-                                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Health Heroes',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Learn & Play',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               GestureDetector(
                                 onTap: () => _showLegend(context),
                                 child: Container(
-                                  width: 34,
-                                  height: 34,
+                                  width: 36,
+                                  height: 36,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha((0.2 * 255).round()),
+                                    color: Colors.white.withAlpha(51),
                                     shape: BoxShape.circle,
                                     border: Border.all(color: Colors.white, width: 2),
                                   ),
                                   child: const Center(
-                                    child: Text(
-                                      '?',
-                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    child: Icon(
+                                      Icons.help_outline,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
                                   ),
                                 ),
@@ -124,46 +148,134 @@ class _HomeShellState extends State<HomeShell> {
                     if (_showStartScreen)
                       Positioned.fill(
                         child: Container(
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('🏥', style: TextStyle(fontSize: 72)),
-                              const SizedBox(height: 18),
-                              const Text('Health Heroes', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
-                              const SizedBox(height: 8),
-                              const Text('Learn health tips while playing!', style: TextStyle(fontSize: 16, color: Colors.black54)),
-                              const SizedBox(height: 30),
-                              const Text(
-                                'Select Number of Players',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                              ),
-                              const SizedBox(height: 20),
-                              Row(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.white,
+                                Colors.grey.shade50,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  _buildPlayerButton(
-                                    context,
-                                    '2 Players',
-                                    const Color(0xFF4A90E2),
-                                    () {
-                                      setState(() => _showStartScreen = false);
-                                      game.startGame(2);
-                                    },
+                                  const SizedBox(height: 40),
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                                      ),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF667eea).withAlpha(102),
+                                          blurRadius: 20,
+                                          spreadRadius: 5,
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Text('🏥', style: TextStyle(fontSize: 60)),
                                   ),
-                                  const SizedBox(width: 14),
-                                  _buildPlayerButton(
-                                    context,
-                                    '3 Players',
-                                    const Color(0xFF2ECC71),
-                                    () {
-                                      setState(() => _showStartScreen = false);
-                                      game.startGame(3);
-                                    },
+                                  const SizedBox(height: 24),
+                                  const Text(
+                                    'Health Heroes',
+                                    style: TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                      letterSpacing: 1,
+                                    ),
                                   ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF667eea).withAlpha(38),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Text(
+                                      'Learn health tips while playing!',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF667eea),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 40),
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha(25),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Select Game Mode',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        _buildGameModeButton(
+                                          context,
+                                          '👥 2 Players',
+                                          'Play with a friend',
+                                          const Color(0xFF4A90E2),
+                                          Icons.people,
+                                          () {
+                                            setState(() => _showStartScreen = false);
+                                            game.startGame(2, false);
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _buildGameModeButton(
+                                          context,
+                                          '👥👤 3 Players',
+                                          'More friends, more fun!',
+                                          const Color(0xFF2ECC71),
+                                          Icons.groups,
+                                          () {
+                                            setState(() => _showStartScreen = false);
+                                            game.startGame(3, false);
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _buildGameModeButton(
+                                          context,
+                                          '🤖 Play with AI Bot',
+                                          'Challenge the computer',
+                                          const Color(0xFFE74C3C),
+                                          Icons.smart_toy,
+                                          () {
+                                            setState(() => _showStartScreen = false);
+                                            game.startGame(2, true);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 40),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -173,54 +285,122 @@ class _HomeShellState extends State<HomeShell> {
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withAlpha((0.85 * 255).round()),
+                            color: Colors.black.withAlpha(217),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: Center(
                             child: Container(
                               margin: const EdgeInsets.all(24),
-                              padding: const EdgeInsets.all(26),
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                              padding: const EdgeInsets.all(28),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(76),
+                                    blurRadius: 30,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
                               child: SingleChildScrollView(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text('🏆', style: TextStyle(fontSize: 72)),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      '${game.playerNames[game.getWinner()]} Wins! 🎉',
-                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 14),
                                     Container(
                                       padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(color: const Color(0xFFf8f9fa), borderRadius: BorderRadius.circular(10)),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                        ),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFFFD700).withAlpha(102),
+                                            blurRadius: 20,
+                                            spreadRadius: 5,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text('🏆', style: TextStyle(fontSize: 60)),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      '${game.playerNames[game.getWinner()]} Wins!',
+                                      style: const TextStyle(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      '🎉 Congratulations! 🎉',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF7F8C8D),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Container(
+                                      padding: const EdgeInsets.all(18),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.grey.shade50,
+                                            Colors.grey.shade100,
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                          width: 1,
+                                        ),
+                                      ),
                                       child: Column(
                                         children: [
-                                          _statRow('Winner:', game.playerNames[game.getWinner()]!),
-                                          const SizedBox(height: 8),
-                                          _statRow('Health Points:', '${game.playerScores[game.getWinner()]}'),
-                                          const SizedBox(height: 8),
-                                          _statRow('Moves Taken:', '${game.moveCount}'),
-                                          const SizedBox(height: 8),
-                                          _statRow('Knowledge Gained:', '${game.getTotalKnowledgeProgress()}%'),
+                                          _statRow('🏅 Winner', game.playerNames[game.getWinner()]!),
+                                          const Divider(height: 20),
+                                          _statRow('❤️ Health Points', '${game.playerScores[game.getWinner()]}'),
+                                          const Divider(height: 20),
+                                          _statRow('🎲 Total Moves', '${game.moveCount}'),
+                                          const Divider(height: 20),
+                                          _statRow('📚 Knowledge Gained', '${game.getTotalKnowledgeProgress()}%'),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 14),
+                                    const SizedBox(height: 24),
                                     ElevatedButton(
                                       onPressed: () {
                                         setState(() => _showStartScreen = true);
                                         game.resetGame();
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(28),
+                                        ),
                                         backgroundColor: const Color(0xFF667eea),
                                         foregroundColor: Colors.white,
+                                        elevation: 6,
+                                        shadowColor: const Color(0xFF667eea).withAlpha(102),
                                       ),
-                                      child: const Text('Play Again', style: TextStyle(fontSize: 16)),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.replay, size: 20),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Play Again',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -239,28 +419,107 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  Widget _buildPlayerButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        elevation: 5,
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  Widget _buildGameModeButton(
+    BuildContext context,
+    String title,
+    String subtitle,
+    Color color,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              color,
+              color.withAlpha(217),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: color.withAlpha(76),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(51),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withAlpha(217),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _statRow(String label, String value) {
-    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: const TextStyle(fontSize: 14, color: Colors.black54)),
-      Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-    ]);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF7F8C8D),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
+        ),
+      ],
+    );
   }
 
   void _showLegend(BuildContext context) {
@@ -272,23 +531,53 @@ class _HomeShellState extends State<HomeShell> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420, maxHeight: 600),
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Game Guide', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.help_outline,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  _legendItem('🎲', 'How to Play', 'Tap the dice to roll. Race to reach square 100.'),
-                  _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward.'),
-                  _legendItem('🐍', 'Colorful Snakes', 'Poor health choices that set you back.'),
-                  _legendItem('❤️', 'Health Points', 'Earn points by landing on ladders.'),
-                  _legendItem('🎯', 'Transparent Design', 'All numbers are visible through snakes and ladders.'),
-                  const SizedBox(height: 14),
+                  const Text(
+                    'Game Guide',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _legendItem('🎲', 'How to Play', 'Tap the dice to roll. Race to reach square 100 first!'),
+                  _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward and earn health points.'),
+                  _legendItem('🐍', 'Colorful Snakes', 'Poor health choices that set you back. Learn from them!'),
+                  _legendItem('❤️', 'Health Points', 'Earn points by landing on ladders and learning health tips.'),
+                  _legendItem('🎯', 'Visible Board', 'All numbers are visible. Snakes and ladders are transparent.'),
+                  _legendItem('🤖', 'AI Bot Mode', 'Play against the computer for a challenge!'),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
-                    child: const Text('Close'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF667eea),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    child: const Text('Got it!'),
                   ),
                 ],
               ),
@@ -301,21 +590,49 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _legendItem(String icon, String label, String desc) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: const Color(0xFFf8f9fa), borderRadius: BorderRadius.circular(10)),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade200,
+          width: 1.5,
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withAlpha(38),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(icon, style: const TextStyle(fontSize: 24)),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(desc, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                Text(
+                  desc,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),
@@ -331,19 +648,30 @@ class _HomeShellState extends State<HomeShell> {
       SnackBar(
         content: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF667eea).withAlpha(38),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(icon, style: const TextStyle(fontSize: 20)),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
+                ),
               ),
             ),
           ],
         ),
         backgroundColor: Colors.white,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 3),
         margin: const EdgeInsets.all(16),
         elevation: 8,

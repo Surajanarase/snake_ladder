@@ -5,7 +5,8 @@ import 'dart:math';
 class GameService extends ChangeNotifier {
   // Game state
   String currentPlayer = 'player1';
-  int numberOfPlayers = 2; // Can be 2 or 3
+  int numberOfPlayers = 2; // Can be 2, 3, or include bot
+  bool hasBot = false;
   Map<String, int> playerPositions = {
     'player1': 0,
     'player2': 0,
@@ -24,7 +25,7 @@ class GameService extends ChangeNotifier {
   Map<String, String> playerNames = {
     'player1': '👤 Player 1',
     'player2': '👤 Player 2',
-    'player3': '👤 Player 3',
+    'player3': '🤖 AI Bot',
   };
   bool isRolling = false;
   int moveCount = 0;
@@ -37,6 +38,38 @@ class GameService extends ChangeNotifier {
     'exercise': 0,
     'sleep': 0,
     'mental': 0,
+  };
+
+  // Health tips for each category
+  final Map<String, List<String>> healthTips = {
+    'nutrition': [
+      '🥗 Eat 5 servings of fruits and vegetables daily',
+      '💧 Drink 8 glasses of water throughout the day',
+      '🥜 Include nuts and seeds for healthy fats',
+      '🐟 Eat fish twice a week for omega-3',
+      '🍎 Choose whole fruits over fruit juices',
+    ],
+    'exercise': [
+      '🏃 Get 30 minutes of exercise daily',
+      '🚶 Take 10,000 steps each day',
+      '💪 Include strength training twice a week',
+      '🧘 Stretch for 10 minutes daily',
+      '🏊 Try swimming for full-body workout',
+    ],
+    'sleep': [
+      '😴 Sleep 7-9 hours every night',
+      '📱 Avoid screens 1 hour before bed',
+      '🌙 Keep bedroom cool and dark',
+      '⏰ Maintain consistent sleep schedule',
+      '☕ Avoid caffeine after 2 PM',
+    ],
+    'mental': [
+      '🧘 Practice meditation for 10 minutes daily',
+      '📝 Journal your thoughts and feelings',
+      '🤝 Connect with friends and family',
+      '🎨 Engage in creative hobbies',
+      '🌳 Spend time in nature regularly',
+    ],
   };
 
   // Enhanced snakes with categories
@@ -67,10 +100,18 @@ class GameService extends ChangeNotifier {
   };
 
   // Start game
-  void startGame(int numPlayers) {
+  void startGame(int numPlayers, bool withBot) {
     numberOfPlayers = numPlayers;
+    hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
+    
+    if (withBot) {
+      playerNames['player$numPlayers'] = '🤖 AI Bot';
+    } else {
+      playerNames['player3'] = '👤 Player 3';
+    }
+    
     playerPositions = {
       'player1': 0,
       'player2': 0,
@@ -108,6 +149,7 @@ class GameService extends ChangeNotifier {
     currentPlayer = 'player1';
     gameActive = false;
     lastRoll = 0;
+    hasBot = false;
     healthProgress = {
       'nutrition': 0,
       'exercise': 0,
@@ -115,6 +157,11 @@ class GameService extends ChangeNotifier {
       'mental': 0,
     };
     notifyListeners();
+  }
+
+  // Check if current player is bot
+  bool isCurrentPlayerBot() {
+    return hasBot && currentPlayer == 'player$numberOfPlayers';
   }
 
   // Roll dice
@@ -250,5 +297,14 @@ class GameService extends ChangeNotifier {
   String getDiceEmoji(int number) {
     const diceEmojis = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
     return diceEmojis[number];
+  }
+
+  // Get random health tip
+  String getRandomTip(String category) {
+    if (healthTips.containsKey(category)) {
+      final tips = healthTips[category]!;
+      return tips[Random().nextInt(tips.length)];
+    }
+    return 'Stay healthy!';
   }
 }

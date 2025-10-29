@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import 'dart:async';
 
 typedef NotifyCallback = void Function(String message, String icon);
 
@@ -35,11 +36,37 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
     super.dispose();
   }
 
+  // Auto-play for bot
+  Future<void> _handleBotTurn(GameService game) async {
+    if (!game.isCurrentPlayerBot() || !game.gameActive) return;
+    
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (!mounted || !game.gameActive) return;
+    
+    _diceController.forward(from: 0);
+    final roll = await game.rollDice();
+    if (roll == 0) return;
+    
+    widget.onNotify('🤖 Bot rolled $roll', '🎲');
+    await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
+    
+    // Continue if still bot's turn
+    if (mounted && game.gameActive) {
+      _handleBotTurn(game);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final diceSize = (screenWidth * 0.18).clamp(70.0, 120.0);
+    final diceSize = (screenWidth * 0.16).clamp(80.0, 110.0);
+
+    // Auto-play bot turn
+    if (game.isCurrentPlayerBot() && game.gameActive && !game.isRolling) {
+      Future.microtask(() => _handleBotTurn(game));
+    }
 
     return Padding(
       padding: const EdgeInsets.all(14),
@@ -110,7 +137,7 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
 
           const SizedBox(height: 16),
 
-          // Enhanced Dice
+          // Enhanced Professional Dice
           Center(
             child: GestureDetector(
               onTap: () async {
@@ -118,7 +145,7 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
                   widget.onNotify('Start a game first', '⚠️');
                   return;
                 }
-                if (game.isRolling) return;
+                if (game.isRolling || game.isCurrentPlayerBot()) return;
                 
                 _diceController.forward(from: 0);
                 final roll = await game.rollDice();
@@ -134,50 +161,66 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
                       width: diceSize,
                       height: diceSize,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            game.playerColors[game.currentPlayer]!,
-                            game.playerColors[game.currentPlayer]!.withAlpha((0.7 * 255).round()),
-                          ],
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: game.isCurrentPlayerBot() 
+                              ? Colors.grey.shade400
+                              : game.playerColors[game.currentPlayer]!,
+                          width: 3,
                         ),
-                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: game.playerColors[game.currentPlayer]!.withAlpha((0.4 * 255).round()),
+                            color: Colors.black.withAlpha(51),
+                            blurRadius: 12,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 4),
+                          ),
+                          BoxShadow(
+                            color: (game.isCurrentPlayerBot() 
+                                ? Colors.grey.shade400
+                                : game.playerColors[game.currentPlayer]!).withAlpha(76),
                             blurRadius: 20,
-                            spreadRadius: 2,
+                            spreadRadius: -2,
                             offset: const Offset(0, 8),
                           ),
                         ],
                       ),
                       child: game.isRolling
-                          ? const Center(
+                          ? Center(
                               child: Icon(
-                                Icons.casino,
-                                color: Colors.white,
-                                size: 50,
+                                Icons.casino_outlined,
+                                color: game.playerColors[game.currentPlayer]!,
+                                size: diceSize * 0.5,
                               ),
                             )
                           : Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 if (game.lastRoll > 0)
-                                  _buildDiceFace(game.lastRoll, diceSize * 0.7)
+                                  _buildStandardDiceFace(
+                                    game.lastRoll, 
+                                    diceSize * 0.65,
+                                    game.isCurrentPlayerBot() 
+                                        ? Colors.grey.shade400
+                                        : game.playerColors[game.currentPlayer]!,
+                                  )
                                 else
                                   Icon(
-                                    Icons.casino,
-                                    size: diceSize * 0.5,
-                                    color: Colors.white,
+                                    Icons.casino_outlined,
+                                    size: diceSize * 0.45,
+                                    color: Colors.grey.shade400,
                                   ),
-                                const SizedBox(height: 8),
+                                SizedBox(height: diceSize * 0.08),
                                 Text(
-                                  game.lastRoll > 0 ? 'Roll: ${game.lastRoll}' : 'Roll Dice',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                  game.lastRoll > 0 ? '${game.lastRoll}' : 'Roll',
+                                  style: TextStyle(
+                                    fontSize: diceSize * 0.16,
+                                    color: game.isCurrentPlayerBot()
+                                        ? Colors.grey.shade600
+                                        : game.playerColors[game.currentPlayer]!,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ],
@@ -193,43 +236,33 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildDiceFace(int number, double size) {
-    return Container(
+  Widget _buildStandardDiceFace(int number, double size, Color dotColor) {
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
       child: CustomPaint(
-        painter: _DiceDotsPainter(number),
+        painter: _StandardDicePainter(number, dotColor),
       ),
     );
   }
 
   Widget _playerCard(String title, int position, int score, Color color, {required bool isActive}) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isActive ? color.withAlpha((0.15 * 255).round()) : const Color(0xFFf8f9fa),
-        borderRadius: BorderRadius.circular(10),
+        color: isActive ? color.withAlpha(38) : const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isActive ? color : Colors.transparent,
-          width: 2,
+          color: isActive ? color : Colors.grey.shade300,
+          width: isActive ? 2.5 : 1.5,
         ),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: color.withAlpha((0.3 * 255).round()),
+                  color: color.withAlpha(76),
                   blurRadius: 12,
-                  offset: const Offset(0, 6),
+                  offset: const Offset(0, 4),
                 )
               ]
             : null,
@@ -247,7 +280,11 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
           const SizedBox(height: 6),
           Text(
             'Position: ${position == 0 ? 'Start' : position}',
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 11, 
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 4),
           Row(
@@ -271,19 +308,20 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
   }
 }
 
-class _DiceDotsPainter extends CustomPainter {
+class _StandardDicePainter extends CustomPainter {
   final int number;
+  final Color dotColor;
   
-  _DiceDotsPainter(this.number);
+  _StandardDicePainter(this.number, this.dotColor);
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black87
+      ..color = dotColor
       ..style = PaintingStyle.fill;
 
-    final dotRadius = size.width * 0.08;
-    final spacing = size.width * 0.3;
+    final dotRadius = size.width * 0.10;
+    final margin = size.width * 0.22;
 
     void drawDot(double x, double y) {
       canvas.drawCircle(Offset(x, y), dotRadius, paint);
@@ -291,40 +329,44 @@ class _DiceDotsPainter extends CustomPainter {
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
+    final left = margin;
+    final right = size.width - margin;
+    final top = margin;
+    final bottom = size.height - margin;
 
     switch (number) {
       case 1:
         drawDot(centerX, centerY);
         break;
       case 2:
-        drawDot(centerX - spacing, centerY - spacing);
-        drawDot(centerX + spacing, centerY + spacing);
+        drawDot(left, top);
+        drawDot(right, bottom);
         break;
       case 3:
-        drawDot(centerX - spacing, centerY - spacing);
+        drawDot(left, top);
         drawDot(centerX, centerY);
-        drawDot(centerX + spacing, centerY + spacing);
+        drawDot(right, bottom);
         break;
       case 4:
-        drawDot(centerX - spacing, centerY - spacing);
-        drawDot(centerX + spacing, centerY - spacing);
-        drawDot(centerX - spacing, centerY + spacing);
-        drawDot(centerX + spacing, centerY + spacing);
+        drawDot(left, top);
+        drawDot(right, top);
+        drawDot(left, bottom);
+        drawDot(right, bottom);
         break;
       case 5:
-        drawDot(centerX - spacing, centerY - spacing);
-        drawDot(centerX + spacing, centerY - spacing);
+        drawDot(left, top);
+        drawDot(right, top);
         drawDot(centerX, centerY);
-        drawDot(centerX - spacing, centerY + spacing);
-        drawDot(centerX + spacing, centerY + spacing);
+        drawDot(left, bottom);
+        drawDot(right, bottom);
         break;
       case 6:
-        drawDot(centerX - spacing, centerY - spacing);
-        drawDot(centerX + spacing, centerY - spacing);
-        drawDot(centerX - spacing, centerY);
-        drawDot(centerX + spacing, centerY);
-        drawDot(centerX - spacing, centerY + spacing);
-        drawDot(centerX + spacing, centerY + spacing);
+        drawDot(left, top);
+        drawDot(right, top);
+        drawDot(left, centerY);
+        drawDot(right, centerY);
+        drawDot(left, bottom);
+        drawDot(right, bottom);
         break;
     }
   }
