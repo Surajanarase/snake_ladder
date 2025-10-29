@@ -9,7 +9,7 @@ class ProgressDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -32,7 +32,7 @@ class ProgressDashboard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                '🏆 Health Knowledge Progress',
+                '🏆 Health Rewards',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
@@ -65,26 +65,24 @@ class ProgressDashboard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _buildProgressBar(
+                child: _buildRewardTile(
                   context,
                   '🎯',
                   'Nutrition',
-                  game.healthProgress['nutrition'] ?? 0,
-                  const Color(0xFF4CAF50),
                   game,
                   'nutrition',
+                  const Color(0xFF4CAF50),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _buildProgressBar(
+                child: _buildRewardTile(
                   context,
                   '💪',
                   'Exercise',
-                  game.healthProgress['exercise'] ?? 0,
-                  const Color(0xFF2196F3),
                   game,
                   'exercise',
+                  const Color(0xFF2196F3),
                 ),
               ),
             ],
@@ -93,26 +91,24 @@ class ProgressDashboard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _buildProgressBar(
+                child: _buildRewardTile(
                   context,
                   '😴',
                   'Sleep',
-                  game.healthProgress['sleep'] ?? 0,
-                  const Color(0xFF9C27B0),
                   game,
                   'sleep',
+                  const Color(0xFF9C27B0),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _buildProgressBar(
+                child: _buildRewardTile(
                   context,
                   '🧘',
                   'Mental',
-                  game.healthProgress['mental'] ?? 0,
-                  const Color(0xFFFF9800),
                   game,
                   'mental',
+                  const Color(0xFFFF9800),
                 ),
               ),
             ],
@@ -122,17 +118,17 @@ class ProgressDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar(
+  Widget _buildRewardTile(
     BuildContext context,
     String icon,
     String label,
-    int progress,
-    Color color,
     GameService game,
     String category,
+    Color color,
   ) {
+    final rewards = game.getRewards(category);
     return GestureDetector(
-      onTap: () => _showCategoryTips(context, game, category, label, icon, color),
+      onTap: () => _showCategoryRewards(context, game, category, label, icon, color),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -177,59 +173,29 @@ class ProgressDashboard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '$progress%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                // Show count of rewards collected
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${rewards.length} collected',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: SizedBox(
-                height: 10,
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: progress / 100,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              color,
-                              color.withAlpha(179),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withAlpha(76),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
+            // Small hint text (no percent)
             Center(
               child: Text(
-                'Tap for tips',
+                'Tap to view rewards',
                 style: TextStyle(
                   fontSize: 10,
                   color: Colors.grey.shade600,
@@ -243,7 +209,7 @@ class ProgressDashboard extends StatelessWidget {
     );
   }
 
-  void _showCategoryTips(
+  void _showCategoryRewards(
     BuildContext context,
     GameService game,
     String category,
@@ -251,6 +217,7 @@ class ProgressDashboard extends StatelessWidget {
     String icon,
     Color color,
   ) {
+    final rewards = game.getRewards(category);
     showDialog(
       context: context,
       builder: (context) {
@@ -275,7 +242,7 @@ class ProgressDashboard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  '$label Health Tips',
+                  '$label Rewards',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -284,49 +251,56 @@ class ProgressDashboard extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: game.healthTips[category]!.map((tip) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: color.withAlpha(76),
-                              width: 1,
-                            ),
+                  child: rewards.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No rewards yet. Land on ladders to earn rewards!',
+                            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                           ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(top: 2),
-                                width: 6,
-                                height: 6,
+                        )
+                      : SingleChildScrollView(
+                          child: Column(
+                            children: rewards.map((r) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  tip,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    height: 1.4,
-                                    color: Color(0xFF2C3E50),
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: color.withAlpha(76),
+                                    width: 1,
                                   ),
                                 ),
-                              ),
-                            ],
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 2),
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        r,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          height: 1.4,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
+                        ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -339,7 +313,7 @@ class ProgressDashboard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  child: const Text('Got it!'),
+                  child: const Text('Close'),
                 ),
               ],
             ),
@@ -350,6 +324,7 @@ class ProgressDashboard extends StatelessWidget {
   }
 
   void _showAllTips(BuildContext context, GameService game) {
+    // Keep the existing "View Tips" behavior (shows preexisting tips)
     showDialog(
       context: context,
       builder: (context) {

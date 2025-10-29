@@ -73,12 +73,14 @@ class _BoardWidgetState extends State<BoardWidget> {
 
             // Check if any player is on this cell
             bool hasPlayer = false;
+            Color? occupyingColor;
             for (var entry in game.playerPositions.entries) {
               if (entry.value == cellNumber && entry.value > 0) {
                 final playerIndex = int.parse(entry.key.replaceAll('player', ''));
                 if (playerIndex <= game.numberOfPlayers) {
                   hasPlayer = true;
-                  break;
+                  // take the first player's color if multiple players are present
+                  occupyingColor ??= game.playerColors[entry.key];
                 }
               }
             }
@@ -86,35 +88,47 @@ class _BoardWidgetState extends State<BoardWidget> {
             const Color lightCell = Color(0xFFFFFFFF);
             const Color altCell = Color(0xFFF8F8F8);
             final bool isAlt = (row + col) % 2 == 0;
-            final Color bg = hasPlayer ? const Color(0xFFFFF9E6) : (isAlt ? altCell : lightCell);
+            final Color bg = hasPlayer
+                ? (occupyingColor ?? const Color(0xFFFFF9E6))
+                : (isAlt ? altCell : lightCell);
 
             // Special cells
             final bool isSnake = game.snakes.containsKey(cellNumber);
             final bool isLadder = game.ladders.containsKey(cellNumber);
 
+            // Determine number text color for contrast
+            Color numberColor;
+            try {
+              // compute contrast: if background is light -> dark text, else white text
+              final luminance = bg.computeLuminance();
+              numberColor = luminance > 0.6 ? const Color(0xFF222222) : Colors.white;
+            } catch (e) {
+              numberColor = const Color(0xFF333333);
+            }
+
             return Container(
               decoration: BoxDecoration(
                 color: bg,
                 border: Border.all(
-                  color: hasPlayer 
-                      ? const Color(0xFFFFB300)
+                  color: hasPlayer
+                      ? (occupyingColor != null ? occupyingColor.withAlpha(200) : const Color(0xFFFFB300))
                       : const Color(0xFFDDDDDD),
                   width: hasPlayer ? 2.0 : 0.5,
                 ),
               ),
               child: Stack(
                 children: [
-                  // Cell number - always visible
+                  // Cell number - always visible and contrast aware
                   Center(
                     child: Text(
                       '$cellNumber',
                       style: TextStyle(
                         fontSize: (boardSize / 300) * 11,
-                        color: const Color(0xFF333333),
+                        color: numberColor,
                         fontWeight: FontWeight.bold,
-                        shadows: const [
+                        shadows: [
                           Shadow(
-                            color: Colors.white,
+                            color: bg.computeLuminance() > 0.6 ? Colors.white.withAlpha(180) : Colors.black.withAlpha(120),
                             blurRadius: 2,
                           ),
                         ],
@@ -130,7 +144,7 @@ class _BoardWidgetState extends State<BoardWidget> {
                         width: boardSize / 50,
                         height: boardSize / 50,
                         decoration: BoxDecoration(
-                          color: isLadder 
+                          color: isLadder
                               ? Colors.green.withAlpha(179)
                               : Colors.red.withAlpha(179),
                           shape: BoxShape.circle,
@@ -157,7 +171,7 @@ class _BoardWidgetState extends State<BoardWidget> {
             final tokenSize = cellSize * 0.28;
 
             List<Widget> tokens = [];
-            
+
             for (var entry in game.playerPositions.entries) {
               final playerIndex = int.parse(entry.key.replaceAll('player', ''));
               if (playerIndex <= game.numberOfPlayers && entry.value > 0) {
@@ -181,13 +195,13 @@ class _BoardWidgetState extends State<BoardWidget> {
 
   Widget _buildToken(int pos, Color color, int playerIndex, double cellSize, double tokenSize, int totalPlayers) {
     if (pos <= 0 || pos > 100) return const SizedBox.shrink();
-    
+
     final rc = _cellToRowCol(pos);
-    
+
     // Position tokens at top-left corner to keep numbers visible
     double offsetX = 2;
     double offsetY = 2;
-    
+
     if (totalPlayers == 2) {
       offsetX = playerIndex == 1 ? 2 : cellSize - tokenSize - 2;
     } else if (totalPlayers == 3) {
@@ -200,7 +214,7 @@ class _BoardWidgetState extends State<BoardWidget> {
         offsetY = cellSize - tokenSize - 2;
       }
     }
-    
+
     final left = rc['col']! * cellSize + offsetX;
     final top = rc['row']! * cellSize + offsetY;
 
@@ -261,7 +275,7 @@ class _BoardWidgetState extends State<BoardWidget> {
 class _BoardConnectionsPainter extends CustomPainter {
   final GameService game;
   final double boardSize;
-  
+
   _BoardConnectionsPainter(this.game, this.boardSize);
 
   @override
@@ -304,16 +318,16 @@ class _BoardConnectionsPainter extends CustomPainter {
       const Color(0xFF48DBFB),
       const Color(0xFF00D2D3),
     ];
-    
+
     final colorIndex = startPos % colors.length;
     final ladderColor = colors[colorIndex].withAlpha(204); // 80% opacity - MORE VISIBLE
 
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final len = math.sqrt(dx * dx + dy * dy);
-    
+
     if (len == 0) return;
-    
+
     final ux = dx / len;
     final uy = dy / len;
     final railWidth = cellSize * 0.12;
@@ -354,7 +368,7 @@ class _BoardConnectionsPainter extends CustomPainter {
       const Color(0xFFB4E197),
       const Color(0xFFFFB5DA),
     ];
-    
+
     final colorIndex = startPos % snakeColors.length;
     final snakeColor = snakeColors[colorIndex].withAlpha(191); // 75% opacity - MORE VISIBLE
     final darkSnakeColor = Color.lerp(snakeColor, Colors.black, 0.2)!;
@@ -364,16 +378,16 @@ class _BoardConnectionsPainter extends CustomPainter {
 
     final segments = math.max(20, (distance / (cellSize * 0.3)).round());
     final List<Offset> points = [];
-    
+
     for (int i = 0; i <= segments; i++) {
       final t = i / segments;
       final x = head.dx + (tail.dx - head.dx) * t;
       final y = head.dy + (tail.dy - head.dy) * t;
-      
+
       final wave = math.sin(t * math.pi * 2.5) * (cellSize * 0.18);
       final perpX = -(tail.dy - head.dy) / distance;
       final perpY = (tail.dx - head.dx) / distance;
-      
+
       points.add(Offset(x + perpX * wave, y + perpY * wave));
     }
 
@@ -403,7 +417,7 @@ class _BoardConnectionsPainter extends CustomPainter {
     final eyeSize = cellSize * 0.035;
     canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
     canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
-    
+
     final pupilSize = eyeSize * 0.6;
     canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
     canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);

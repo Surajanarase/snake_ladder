@@ -32,7 +32,16 @@ class GameService extends ChangeNotifier {
   bool gameActive = false;
   int lastRoll = 0;
 
-  // Health progress tracking
+  // --- Reward system (new) ---
+  // Store collected rewards for the four categories
+  Map<String, List<String>> rewards = {
+    'nutrition': [],
+    'exercise': [],
+    'sleep': [],
+    'mental': [],
+  };
+
+  // Health progress kept for compatibility (optional)
   Map<String, int> healthProgress = {
     'nutrition': 0,
     'exercise': 0,
@@ -40,7 +49,7 @@ class GameService extends ChangeNotifier {
     'mental': 0,
   };
 
-  // Health tips for each category
+  // Health tips for each category (unchanged, used for "View Tips" if needed)
   final Map<String, List<String>> healthTips = {
     'nutrition': [
       '🥗 Eat 5 servings of fruits and vegetables daily',
@@ -72,7 +81,7 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // Enhanced snakes with categories
+  // (snakes and ladders unchanged) ...
   final Map<int, Map<String, dynamic>> snakes = {
     99: {'end': 78, 'message': "Skipped breakfast! Energy levels drop.", 'icon': '🍳', 'category': 'nutrition'},
     95: {'end': 75, 'message': "Forgot to wash hands! Germs spread.", 'icon': '🦠', 'category': 'hygiene'},
@@ -86,7 +95,6 @@ class GameService extends ChangeNotifier {
     28: {'end': 10, 'message': "Ate too much sugar! Energy crash.", 'icon': '🍬', 'category': 'nutrition'},
   };
 
-  // Enhanced ladders with categories and tips
   final Map<int, Map<String, dynamic>> ladders = {
     4: {'end': 14, 'message': "Ate fruits! Immunity boost!", 'icon': '🍎', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
     9: {'end': 31, 'message': "Morning exercise! Energy increased!", 'icon': '💪', 'category': 'exercise', 'tip': "30 minutes of daily exercise improves mood and energy levels."},
@@ -105,13 +113,13 @@ class GameService extends ChangeNotifier {
     hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
-    
+
     if (withBot) {
       playerNames['player$numPlayers'] = '🤖 AI Bot';
     } else {
       playerNames['player3'] = '👤 Player 3';
     }
-    
+
     playerPositions = {
       'player1': 0,
       'player2': 0,
@@ -129,6 +137,13 @@ class GameService extends ChangeNotifier {
       'exercise': 0,
       'sleep': 0,
       'mental': 0,
+    };
+    // reset rewards as well
+    rewards = {
+      'nutrition': [],
+      'exercise': [],
+      'sleep': [],
+      'mental': [],
     };
     notifyListeners();
   }
@@ -156,6 +171,12 @@ class GameService extends ChangeNotifier {
       'sleep': 0,
       'mental': 0,
     };
+    rewards = {
+      'nutrition': [],
+      'exercise': [],
+      'sleep': [],
+      'mental': [],
+    };
     notifyListeners();
   }
 
@@ -167,17 +188,17 @@ class GameService extends ChangeNotifier {
   // Roll dice
   Future<int> rollDice() async {
     if (isRolling || !gameActive) return 0;
-    
+
     isRolling = true;
     notifyListeners();
 
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     final roll = Random().nextInt(6) + 1;
     lastRoll = roll;
     isRolling = false;
     notifyListeners();
-    
+
     return roll;
   }
 
@@ -213,7 +234,7 @@ class GameService extends ChangeNotifier {
       playerPositions[player] = snake['end'];
       notifyListeners();
       checkWinCondition(onNotify);
-      
+
     } else if (ladders.containsKey(position)) {
       final ladder = ladders[position]!;
       onNotify(ladder['message'], ladder['icon']);
@@ -223,17 +244,26 @@ class GameService extends ChangeNotifier {
       updateHealthProgress(ladder['category']);
       notifyListeners();
 
+      // --- NEW: also signal UI to show a reward popup and let UI persist it ---
+      // Only send reward notifications for the four tracked categories (nutrition/exercise/sleep/mental)
+      final category = ladder['category']?.toString() ?? '';
+      String rewardText = ladder['message'] ?? 'You got a reward!';
+      if (['nutrition', 'exercise', 'sleep', 'mental'].contains(category)) {
+        // Use UI convention: "REWARD::<category>::<text>"
+        onNotify('REWARD::$category::$rewardText', ladder['icon']);
+      }
+
       await Future.delayed(const Duration(milliseconds: 1000));
       playerPositions[player] = ladder['end'];
       notifyListeners();
       checkWinCondition(onNotify);
-      
+
     } else {
       checkWinCondition(onNotify);
     }
   }
 
-  // Update health progress
+  // Update health progress (kept for compatibility; can be used if you want to show both)
   void updateHealthProgress(String category) {
     if (category == 'nutrition') {
       healthProgress['nutrition'] = (healthProgress['nutrition']! + 25).clamp(0, 100);
@@ -245,6 +275,18 @@ class GameService extends ChangeNotifier {
       healthProgress['mental'] = (healthProgress['mental']! + 25).clamp(0, 100);
     }
     notifyListeners();
+  }
+
+  // Add a reward into the stored compartment (called from UI when it receives the REWARD:: message)
+  void addReward(String category, String rewardText) {
+    if (!rewards.containsKey(category)) return;
+    rewards[category]!.insert(0, rewardText); // newest first
+    notifyListeners();
+  }
+
+  // Get rewards for a category
+  List<String> getRewards(String category) {
+    return rewards[category] ?? [];
   }
 
   // Check win condition
@@ -287,12 +329,12 @@ class GameService extends ChangeNotifier {
 
   // Get total knowledge progress
   int getTotalKnowledgeProgress() {
-    return ((healthProgress['nutrition']! + 
-             healthProgress['exercise']! + 
-             healthProgress['sleep']! + 
+    return ((healthProgress['nutrition']! +
+             healthProgress['exercise']! +
+             healthProgress['sleep']! +
              healthProgress['mental']!) / 4).round();
   }
-  
+
   // Get dice emoji
   String getDiceEmoji(int number) {
     const diceEmojis = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
