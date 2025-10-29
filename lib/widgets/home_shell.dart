@@ -15,7 +15,86 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  bool _showStartScreen = true;
+
+
+    // Show a small dialog to collect player names before starting.
+  // Provides Back option so user can return to start selection.
+  void _showNameEntry(BuildContext context, int numPlayers, bool withBot) {
+    final game = Provider.of<GameService>(context, listen: false);
+    final controllers = <TextEditingController>[];
+    for (int i = 1; i <= numPlayers; i++) {
+      final defaultName = game.playerNames['player$i'] ?? '👤 Player $i';
+      controllers.add(TextEditingController(text: defaultName));
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Enter player names',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 12),
+                for (int i = 0; i < controllers.length; i++) ...[
+                  TextField(
+                    controller: controllers[i],
+                    decoration: InputDecoration(
+                      labelText: 'Player ${i + 1} name',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Back: just close this dialog and keep start screen visible
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // return to start selection
+                      },
+                      child: const Text('Back'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Save names and start game
+                        for (int i = 0; i < controllers.length; i++) {
+                          final name = controllers[i].text.trim();
+                          if (name.isNotEmpty) {
+                            game.playerNames['player${i + 1}'] = name;
+                          }
+                        }
+                        // hide start screen and start
+                        setState(() => _showStartScreen = false);
+                        // if bot mode was requested, withBot==true will be handled by caller; in our flows withBot is false here
+                        game.startGame(numPlayers, withBot);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
+                      child: const Text('Start'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+   bool _showStartScreen = true;
+  // When true we hide the win overlay so user can "stay" after closing it
+  bool _suppressWinOverlay = false;
+
 
   @override
   Widget build(BuildContext context) {
@@ -234,23 +313,25 @@ class _HomeShellState extends State<HomeShell> {
                                           ),
                                         ),
                                         const SizedBox(height: 20),
-                                        _buildGameModeButton(
-                                          context,
-                                          '👥 2 Players',
-                                          'Play with a friend',
-                                          const Color(0xFF4A90E2),
-                                          Icons.people,
-                                          () => _showNameEntry(context, 2, false),
-                                        ),
+                                       _buildGameModeButton(
+  context,
+  '👥 2 Players',
+  'Play with a friend',
+  const Color(0xFF4A90E2),
+  Icons.people,
+  () => _showNameEntry(context, 2, false),
+),
+
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
-                                          context,
-                                          '👥👤 3 Players',
-                                          'More friends, more fun!',
-                                          const Color(0xFF2ECC71),
-                                          Icons.groups,
-                                          () => _showNameEntry(context, 3, false),
-                                        ),
+  context,
+  '👥👤 3 Players',
+  'More friends, more fun!',
+  const Color(0xFF2ECC71),
+  Icons.groups,
+  () => _showNameEntry(context, 3, false),
+),
+
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
                                           context,
@@ -258,7 +339,6 @@ class _HomeShellState extends State<HomeShell> {
                                           'Challenge the computer',
                                           const Color(0xFFE74C3C),
                                           Icons.smart_toy,
-                                          // bot mode: no name entry for bot
                                           () {
                                             setState(() => _showStartScreen = false);
                                             game.startGame(2, true);
@@ -276,7 +356,8 @@ class _HomeShellState extends State<HomeShell> {
                       ),
 
                     // Win overlay
-                    if (!game.gameActive && !_showStartScreen && game.getWinner() != null)
+                    if (!game.gameActive && !_showStartScreen && game.getWinner() != null && !_suppressWinOverlay)
+
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
@@ -367,36 +448,64 @@ class _HomeShellState extends State<HomeShell> {
                                       ),
                                     ),
                                     const SizedBox(height: 24),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        setState(() => _showStartScreen = true);
-                                        game.resetGame();
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(28),
-                                        ),
-                                        backgroundColor: const Color(0xFF667eea),
-                                        foregroundColor: Colors.white,
-                                        elevation: 6,
-                                        shadowColor: const Color(0xFF667eea).withAlpha(102),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.replay, size: 20),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Play Again',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    // Close (Stay)
+    ElevatedButton(
+      onPressed: () {
+        // hide overlay so user can stay on this page and inspect dashboard/rewards
+        setState(() {
+          _suppressWinOverlay = true;
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey.shade300,
+        foregroundColor: Colors.black87,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: const Text('Close (Stay)'),
+    ),
+
+    // Play Again: reset the board but remain on the same screen so user can play again.
+    ElevatedButton(
+      onPressed: () {
+        setState(() {
+          _suppressWinOverlay = false;
+        });
+        game.resetGame();
+        // keep _showStartScreen false so the board remains visible
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF667eea),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: const Text('Play Again'),
+    ),
+
+    // Back to Home: go back to start selection and reset game
+    ElevatedButton(
+      onPressed: () {
+        game.resetGame();
+        setState(() {
+          _showStartScreen = true;
+          _suppressWinOverlay = false;
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF9E9E9E),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: const Text('Back to Home'),
+    ),
+  ],
+),
+
                                   ],
                                 ),
                               ),
@@ -411,77 +520,6 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ),
       ),
-    );
-  }
-
-  // Show a small dialog to collect player names before starting.
-  // Provides Back option so user can go back to start selection.
-  void _showNameEntry(BuildContext context, int numPlayers, bool withBot) {
-    final game = Provider.of<GameService>(context, listen: false);
-    final controllers = <TextEditingController>[];
-    for (int i = 1; i <= numPlayers; i++) {
-      final defaultName = game.playerNames['player$i'] ?? '👤 Player $i';
-      controllers.add(TextEditingController(text: defaultName));
-    }
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Enter player names', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 12),
-                for (int i = 0; i < controllers.length; i++) ...[
-                  TextField(
-                    controller: controllers[i],
-                    decoration: InputDecoration(
-                      labelText: 'Player ${i + 1} name',
-                      prefixText: i == controllers.length - 1 && withBot ? '🤖 ' : '',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Back: just close this dialog and keep start screen visible
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // return to start selection
-                      },
-                      child: const Text('Back'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Save names and start game
-                        for (int i = 0; i < controllers.length; i++) {
-                          final name = controllers[i].text.trim();
-                          if (name.isNotEmpty) {
-                            game.playerNames['player${i + 1}'] = name;
-                          }
-                        }
-                        // hide start screen and start
-                        setState(() => _showStartScreen = false);
-                        game.startGame(numPlayers, withBot);
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
-                      child: const Text('Start'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -707,83 +745,117 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  // Reward-aware toast/dialog
   void _showToast(BuildContext context, String message, String icon) {
     final game = Provider.of<GameService>(context, listen: false);
 
-    // Detect reward convention:
-    // It supports both:
-    //  - "REWARD::<category>::<text>"  (legacy)
-    //  - "REWARD::<player>::<category>::<text>" (new player-aware)
+    // Support two formats:
+    // 1) Player-aware: "REWARD::<player>::<category>::<text>" e.g. REWARD::player1::nutrition::Ate fruits!
+    // 2) Legacy: "REWARD::<category>::<text>"
     if (message.startsWith('REWARD::')) {
       try {
         final parts = message.split('::');
         if (parts.length >= 3) {
-          String? playerId;
-          String category;
-          String rewardText;
+          // If format includes player (parts[1] starts with 'player' and length >=4)
           if (parts.length >= 4 && parts[1].startsWith('player')) {
-            // new format
-            playerId = parts[1];
-            category = parts[2];
-            rewardText = parts.sublist(3).join('::');
-            // store reward per player
-            game.addRewardForPlayer(playerId, category, rewardText);
-          } else {
-            // legacy format
-            category = parts[1];
-            rewardText = parts.sublist(2).join('::');
-            game.addReward(category, rewardText);
-          }
+            final playerId = parts[1];
+            final category = parts[2];
+            final rewardText = parts.sublist(3).join('::');
 
-          // show centered popup with bold statement
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) {
-              return Dialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        icon,
-                        style: const TextStyle(fontSize: 28),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        rewardText,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
+            // store reward per player (avoid duplicates handled in GameService)
+            game.addRewardForPlayer(playerId, category, rewardText);
+
+            if (!mounted) return;
+            showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(icon, style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 12),
+                        Text(
+                          rewardText,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 14),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF667eea),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF667eea),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                          ),
+                          child: const Text('OK'),
                         ),
-                        child: const Text('OK'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          );
-          return;
+                );
+              },
+            );
+            return;
+          } else {
+            // Legacy format: category at parts[1]
+            final category = parts[1];
+            final rewardText = parts.sublist(2).join('::');
+            game.addReward(category, rewardText);
+
+            if (!mounted) return;
+            showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(icon, style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 12),
+                        Text(
+                          rewardText,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF667eea),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                          ),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+            return;
+          }
         }
-      } catch (e) {
-        // fallback to snackbar if parsing fails
+      } catch (_) {
+        // If parsing fails, fall back to snackbar below
       }
     }
 

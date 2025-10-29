@@ -25,7 +25,7 @@ class GameService extends ChangeNotifier {
   Map<String, String> playerNames = {
     'player1': '👤 Player 1',
     'player2': '👤 Player 2',
-    'player3': '🤖 AI Bot',
+    'player3': '👤 Player 3',
   };
   bool isRolling = false;
   int moveCount = 0;
