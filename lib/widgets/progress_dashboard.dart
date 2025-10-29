@@ -126,7 +126,17 @@ class ProgressDashboard extends StatelessWidget {
     String category,
     Color color,
   ) {
-    final rewards = game.getRewards(category);
+    // Count total across all players for display
+    int totalCount = 0;
+    for (int i = 1; i <= game.numberOfPlayers; i++) {
+      final pid = 'player$i';
+      final list = game.getPlayerRewards(pid, category);
+      if (i == game.numberOfPlayers && game.hasBot) {
+        // skip bot in the totalCount display if you prefer, but user asked "except bot" only for viewing
+      }
+      totalCount += list.length;
+    }
+
     return GestureDetector(
       onTap: () => _showCategoryRewards(context, game, category, label, icon, color),
       child: Container(
@@ -181,7 +191,7 @@ class ProgressDashboard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '${rewards.length} collected',
+                    '$totalCount collected',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -195,7 +205,7 @@ class ProgressDashboard extends StatelessWidget {
             // Small hint text (no percent)
             Center(
               child: Text(
-                'Tap to view rewards',
+                'Tap to view rewards by player',
                 style: TextStyle(
                   fontSize: 10,
                   color: Colors.grey.shade600,
@@ -217,101 +227,98 @@ class ProgressDashboard extends StatelessWidget {
     String icon,
     Color color,
   ) {
-    final rewards = game.getRewards(category);
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
-            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 520),
+            padding: const EdgeInsets.all(18),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: color.withAlpha(38),
                     shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    icon,
-                    style: const TextStyle(fontSize: 32),
-                  ),
+                  child: Text(icon, style: const TextStyle(fontSize: 28)),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   '$label Rewards',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                ),
+                const SizedBox(height: 12),
+
+                // Show per-player lists (human players only)
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        for (int i = 1; i <= game.numberOfPlayers; i++) ...[
+                          // skip bot player when showing per-player lists (user requested except bot)
+                          if (!(game.hasBot && i == game.numberOfPlayers)) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                game.playerNames['player$i'] ?? 'Player $i',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Builder(builder: (ctx) {
+                              final list = game.getPlayerRewards('player$i', category);
+                              if (list.isEmpty) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: color.withAlpha(40)),
+                                  ),
+                                  child: Text('No rewards yet for ${game.playerNames['player$i'] ?? 'Player $i'}', style: TextStyle(color: Colors.grey.shade700)),
+                                );
+                              }
+                              return Column(
+                                children: list.map((r) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: color.withAlpha(40)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                                        const SizedBox(width: 10),
+                                        Expanded(child: Text(r, style: const TextStyle(fontSize: 14, color: Color(0xFF2C3E50)))),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            }),
+                          ]
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Flexible(
-                  child: rewards.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No rewards yet. Land on ladders to earn rewards!',
-                            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: rewards.map((r) {
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: color.withAlpha(76),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      margin: const EdgeInsets.only(top: 2),
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        r,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          height: 1.4,
-                                          color: Color(0xFF2C3E50),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                   child: const Text('Close'),
                 ),
@@ -409,36 +416,17 @@ class ProgressDashboard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ...tips.map((tip) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      tip,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                  ),
-                ],
+          for (final t in tips)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withAlpha(30)),
               ),
-            );
-          }).toList(),
+              child: Text(t, style: TextStyle(color: Colors.grey.shade800)),
+            ),
         ],
       ),
     );

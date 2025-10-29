@@ -32,13 +32,36 @@ class GameService extends ChangeNotifier {
   bool gameActive = false;
   int lastRoll = 0;
 
-  // --- Reward system (new) ---
-  // Store collected rewards for the four categories
+  // --- Reward system (refactored to be per-player) ---
+  // old global category -> kept for compatibility but not used by UI now
   Map<String, List<String>> rewards = {
     'nutrition': [],
     'exercise': [],
     'sleep': [],
     'mental': [],
+  };
+
+  // New: store rewards per player, per category
+  // e.g. playerRewards['player1']!['nutrition'] = ['Ate fruits!', ...]
+  Map<String, Map<String, List<String>>> playerRewards = {
+    'player1': {
+      'nutrition': [],
+      'exercise': [],
+      'sleep': [],
+      'mental': [],
+    },
+    'player2': {
+      'nutrition': [],
+      'exercise': [],
+      'sleep': [],
+      'mental': [],
+    },
+    'player3': {
+      'nutrition': [],
+      'exercise': [],
+      'sleep': [],
+      'mental': [],
+    },
   };
 
   // Health progress kept for compatibility (optional)
@@ -49,7 +72,7 @@ class GameService extends ChangeNotifier {
     'mental': 0,
   };
 
-  // Health tips for each category (unchanged, used for "View Tips" if needed)
+  // Health tips for each category
   final Map<String, List<String>> healthTips = {
     'nutrition': [
       '🥗 Eat 5 servings of fruits and vegetables daily',
@@ -107,7 +130,7 @@ class GameService extends ChangeNotifier {
     80: {'end': 100, 'message': "Perfect health habits! You're a health champion!", 'icon': '🏆', 'category': 'health', 'tip': "Consistency in healthy habits leads to a better life!"},
   };
 
-  // Start game
+  // Start game — initialize per-player reward containers
   void startGame(int numPlayers, bool withBot) {
     numberOfPlayers = numPlayers;
     hasBot = withBot;
@@ -138,13 +161,35 @@ class GameService extends ChangeNotifier {
       'sleep': 0,
       'mental': 0,
     };
-    // reset rewards as well
+    // reset global rewards
     rewards = {
       'nutrition': [],
       'exercise': [],
       'sleep': [],
       'mental': [],
     };
+    // reset per-player rewards
+    playerRewards = {
+      'player1': {
+        'nutrition': [],
+        'exercise': [],
+        'sleep': [],
+        'mental': [],
+      },
+      'player2': {
+        'nutrition': [],
+        'exercise': [],
+        'sleep': [],
+        'mental': [],
+      },
+      'player3': {
+        'nutrition': [],
+        'exercise': [],
+        'sleep': [],
+        'mental': [],
+      },
+    };
+
     notifyListeners();
   }
 
@@ -176,6 +221,26 @@ class GameService extends ChangeNotifier {
       'exercise': [],
       'sleep': [],
       'mental': [],
+    };
+    playerRewards = {
+      'player1': {
+        'nutrition': [],
+        'exercise': [],
+        'sleep': [],
+        'mental': [],
+      },
+      'player2': {
+        'nutrition': [],
+        'exercise': [],
+        'sleep': [],
+        'mental': [],
+      },
+      'player3': {
+        'nutrition': [],
+        'exercise': [],
+        'sleep': [],
+        'mental': [],
+      },
     };
     notifyListeners();
   }
@@ -244,13 +309,12 @@ class GameService extends ChangeNotifier {
       updateHealthProgress(ladder['category']);
       notifyListeners();
 
-      // --- NEW: also signal UI to show a reward popup and let UI persist it ---
-      // Only send reward notifications for the four tracked categories (nutrition/exercise/sleep/mental)
+      // --- NEW: signal UI with player-aware reward message ---
       final category = ladder['category']?.toString() ?? '';
       String rewardText = ladder['message'] ?? 'You got a reward!';
       if (['nutrition', 'exercise', 'sleep', 'mental'].contains(category)) {
-        // Use UI convention: "REWARD::<category>::<text>"
-        onNotify('REWARD::$category::$rewardText', ladder['icon']);
+        // Format: REWARD::<player>::<category>::<text>
+        onNotify('REWARD::$player::$category::$rewardText', ladder['icon']);
       }
 
       await Future.delayed(const Duration(milliseconds: 1000));
@@ -277,16 +341,33 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Add a reward into the stored compartment (called from UI when it receives the REWARD:: message)
+  // Add a reward into the stored compartment (global) — kept for compatibility
   void addReward(String category, String rewardText) {
     if (!rewards.containsKey(category)) return;
     rewards[category]!.insert(0, rewardText); // newest first
     notifyListeners();
   }
 
-  // Get rewards for a category
+  // New: add reward for a specific player
+  void addRewardForPlayer(String player, String category, String rewardText) {
+    if (!playerRewards.containsKey(player)) return;
+    if (!playerRewards[player]!.containsKey(category)) return;
+    // avoid exact duplicates
+    if (playerRewards[player]![category]!.contains(rewardText)) return;
+    playerRewards[player]![category]!.insert(0, rewardText);
+    // also keep the global record for compatibility
+    addReward(category, rewardText);
+    notifyListeners();
+  }
+
+  // Get rewards for a category (global)
   List<String> getRewards(String category) {
     return rewards[category] ?? [];
+  }
+
+  // New: get rewards for specific player/category
+  List<String> getPlayerRewards(String player, String category) {
+    return playerRewards[player]?[category] ?? [];
   }
 
   // Check win condition

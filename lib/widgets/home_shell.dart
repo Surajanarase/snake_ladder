@@ -240,10 +240,7 @@ class _HomeShellState extends State<HomeShell> {
                                           'Play with a friend',
                                           const Color(0xFF4A90E2),
                                           Icons.people,
-                                          () {
-                                            setState(() => _showStartScreen = false);
-                                            game.startGame(2, false);
-                                          },
+                                          () => _showNameEntry(context, 2, false),
                                         ),
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
@@ -252,10 +249,7 @@ class _HomeShellState extends State<HomeShell> {
                                           'More friends, more fun!',
                                           const Color(0xFF2ECC71),
                                           Icons.groups,
-                                          () {
-                                            setState(() => _showStartScreen = false);
-                                            game.startGame(3, false);
-                                          },
+                                          () => _showNameEntry(context, 3, false),
                                         ),
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
@@ -264,6 +258,7 @@ class _HomeShellState extends State<HomeShell> {
                                           'Challenge the computer',
                                           const Color(0xFFE74C3C),
                                           Icons.smart_toy,
+                                          // bot mode: no name entry for bot
                                           () {
                                             setState(() => _showStartScreen = false);
                                             game.startGame(2, true);
@@ -416,6 +411,77 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ),
       ),
+    );
+  }
+
+  // Show a small dialog to collect player names before starting.
+  // Provides Back option so user can go back to start selection.
+  void _showNameEntry(BuildContext context, int numPlayers, bool withBot) {
+    final game = Provider.of<GameService>(context, listen: false);
+    final controllers = <TextEditingController>[];
+    for (int i = 1; i <= numPlayers; i++) {
+      final defaultName = game.playerNames['player$i'] ?? '👤 Player $i';
+      controllers.add(TextEditingController(text: defaultName));
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Enter player names', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 12),
+                for (int i = 0; i < controllers.length; i++) ...[
+                  TextField(
+                    controller: controllers[i],
+                    decoration: InputDecoration(
+                      labelText: 'Player ${i + 1} name',
+                      prefixText: i == controllers.length - 1 && withBot ? '🤖 ' : '',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Back: just close this dialog and keep start screen visible
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // return to start selection
+                      },
+                      child: const Text('Back'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Save names and start game
+                        for (int i = 0; i < controllers.length; i++) {
+                          final name = controllers[i].text.trim();
+                          if (name.isNotEmpty) {
+                            game.playerNames['player${i + 1}'] = name;
+                          }
+                        }
+                        // hide start screen and start
+                        setState(() => _showStartScreen = false);
+                        game.startGame(numPlayers, withBot);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
+                      child: const Text('Start'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -641,105 +707,121 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
+  // Reward-aware toast/dialog
   void _showToast(BuildContext context, String message, String icon) {
-  // Detect reward convention: "REWARD::<category>::<text>"
-  if (message.startsWith('REWARD::')) {
-    // parse
-    try {
-      final parts = message.split('::');
-      if (parts.length >= 3) {
-        final category = parts[1];
-        final rewardText = parts.sublist(2).join('::'); // in case :: used
-        final game = Provider.of<GameService>(context, listen: false);
-        // store reward in game service
-        game.addReward(category, rewardText);
+    final game = Provider.of<GameService>(context, listen: false);
 
-        // show centered popup with bold statement
-        if (!mounted) return; // safety: don't show dialog if widget is disposed
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      icon,
-                      style: const TextStyle(fontSize: 28),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      rewardText,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
+    // Detect reward convention:
+    // It supports both:
+    //  - "REWARD::<category>::<text>"  (legacy)
+    //  - "REWARD::<player>::<category>::<text>" (new player-aware)
+    if (message.startsWith('REWARD::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 3) {
+          String? playerId;
+          String category;
+          String rewardText;
+          if (parts.length >= 4 && parts[1].startsWith('player')) {
+            // new format
+            playerId = parts[1];
+            category = parts[2];
+            rewardText = parts.sublist(3).join('::');
+            // store reward per player
+            game.addRewardForPlayer(playerId, category, rewardText);
+          } else {
+            // legacy format
+            category = parts[1];
+            rewardText = parts.sublist(2).join('::');
+            game.addReward(category, rewardText);
+          }
+
+          // show centered popup with bold statement
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        icon,
+                        style: const TextStyle(fontSize: 28),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 14),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF667eea),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                      const SizedBox(height: 12),
+                      Text(
+                        rewardText,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      child: const Text('OK'),
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF667eea),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                        ),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+          return;
+        }
+      } catch (e) {
+        // fallback to snackbar if parsing fails
+      }
+    }
+
+    // default behavior: floating SnackBar (unchanged)
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF667eea).withAlpha(38),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(icon, style: const TextStyle(fontSize: 20)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
                 ),
               ),
-            );
-          },
-        );
-        return;
-      }
-    } catch (e) {
-      // fallback to snackbar if parsing fails
-    }
-  }
-
-  // default behavior: floating SnackBar (unchanged)
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF667eea).withAlpha(38),
-              borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(icon, style: const TextStyle(fontSize: 20)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        elevation: 8,
       ),
-      backgroundColor: Colors.white,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      duration: const Duration(seconds: 3),
-      margin: const EdgeInsets.all(16),
-      elevation: 8,
-    ),
-  );
+    );
   }
 }
