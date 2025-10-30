@@ -33,7 +33,6 @@ class GameService extends ChangeNotifier {
   int lastRoll = 0;
 
   // --- Reward system (refactored to be per-player) ---
-  // old global category -> kept for compatibility but not used by UI now
   Map<String, List<String>> rewards = {
     'nutrition': [],
     'exercise': [],
@@ -41,8 +40,6 @@ class GameService extends ChangeNotifier {
     'mental': [],
   };
 
-  // New: store rewards per player, per category
-  // e.g. playerRewards['player1']!['nutrition'] = ['Ate fruits!', ...]
   Map<String, Map<String, List<String>>> playerRewards = {
     'player1': {
       'nutrition': [],
@@ -64,7 +61,6 @@ class GameService extends ChangeNotifier {
     },
   };
 
-  // Health progress kept for compatibility (optional)
   Map<String, int> healthProgress = {
     'nutrition': 0,
     'exercise': 0,
@@ -104,43 +100,120 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // (snakes and ladders unchanged) ...
-  final Map<int, Map<String, dynamic>> snakes = {
-    99: {'end': 78, 'message': "Skipped breakfast! Energy levels drop.", 'icon': '🍳', 'category': 'nutrition'},
-    95: {'end': 75, 'message': "Forgot to wash hands! Germs spread.", 'icon': '🦠', 'category': 'hygiene'},
-    87: {'end': 36, 'message': "Too much junk food! Health declining.", 'icon': '🍔', 'category': 'nutrition'},
-    64: {'end': 60, 'message': "Dehydrated! Remember to drink water.", 'icon': '💧', 'category': 'nutrition'},
-    62: {'end': 19, 'message': "Poor posture! Back pain develops.", 'icon': '🪑', 'category': 'exercise'},
-    54: {'end': 34, 'message': "Skipped exercise! Fitness drops.", 'icon': '🏃', 'category': 'exercise'},
-    17: {'end': 7, 'message': "Stayed up too late! Need proper sleep.", 'icon': '😴', 'category': 'sleep'},
-    73: {'end': 53, 'message': "Too much screen time! Eye strain.", 'icon': '📱', 'category': 'mental'},
-    92: {'end': 88, 'message': "Ignored stress! Anxiety increases.", 'icon': '😰', 'category': 'mental'},
-    28: {'end': 10, 'message': "Ate too much sugar! Energy crash.", 'icon': '🍬', 'category': 'nutrition'},
-  };
+  // Dynamic snakes and ladders - will be regenerated each game
+  Map<int, Map<String, dynamic>> snakes = {};
+  Map<int, Map<String, dynamic>> ladders = {};
 
-  final Map<int, Map<String, dynamic>> ladders = {
-    4: {'end': 14, 'message': "Ate fruits! Immunity boost!", 'icon': '🍎', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
-    9: {'end': 31, 'message': "Morning exercise! Energy increased!", 'icon': '💪', 'category': 'exercise', 'tip': "30 minutes of daily exercise improves mood and energy levels."},
-    20: {'end': 38, 'message': "Drank 8 glasses of water! Well hydrated!", 'icon': '💧', 'category': 'nutrition', 'tip': "Proper hydration helps your body function optimally."},
-    21: {'end': 42, 'message': "Regular checkup! Early detection saves!", 'icon': '👨‍⚕️', 'category': 'health', 'tip': "Annual health checkups can catch problems early."},
-    40: {'end': 59, 'message': "Meditation time! Stress reduced!", 'icon': '🧘', 'category': 'mental', 'tip': "10 minutes of meditation daily reduces stress and anxiety."},
-    51: {'end': 67, 'message': "Healthy meal! Nutrition balanced!", 'icon': '🥗', 'category': 'nutrition', 'tip': "A balanced diet includes vegetables, proteins, and whole grains."},
-    63: {'end': 81, 'message': "Good sleep routine! Well rested!", 'icon': '🌙', 'category': 'sleep', 'tip': "7-9 hours of quality sleep boosts immune system and memory."},
-    71: {'end': 91, 'message': "Vaccination complete! Protected!", 'icon': '💉', 'category': 'health', 'tip': "Vaccines protect you and your community from diseases."},
-    80: {'end': 100, 'message': "Perfect health habits! You're a health champion!", 'icon': '🏆', 'category': 'health', 'tip': "Consistency in healthy habits leads to a better life!"},
-  };
+  // Template data for generating dynamic snakes
+  final List<Map<String, dynamic>> snakeTemplates = [
+    {'message': "Skipped breakfast! Energy levels drop.", 'icon': '🍳', 'category': 'nutrition'},
+    {'message': "Forgot to wash hands! Germs spread.", 'icon': '🦠', 'category': 'hygiene'},
+    {'message': "Too much junk food! Health declining.", 'icon': '🍔', 'category': 'nutrition'},
+    {'message': "Dehydrated! Remember to drink water.", 'icon': '💧', 'category': 'nutrition'},
+    {'message': "Poor posture! Back pain develops.", 'icon': '🪑', 'category': 'exercise'},
+    {'message': "Skipped exercise! Fitness drops.", 'icon': '🏃', 'category': 'exercise'},
+    {'message': "Stayed up too late! Need proper sleep.", 'icon': '😴', 'category': 'sleep'},
+    {'message': "Too much screen time! Eye strain.", 'icon': '📱', 'category': 'mental'},
+    {'message': "Ignored stress! Anxiety increases.", 'icon': '😰', 'category': 'mental'},
+    {'message': "Ate too much sugar! Energy crash.", 'icon': '🍬', 'category': 'nutrition'},
+  ];
 
-  // Start game — initialize per-player reward containers
+  // Template data for generating dynamic ladders
+  final List<Map<String, dynamic>> ladderTemplates = [
+    {'message': "Ate fruits! Immunity boost!", 'icon': '🍎', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
+    {'message': "Morning exercise! Energy increased!", 'icon': '💪', 'category': 'exercise', 'tip': "30 minutes of daily exercise improves mood and energy levels."},
+    {'message': "Drank 8 glasses of water! Well hydrated!", 'icon': '💧', 'category': 'nutrition', 'tip': "Proper hydration helps your body function optimally."},
+    {'message': "Regular checkup! Early detection saves!", 'icon': '👨‍⚕️', 'category': 'health', 'tip': "Annual health checkups can catch problems early."},
+    {'message': "Meditation time! Stress reduced!", 'icon': '🧘', 'category': 'mental', 'tip': "10 minutes of meditation daily reduces stress and anxiety."},
+    {'message': "Healthy meal! Nutrition balanced!", 'icon': '🥗', 'category': 'nutrition', 'tip': "A balanced diet includes vegetables, proteins, and whole grains."},
+    {'message': "Good sleep routine! Well rested!", 'icon': '🌙', 'category': 'sleep', 'tip': "7-9 hours of quality sleep boosts immune system and memory."},
+    {'message': "Vaccination complete! Protected!", 'icon': '💉', 'category': 'health', 'tip': "Vaccines protect you and your community from diseases."},
+    {'message': "Perfect health habits! You're a health champion!", 'icon': '🏆', 'category': 'health', 'tip': "Consistency in healthy habits leads to a better life!"},
+  ];
+
+  // Generate random board layout
+  void generateRandomBoard() {
+    snakes = {};
+    ladders = {};
+    final random = Random();
+    final usedPositions = <int>{};
+
+    // Generate 8-10 snakes
+    final numSnakes = 8 + random.nextInt(3);
+    for (int i = 0; i < numSnakes && i < snakeTemplates.length; i++) {
+      int start, end;
+      int attempts = 0;
+      do {
+        start = 20 + random.nextInt(75); // Start between 20-94
+        end = 5 + random.nextInt(start - 5); // End must be less than start
+        attempts++;
+      } while ((usedPositions.contains(start) || usedPositions.contains(end) || start - end < 5) && attempts < 50);
+
+      if (attempts < 50) {
+        usedPositions.add(start);
+        usedPositions.add(end);
+        snakes[start] = {
+          'end': end,
+          'message': snakeTemplates[i]['message'],
+          'icon': snakeTemplates[i]['icon'],
+          'category': snakeTemplates[i]['category'],
+        };
+      }
+    }
+
+    // Generate 8-10 ladders
+    final numLadders = 8 + random.nextInt(3);
+    for (int i = 0; i < numLadders && i < ladderTemplates.length; i++) {
+      int start, end;
+      int attempts = 0;
+      do {
+        start = 4 + random.nextInt(85); // Start between 4-88
+        end = start + 5 + random.nextInt(20); // End is 5-24 squares higher
+        if (end > 99) end = 99;
+        attempts++;
+      } while ((usedPositions.contains(start) || usedPositions.contains(end) || end - start < 5) && attempts < 50);
+
+      if (attempts < 50) {
+        usedPositions.add(start);
+        usedPositions.add(end);
+        ladders[start] = {
+          'end': end,
+          'message': ladderTemplates[i]['message'],
+          'icon': ladderTemplates[i]['icon'],
+          'category': ladderTemplates[i]['category'],
+          'tip': ladderTemplates[i]['tip'],
+        };
+      }
+    }
+
+    // Ensure there's always a winning ladder near the end
+    if (!ladders.values.any((l) => l['end'] == 100)) {
+      int winStart = 75 + random.nextInt(15); // Between 75-89
+      while (usedPositions.contains(winStart)) {
+        winStart = 75 + random.nextInt(15);
+      }
+      ladders[winStart] = {
+        'end': 100,
+        'message': "Perfect health habits! You're a health champion!",
+        'icon': '🏆',
+        'category': 'health',
+        'tip': "Consistency in healthy habits leads to a better life!",
+      };
+    }
+  }
+
+  // Start game with new random board
   void startGame(int numPlayers, bool withBot) {
     numberOfPlayers = numPlayers;
     hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
 
+    // Generate new random board layout
+    generateRandomBoard();
+
     if (withBot) {
       playerNames['player$numPlayers'] = '🤖 AI Bot';
-    } else {
-      playerNames['player3'] = '👤 Player 3';
     }
 
     playerPositions = {
@@ -161,14 +234,12 @@ class GameService extends ChangeNotifier {
       'sleep': 0,
       'mental': 0,
     };
-    // reset global rewards
     rewards = {
       'nutrition': [],
       'exercise': [],
       'sleep': [],
       'mental': [],
     };
-    // reset per-player rewards
     playerRewards = {
       'player1': {
         'nutrition': [],
@@ -193,8 +264,11 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Reset game
+  // Reset game with new random board
   void resetGame() {
+    // Generate new random board for the reset
+    generateRandomBoard();
+    
     playerPositions = {
       'player1': 0,
       'player2': 0,
@@ -309,11 +383,10 @@ class GameService extends ChangeNotifier {
       updateHealthProgress(ladder['category']);
       notifyListeners();
 
-      // --- NEW: signal UI with player-aware reward message ---
+      // Signal UI with player-aware reward message
       final category = ladder['category']?.toString() ?? '';
       String rewardText = ladder['message'] ?? 'You got a reward!';
       if (['nutrition', 'exercise', 'sleep', 'mental'].contains(category)) {
-        // Format: REWARD::<player>::<category>::<text>
         onNotify('REWARD::$player::$category::$rewardText', ladder['icon']);
       }
 
@@ -327,7 +400,7 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  // Update health progress (kept for compatibility; can be used if you want to show both)
+  // Update health progress
   void updateHealthProgress(String category) {
     if (category == 'nutrition') {
       healthProgress['nutrition'] = (healthProgress['nutrition']! + 25).clamp(0, 100);
@@ -341,21 +414,19 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Add a reward into the stored compartment (global) — kept for compatibility
+  // Add a reward into the stored compartment (global)
   void addReward(String category, String rewardText) {
     if (!rewards.containsKey(category)) return;
-    rewards[category]!.insert(0, rewardText); // newest first
+    rewards[category]!.insert(0, rewardText);
     notifyListeners();
   }
 
-  // New: add reward for a specific player
+  // Add reward for a specific player
   void addRewardForPlayer(String player, String category, String rewardText) {
     if (!playerRewards.containsKey(player)) return;
     if (!playerRewards[player]!.containsKey(category)) return;
-    // avoid exact duplicates
     if (playerRewards[player]![category]!.contains(rewardText)) return;
     playerRewards[player]![category]!.insert(0, rewardText);
-    // also keep the global record for compatibility
     addReward(category, rewardText);
     notifyListeners();
   }
@@ -365,7 +436,7 @@ class GameService extends ChangeNotifier {
     return rewards[category] ?? [];
   }
 
-  // New: get rewards for specific player/category
+  // Get rewards for specific player/category
   List<String> getPlayerRewards(String player, String category) {
     return playerRewards[player]?[category] ?? [];
   }

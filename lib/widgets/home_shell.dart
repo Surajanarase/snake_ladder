@@ -15,10 +15,10 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
+  bool _showStartScreen = true;
+  bool _suppressWinOverlay = false;
 
-
-    // Show a small dialog to collect player names before starting.
-  // Provides Back option so user can return to start selection.
+  // Show a small dialog to collect player names before starting.
   void _showNameEntry(BuildContext context, int numPlayers, bool withBot) {
     final game = Provider.of<GameService>(context, listen: false);
     final controllers = <TextEditingController>[];
@@ -33,57 +33,56 @@ class _HomeShellState extends State<HomeShell> {
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Enter player names',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                const SizedBox(height: 12),
-                for (int i = 0; i < controllers.length; i++) ...[
-                  TextField(
-                    controller: controllers[i],
-                    decoration: InputDecoration(
-                      labelText: 'Player ${i + 1} name',
-                    ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter player names',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
-                  const SizedBox(height: 8),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Back: just close this dialog and keep start screen visible
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // return to start selection
-                      },
-                      child: const Text('Back'),
+                  const SizedBox(height: 12),
+                  for (int i = 0; i < controllers.length; i++) ...[
+                    TextField(
+                      controller: controllers[i],
+                      decoration: InputDecoration(
+                        labelText: 'Player ${i + 1} name',
+                      ),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Save names and start game
-                        for (int i = 0; i < controllers.length; i++) {
-                          final name = controllers[i].text.trim();
-                          if (name.isNotEmpty) {
-                            game.playerNames['player${i + 1}'] = name;
-                          }
-                        }
-                        // hide start screen and start
-                        setState(() => _showStartScreen = false);
-                        // if bot mode was requested, withBot==true will be handled by caller; in our flows withBot is false here
-                        game.startGame(numPlayers, withBot);
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
-                      child: const Text('Start'),
-                    ),
+                    const SizedBox(height: 8),
                   ],
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Back'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Save names and start game
+                          for (int i = 0; i < controllers.length; i++) {
+                            final name = controllers[i].text.trim();
+                            if (name.isNotEmpty) {
+                              game.playerNames['player${i + 1}'] = name;
+                            }
+                          }
+                          setState(() => _showStartScreen = false);
+                          game.startGame(numPlayers, withBot);
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
+                        child: const Text('Start'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -91,14 +90,10 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-   bool _showStartScreen = true;
-  // When true we hide the win overlay so user can "stay" after closing it
-  bool _suppressWinOverlay = false;
-
-
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       body: Container(
@@ -112,7 +107,7 @@ class _HomeShellState extends State<HomeShell> {
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: math.max(560, MediaQuery.of(context).size.width)),
+              constraints: BoxConstraints(maxWidth: math.max(560, screenWidth)),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -313,25 +308,23 @@ class _HomeShellState extends State<HomeShell> {
                                           ),
                                         ),
                                         const SizedBox(height: 20),
-                                       _buildGameModeButton(
-  context,
-  '👥 2 Players',
-  'Play with a friend',
-  const Color(0xFF4A90E2),
-  Icons.people,
-  () => _showNameEntry(context, 2, false),
-),
-
+                                        _buildGameModeButton(
+                                          context,
+                                          '👥 2 Players',
+                                          'Play with a friend',
+                                          const Color(0xFF4A90E2),
+                                          Icons.people,
+                                          () => _showNameEntry(context, 2, false),
+                                        ),
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
-  context,
-  '👥👤 3 Players',
-  'More friends, more fun!',
-  const Color(0xFF2ECC71),
-  Icons.groups,
-  () => _showNameEntry(context, 3, false),
-),
-
+                                          context,
+                                          '👥👤 3 Players',
+                                          'More friends, more fun!',
+                                          const Color(0xFF2ECC71),
+                                          Icons.groups,
+                                          () => _showNameEntry(context, 3, false),
+                                        ),
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
                                           context,
@@ -357,7 +350,6 @@ class _HomeShellState extends State<HomeShell> {
 
                     // Win overlay
                     if (!game.gameActive && !_showStartScreen && game.getWinner() != null && !_suppressWinOverlay)
-
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
@@ -368,6 +360,10 @@ class _HomeShellState extends State<HomeShell> {
                             child: Container(
                               margin: const EdgeInsets.all(24),
                               padding: const EdgeInsets.all(28),
+                              constraints: BoxConstraints(
+                                maxWidth: screenWidth - 48,
+                                maxHeight: MediaQuery.of(context).size.height - 100,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
@@ -448,64 +444,134 @@ class _HomeShellState extends State<HomeShell> {
                                       ),
                                     ),
                                     const SizedBox(height: 24),
-                                    Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    // Close (Stay)
-    ElevatedButton(
-      onPressed: () {
-        // hide overlay so user can stay on this page and inspect dashboard/rewards
-        setState(() {
-          _suppressWinOverlay = true;
-        });
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey.shade300,
-        foregroundColor: Colors.black87,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: const Text('Close (Stay)'),
-    ),
-
-    // Play Again: reset the board but remain on the same screen so user can play again.
-    ElevatedButton(
-      onPressed: () {
-        setState(() {
-          _suppressWinOverlay = false;
-        });
-        game.resetGame();
-        // keep _showStartScreen false so the board remains visible
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: const Text('Play Again'),
-    ),
-
-    // Back to Home: go back to start selection and reset game
-    ElevatedButton(
-      onPressed: () {
-        game.resetGame();
-        setState(() {
-          _showStartScreen = true;
-          _suppressWinOverlay = false;
-        });
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF9E9E9E),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: const Text('Back to Home'),
-    ),
-  ],
-),
-
+                                    // Responsive button layout
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        if (constraints.maxWidth < 400) {
+                                          // Stack buttons vertically on small screens
+                                          return Column(
+                                            children: [
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _suppressWinOverlay = true;
+                                                    });
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.grey.shade300,
+                                                    foregroundColor: Colors.black87,
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                  ),
+                                                  child: const Text('Close (Stay)'),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _suppressWinOverlay = false;
+                                                    });
+                                                    game.resetGame();
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF667eea),
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                  ),
+                                                  child: const Text('Play Again'),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    game.resetGame();
+                                                    setState(() {
+                                                      _showStartScreen = true;
+                                                      _suppressWinOverlay = false;
+                                                    });
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF9E9E9E),
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                  ),
+                                                  child: const Text('Back to Home'),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        } else {
+                                          // Show buttons horizontally on larger screens
+                                          return Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _suppressWinOverlay = true;
+                                                    });
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.grey.shade300,
+                                                    foregroundColor: Colors.black87,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                  ),
+                                                  child: const Text('Close', style: TextStyle(fontSize: 13)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _suppressWinOverlay = false;
+                                                    });
+                                                    game.resetGame();
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF667eea),
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                  ),
+                                                  child: const Text('Play Again', style: TextStyle(fontSize: 13)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    game.resetGame();
+                                                    setState(() {
+                                                      _showStartScreen = true;
+                                                      _suppressWinOverlay = false;
+                                                    });
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF9E9E9E),
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                  ),
+                                                  child: const Text('Home', style: TextStyle(fontSize: 13)),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        }
+                                      },
+                                    ),
                                   ],
                                 ),
                               ),
@@ -606,20 +672,26 @@ class _HomeShellState extends State<HomeShell> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF7F8C8D),
-            fontWeight: FontWeight.w600,
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF7F8C8D),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2C3E50),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+            textAlign: TextAlign.end,
           ),
         ),
       ],
@@ -668,7 +740,7 @@ class _HomeShellState extends State<HomeShell> {
                   _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward and earn health points.'),
                   _legendItem('🐍', 'Colorful Snakes', 'Poor health choices that set you back. Learn from them!'),
                   _legendItem('❤️', 'Health Points', 'Earn points by landing on ladders and learning health tips.'),
-                  _legendItem('🎯', 'Visible Board', 'All numbers are visible. Snakes and ladders are transparent.'),
+                  _legendItem('🎯', 'Dynamic Board', 'Each new game has different snake and ladder positions!'),
                   _legendItem('🤖', 'AI Bot Mode', 'Play against the computer for a challenge!'),
                   const SizedBox(height: 20),
                   ElevatedButton(
@@ -748,20 +820,15 @@ class _HomeShellState extends State<HomeShell> {
   void _showToast(BuildContext context, String message, String icon) {
     final game = Provider.of<GameService>(context, listen: false);
 
-    // Support two formats:
-    // 1) Player-aware: "REWARD::<player>::<category>::<text>" e.g. REWARD::player1::nutrition::Ate fruits!
-    // 2) Legacy: "REWARD::<category>::<text>"
     if (message.startsWith('REWARD::')) {
       try {
         final parts = message.split('::');
         if (parts.length >= 3) {
-          // If format includes player (parts[1] starts with 'player' and length >=4)
           if (parts.length >= 4 && parts[1].startsWith('player')) {
             final playerId = parts[1];
             final category = parts[2];
             final rewardText = parts.sublist(3).join('::');
 
-            // store reward per player (avoid duplicates handled in GameService)
             game.addRewardForPlayer(playerId, category, rewardText);
 
             if (!mounted) return;
@@ -778,6 +845,16 @@ class _HomeShellState extends State<HomeShell> {
                       children: [
                         Text(icon, style: const TextStyle(fontSize: 28)),
                         const SizedBox(height: 12),
+                        Text(
+                          '${game.playerNames[playerId]} earned a reward!',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF667eea),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           rewardText,
                           style: const TextStyle(
@@ -806,7 +883,6 @@ class _HomeShellState extends State<HomeShell> {
             );
             return;
           } else {
-            // Legacy format: category at parts[1]
             final category = parts[1];
             final rewardText = parts.sublist(2).join('::');
             game.addReward(category, rewardText);
@@ -859,7 +935,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // default behavior: floating SnackBar (unchanged)
+    // default behavior: floating SnackBar
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
