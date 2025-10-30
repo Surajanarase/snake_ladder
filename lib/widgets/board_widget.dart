@@ -25,10 +25,17 @@ class _BoardWidgetState extends State<BoardWidget> {
         child: Container(
           width: boardSize,
           height: boardSize,
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B6F47),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF8B6F47),
+                Color(0xFF654321),
+              ],
+            ),
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+            boxShadow: [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 20,
@@ -38,10 +45,22 @@ class _BoardWidgetState extends State<BoardWidget> {
           ),
           padding: const EdgeInsets.all(12),
           child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5DC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF654321), width: 2),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFFAF0),
+                  Color(0xFFF5F5DC),
+                ],
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              border: Border(
+                top: BorderSide(color: Color(0xFF654321), width: 2),
+                bottom: BorderSide(color: Color(0xFF654321), width: 2),
+                left: BorderSide(color: Color(0xFF654321), width: 2),
+                right: BorderSide(color: Color(0xFF654321), width: 2),
+              ),
             ),
             padding: const EdgeInsets.all(6),
             child: _buildBoardContents(boardSize, game),
@@ -59,8 +78,8 @@ class _BoardWidgetState extends State<BoardWidget> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 10,
-            crossAxisSpacing: 1,
-            mainAxisSpacing: 1,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
           ),
           itemCount: 100,
           itemBuilder: (context, index) {
@@ -79,77 +98,128 @@ class _BoardWidgetState extends State<BoardWidget> {
                 final playerIndex = int.parse(entry.key.replaceAll('player', ''));
                 if (playerIndex <= game.numberOfPlayers) {
                   hasPlayer = true;
-                  // take the first player's color if multiple players are present
                   occupyingColor ??= game.playerColors[entry.key];
                 }
               }
             }
 
-            const Color lightCell = Color(0xFFFFFFFF);
-            const Color altCell = Color(0xFFF8F8F8);
-            final bool isAlt = (row + col) % 2 == 0;
-            final Color bg = hasPlayer
-                ? (occupyingColor ?? const Color(0xFFFFF9E6))
-                : (isAlt ? altCell : lightCell);
+            // Alternating pastel colors for a more playful look
+            final bool isLightRow = rowFromBottom % 2 == 0;
+            final bool isLightCol = actualCol % 2 == 0;
+            Color cellColor;
+            
+            if (hasPlayer) {
+              cellColor = Color.alphaBlend(
+                occupyingColor!.withAlpha(38),
+                Colors.white,
+              );
+            } else {
+              if (isLightRow == isLightCol) {
+                cellColor = const Color(0xFFFFFFFF);
+              } else {
+                cellColor = const Color(0xFFFFF9E6);
+              }
+            }
 
             // Special cells
             final bool isSnake = game.snakes.containsKey(cellNumber);
             final bool isLadder = game.ladders.containsKey(cellNumber);
 
-            // Determine number text color for contrast
-            Color numberColor;
-            try {
-              // compute contrast: if background is light -> dark text, else white text
-              final luminance = bg.computeLuminance();
-              numberColor = luminance > 0.6 ? const Color(0xFF222222) : Colors.white;
-            } catch (e) {
-              numberColor = const Color(0xFF333333);
+            // Special cell highlights
+            if (isSnake && !hasPlayer) {
+              cellColor = const Color(0xFFFFEBEE); // Light red tint
+            } else if (isLadder && !hasPlayer) {
+              cellColor = const Color(0xFFE8F5E9); // Light green tint
+            }
+
+            // Start and end cell special styling
+            if (cellNumber == 1) {
+              cellColor = const Color(0xFFE3F2FD); // Light blue for start
+            } else if (cellNumber == 100) {
+              cellColor = const Color(0xFFFFF9C4); // Light yellow for finish
+            }
+
+            Color numberColor = const Color(0xFF424242);
+            if (hasPlayer) {
+              numberColor = occupyingColor!;
+            } else if (cellNumber == 1 || cellNumber == 100) {
+              numberColor = const Color(0xFF1976D2);
             }
 
             return Container(
               decoration: BoxDecoration(
-                color: bg,
+                color: cellColor,
+                borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: hasPlayer
-                      ? (occupyingColor != null ? occupyingColor.withAlpha(200) : const Color(0xFFFFB300))
-                      : const Color(0xFFDDDDDD),
-                  width: hasPlayer ? 2.0 : 0.5,
+                      ? Color.alphaBlend(occupyingColor!.withAlpha(127), Colors.white)
+                      : (cellNumber == 1 || cellNumber == 100)
+                          ? const Color(0xFF1976D2).withAlpha(76)
+                          : const Color(0xFFE0E0E0),
+                  width: hasPlayer ? 2.0 : 1.0,
                 ),
+                boxShadow: hasPlayer ? [
+                  BoxShadow(
+                    color: occupyingColor!.withAlpha(76),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ] : null,
               ),
               child: Stack(
                 children: [
-                  // Cell number - always visible and contrast aware
+                  // Cell number
                   Center(
                     child: Text(
                       '$cellNumber',
                       style: TextStyle(
-                        fontSize: (boardSize / 300) * 11,
+                        fontSize: (boardSize / 300) * 12,
                         color: numberColor,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
+                        fontWeight: FontWeight.w700,
+                        shadows: const [
                           Shadow(
-                            color: bg.computeLuminance() > 0.6 ? Colors.white.withAlpha(180) : Colors.black.withAlpha(120),
-                            blurRadius: 2,
+                            color: Color(0x80FFFFFF),
+                            blurRadius: 1,
                           ),
                         ],
                       ),
                     ),
                   ),
-                  // Special cell indicator
+                  // Special cell indicator (larger and more visible)
                   if (isSnake || isLadder)
                     Positioned(
-                      top: 2,
-                      right: 2,
+                      top: 1,
+                      right: 1,
                       child: Container(
-                        width: boardSize / 50,
-                        height: boardSize / 50,
+                        width: boardSize / 40,
+                        height: boardSize / 40,
                         decoration: BoxDecoration(
                           color: isLadder
-                              ? Colors.green.withAlpha(179)
-                              : Colors.red.withAlpha(179),
+                              ? const Color(0xFF4CAF50)
+                              : const Color(0xFFF44336),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isLadder ? Colors.green : Colors.red).withAlpha(102),
+                              blurRadius: 2,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
                       ),
+                    ),
+                  // Start/End markers
+                  if (cellNumber == 1)
+                    const Positioned(
+                      bottom: 2,
+                      left: 2,
+                      child: Text('🎯', style: TextStyle(fontSize: 10)),
+                    ),
+                  if (cellNumber == 100)
+                    const Positioned(
+                      bottom: 2,
+                      right: 2,
+                      child: Text('🏆', style: TextStyle(fontSize: 10)),
                     ),
                 ],
               ),
@@ -157,18 +227,18 @@ class _BoardWidgetState extends State<BoardWidget> {
           },
         ),
 
-        // CustomPaint for snakes and ladders - more visible
+        // CustomPaint for snakes and ladders
         Positioned.fill(
           child: CustomPaint(
             painter: _BoardConnectionsPainter(game, boardSize),
           ),
         ),
 
-        // Player tokens - smaller and with cell number visible
+        // Player tokens
         Positioned.fill(
           child: LayoutBuilder(builder: (context, box) {
             final cellSize = box.maxWidth / 10;
-            final tokenSize = cellSize * 0.28;
+            final tokenSize = cellSize * 0.32;
 
             List<Widget> tokens = [];
 
@@ -198,20 +268,24 @@ class _BoardWidgetState extends State<BoardWidget> {
 
     final rc = _cellToRowCol(pos);
 
-    // Position tokens at top-left corner to keep numbers visible
-    double offsetX = 2;
-    double offsetY = 2;
+    // Smart positioning for multiple players
+    double offsetX = cellSize * 0.5 - tokenSize * 0.5;
+    double offsetY = cellSize * 0.5 - tokenSize * 0.5;
 
     if (totalPlayers == 2) {
-      offsetX = playerIndex == 1 ? 2 : cellSize - tokenSize - 2;
+      offsetX = playerIndex == 1 
+          ? cellSize * 0.25 - tokenSize * 0.5
+          : cellSize * 0.75 - tokenSize * 0.5;
     } else if (totalPlayers == 3) {
       if (playerIndex == 1) {
-        offsetX = 2;
+        offsetX = cellSize * 0.25 - tokenSize * 0.5;
+        offsetY = cellSize * 0.35 - tokenSize * 0.5;
       } else if (playerIndex == 2) {
-        offsetX = cellSize - tokenSize - 2;
+        offsetX = cellSize * 0.75 - tokenSize * 0.5;
+        offsetY = cellSize * 0.35 - tokenSize * 0.5;
       } else {
-        offsetX = (cellSize - tokenSize) / 2;
-        offsetY = cellSize - tokenSize - 2;
+        offsetX = cellSize * 0.5 - tokenSize * 0.5;
+        offsetY = cellSize * 0.7 - tokenSize * 0.5;
       }
     }
 
@@ -234,14 +308,21 @@ class _BoardWidgetState extends State<BoardWidget> {
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color,
-                border: Border.all(color: Colors.white, width: 2),
+                gradient: RadialGradient(
+                  colors: [
+                    color.withAlpha(229),
+                    color,
+                  ],
+                  center: Alignment.topLeft,
+                  radius: 1.0,
+                ),
+                border: Border.all(color: Colors.white, width: 2.5),
                 boxShadow: [
                   BoxShadow(
                     color: color.withAlpha(127),
-                    blurRadius: 6,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 2),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -249,9 +330,15 @@ class _BoardWidgetState extends State<BoardWidget> {
               child: Text(
                 playerIndex == 3 ? '🤖' : 'P$playerIndex',
                 style: TextStyle(
-                  fontSize: tokenSize * 0.35,
+                  fontSize: tokenSize * 0.4,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
+                  shadows: const [
+                    Shadow(
+                      color: Color(0x4D000000),
+                      blurRadius: 2,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -292,36 +379,23 @@ class _BoardConnectionsPainter extends CustomPainter {
       return Offset(col * cellSize + cellSize / 2, row * cellSize + cellSize / 2);
     }
 
-    // Draw ladders - MORE VISIBLE
+    // Draw ladders
     for (var e in game.ladders.entries) {
       final start = centerOf(e.key);
       final end = centerOf((e.value['end'] ?? e.value) as int);
-      _drawVisibleLadder(canvas, start, end, cellSize, e.key);
+      _drawStylishLadder(canvas, start, end, cellSize);
     }
 
-    // Draw snakes - MORE VISIBLE
+    // Draw snakes
     for (var e in game.snakes.entries) {
       final head = centerOf(e.key);
       final tail = centerOf((e.value['end'] ?? e.value) as int);
-      _drawVisibleSnake(canvas, head, tail, cellSize, e.key);
+      _drawStylishSnake(canvas, head, tail, cellSize);
     }
   }
 
-  void _drawVisibleLadder(Canvas canvas, Offset start, Offset end, double cellSize, int startPos) {
-    final colors = [
-      const Color(0xFFFF6B6B),
-      const Color(0xFF4ECDC4),
-      const Color(0xFFFFE66D),
-      const Color(0xFF95E1D3),
-      const Color(0xFFFF9FF3),
-      const Color(0xFFFECA57),
-      const Color(0xFF48DBFB),
-      const Color(0xFF00D2D3),
-    ];
-
-    final colorIndex = startPos % colors.length;
-    final ladderColor = colors[colorIndex].withAlpha(204); // 80% opacity - MORE VISIBLE
-
+  void _drawStylishLadder(Canvas canvas, Offset start, Offset end, double cellSize) {
+    // Beautiful gradient ladder with 3D effect
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final len = math.sqrt(dx * dx + dy * dy);
@@ -330,61 +404,85 @@ class _BoardConnectionsPainter extends CustomPainter {
 
     final ux = dx / len;
     final uy = dy / len;
-    final railWidth = cellSize * 0.12;
+    final railWidth = cellSize * 0.14;
     final perp = Offset(-uy, ux) * railWidth;
 
-    // Side rails
+    // Shadow for 3D effect
+    final shadowPaint = Paint()
+      ..color = const Color(0x26000000)
+      ..strokeWidth = cellSize * 0.11
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawLine(start + perp + const Offset(2, 2), end + perp + const Offset(2, 2), shadowPaint);
+    canvas.drawLine(start - perp + const Offset(2, 2), end - perp + const Offset(2, 2), shadowPaint);
+
+    // Main rails with gradient effect
     final railPaint = Paint()
-      ..color = ladderColor
-      ..strokeWidth = cellSize * 0.09
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF8B4513),
+          Color(0xFFD2691E),
+        ],
+      ).createShader(Rect.fromPoints(start, end))
+      ..strokeWidth = cellSize * 0.10
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     canvas.drawLine(start + perp, end + perp, railPaint);
     canvas.drawLine(start - perp, end - perp, railPaint);
 
-    // Rungs
-    final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
-    final rungPaint = Paint()
-      ..color = ladderColor.withAlpha(179) // 70% opacity
-      ..strokeWidth = cellSize * 0.07
+    // Highlight on rails
+    final highlightPaint = Paint()
+      ..color = const Color(0x99DEB887)
+      ..strokeWidth = cellSize * 0.04
       ..strokeCap = StrokeCap.round;
 
+    canvas.drawLine(start + perp * 0.7, end + perp * 0.7, highlightPaint);
+    canvas.drawLine(start - perp * 0.7, end - perp * 0.7, highlightPaint);
+
+    // Rungs with shadow
+    final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
+    
     for (int i = 0; i <= rungCount; i++) {
       final t = i / rungCount;
       final center = Offset(start.dx + dx * t, start.dy + dy * t);
+      
+      // Rung shadow
+      final rungShadowPaint = Paint()
+        ..color = const Color(0x26000000)
+        ..strokeWidth = cellSize * 0.08
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(center - perp * 0.95 + const Offset(1, 1), center + perp * 0.95 + const Offset(1, 1), rungShadowPaint);
+      
+      // Main rung
+      final rungPaint = Paint()
+        ..shader = const LinearGradient(
+          colors: [
+            Color(0xFF8B4513),
+            Color(0xFFD2691E),
+          ],
+        ).createShader(Rect.fromPoints(center - perp, center + perp))
+        ..strokeWidth = cellSize * 0.08
+        ..strokeCap = StrokeCap.round;
       canvas.drawLine(center - perp * 0.95, center + perp * 0.95, rungPaint);
     }
   }
 
-  void _drawVisibleSnake(Canvas canvas, Offset head, Offset tail, double cellSize, int startPos) {
-    final snakeColors = [
-      const Color(0xFF6BCB77),
-      const Color(0xFFFFC93C),
-      const Color(0xFFFF6B9D),
-      const Color(0xFF9B72AA),
-      const Color(0xFFFF8364),
-      const Color(0xFF00D9FF),
-      const Color(0xFFB4E197),
-      const Color(0xFFFFB5DA),
-    ];
-
-    final colorIndex = startPos % snakeColors.length;
-    final snakeColor = snakeColors[colorIndex].withAlpha(191); // 75% opacity - MORE VISIBLE
-    final darkSnakeColor = Color.lerp(snakeColor, Colors.black, 0.2)!;
-
+  void _drawStylishSnake(Canvas canvas, Offset head, Offset tail, double cellSize) {
     final distance = (head - tail).distance;
     if (distance == 0) return;
 
-    final segments = math.max(20, (distance / (cellSize * 0.3)).round());
+    final segments = math.max(25, (distance / (cellSize * 0.25)).round());
     final List<Offset> points = [];
 
+    // Create wavy snake body
     for (int i = 0; i <= segments; i++) {
       final t = i / segments;
       final x = head.dx + (tail.dx - head.dx) * t;
       final y = head.dy + (tail.dy - head.dy) * t;
 
-      final wave = math.sin(t * math.pi * 2.5) * (cellSize * 0.18);
+      final wave = math.sin(t * math.pi * 3) * (cellSize * 0.2);
       final perpX = -(tail.dy - head.dy) / distance;
       final perpY = (tail.dx - head.dx) / distance;
 
@@ -397,30 +495,97 @@ class _BoardConnectionsPainter extends CustomPainter {
       path.lineTo(points[i].dx, points[i].dy);
     }
 
-    // Main body
-    final bodyPaint = Paint()
-      ..color = snakeColor
+    // Shadow
+    final shadowPaint = Paint()
+      ..color = const Color(0x33000000)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = cellSize * 0.16;
-    canvas.drawPath(path, bodyPaint);
+      ..strokeWidth = cellSize * 0.19;
+    
+    canvas.save();
+    canvas.translate(2, 2);
+    canvas.drawPath(path, shadowPaint);
+    canvas.restore();
 
-    // Snake head
-    final headSize = cellSize * 0.15;
-    canvas.drawCircle(head, headSize, Paint()..color = snakeColor);
-    canvas.drawCircle(head, headSize, Paint()
-      ..color = darkSnakeColor
+    // Outer body (darker)
+    final outerPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF2E7D32),
+          Color(0xFF66BB6A),
+        ],
+      ).createShader(Rect.fromPoints(head, tail))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = cellSize * 0.025);
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = cellSize * 0.18;
+    canvas.drawPath(path, outerPaint);
 
-    // Eyes
-    final eyeSize = cellSize * 0.035;
-    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
-    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
+    // Inner body (lighter)
+    final innerPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF4CAF50),
+          Color(0xFF81C784),
+        ],
+      ).createShader(Rect.fromPoints(head, tail))
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = cellSize * 0.13;
+    canvas.drawPath(path, innerPaint);
 
-    final pupilSize = eyeSize * 0.6;
-    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
-    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
+    // Pattern on snake body
+    for (int i = 0; i < points.length; i += 3) {
+      final patternPaint = Paint()
+        ..color = const Color(0x4D1B5E20)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(points[i], cellSize * 0.03, patternPaint);
+    }
+
+    // Snake head with shadow
+    final headSize = cellSize * 0.18;
+    
+    // Head shadow
+    canvas.drawCircle(head + const Offset(2, 2), headSize, Paint()
+      ..color = const Color(0x33000000));
+    
+    // Head gradient
+    final headPaint = Paint()
+      ..shader = const RadialGradient(
+        colors: [
+          Color(0xFF66BB6A),
+          Color(0xFF2E7D32),
+        ],
+      ).createShader(Rect.fromCircle(center: head, radius: headSize));
+    canvas.drawCircle(head, headSize, headPaint);
+
+    // Head outline
+    canvas.drawCircle(head, headSize, Paint()
+      ..color = const Color(0xFF1B5E20)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = cellSize * 0.03);
+
+    // Eyes with white background
+    final eyeSize = cellSize * 0.045;
+    final eyeWhite = Paint()..color = Colors.white;
+    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.4), eyeSize, eyeWhite);
+    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.4), eyeSize, eyeWhite);
+
+    // Pupils
+    final pupilSize = eyeSize * 0.65;
+    final pupilPaint = Paint()..color = const Color(0xFF1B5E20);
+    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.4), pupilSize, pupilPaint);
+    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.4), pupilSize, pupilPaint);
+
+    // Tongue
+    final tonguePaint = Paint()
+      ..color = const Color(0xFFD32F2F)
+      ..strokeWidth = cellSize * 0.02
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      head + Offset(0, headSize * 0.6),
+      head + Offset(0, headSize * 0.9),
+      tonguePaint,
+    );
   }
 
   @override

@@ -11,7 +11,7 @@ class ProgressDashboard extends StatelessWidget {
     final game = Provider.of<GameService>(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -38,30 +38,42 @@ class ProgressDashboard extends StatelessWidget {
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF2C3E50),
+                  letterSpacing: 0.3,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               GestureDetector(
                 onTap: () => _showAllTips(context, game),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667eea),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x4D667eea),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: const Text(
                     'View Tips',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          // Grid layout for rewards - 2x2 uniform
           Row(
             children: [
               Expanded(
@@ -74,7 +86,7 @@ class ProgressDashboard extends StatelessWidget {
                   const Color(0xFF4CAF50),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildRewardTile(
                   context,
@@ -87,7 +99,7 @@ class ProgressDashboard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -100,7 +112,7 @@ class ProgressDashboard extends StatelessWidget {
                   const Color(0xFF9C27B0),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildRewardTile(
                   context,
@@ -131,35 +143,39 @@ class ProgressDashboard extends StatelessWidget {
     for (int i = 1; i <= game.numberOfPlayers; i++) {
       final pid = 'player$i';
       final list = game.getPlayerRewards(pid, category);
-      if (i == game.numberOfPlayers && game.hasBot) {
-        // skip bot in the totalCount display if you prefer, but user asked "except bot" only for viewing
-      }
       totalCount += list.length;
     }
 
     return GestureDetector(
       onTap: () => _showCategoryRewards(context, game, category, label, icon, color),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.grey.shade200,
+            color: color.withAlpha(51),
             width: 1.5,
           ),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(25),
+            const BoxShadow(
+              color: Color(0x0D000000),
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: Offset(0, 2),
+            ),
+            BoxShadow(
+              color: color.withAlpha(25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Icon and label in a row
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(6),
@@ -169,49 +185,69 @@ class ProgressDashboard extends StatelessWidget {
                   ),
                   child: Text(
                     icon,
-                    style: const TextStyle(fontSize: 18),
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+                const SizedBox(width: 6),
+                Flexible(
                   child: Text(
                     label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                ),
-                // Show count of rewards collected
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$totalCount collected',
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       color: color,
+                      letterSpacing: 0.2,
                     ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            // Small hint text (no percent)
-            Center(
-              child: Text(
-                'Tap to view rewards by player',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
+            const SizedBox(height: 8),
+            // Count badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withAlpha(51),
+                    color.withAlpha(25),
+                  ],
                 ),
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.star,
+                    size: 12,
+                    color: color,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$totalCount',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Hint text
+            Text(
+              'Tap to view',
+              style: TextStyle(
+                fontSize: 9,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -234,23 +270,52 @@ class ProgressDashboard extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420, maxHeight: 520),
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  color.withAlpha(13),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withAlpha(38),
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withAlpha(51),
+                        color.withAlpha(25),
+                      ],
+                    ),
                     shape: BoxShape.circle,
                   ),
-                  child: Text(icon, style: const TextStyle(fontSize: 28)),
+                  child: Text(icon, style: const TextStyle(fontSize: 32)),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   '$label Rewards',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                  style: TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.bold, 
+                    color: color,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
+                Text(
+                  'Collected by players',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // Show per-player lists (human players only)
                 Expanded(
@@ -258,52 +323,97 @@ class ProgressDashboard extends StatelessWidget {
                     child: Column(
                       children: [
                         for (int i = 1; i <= game.numberOfPlayers; i++) ...[
-                          // skip bot player when showing per-player lists (user requested except bot)
+                          // skip bot player when showing per-player lists
                           if (!(game.hasBot && i == game.numberOfPlayers)) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                game.playerNames['player$i'] ?? 'Player $i',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                            if (i > 1) const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: game.playerColors['player$i']!.withAlpha(25),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: game.playerColors['player$i']!.withAlpha(76),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: game.playerColors['player$i']!,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        game.playerNames['player$i'] ?? 'Player $i',
+                                        style: TextStyle(
+                                          fontSize: 14, 
+                                          fontWeight: FontWeight.bold, 
+                                          color: game.playerColors['player$i']!,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Builder(builder: (ctx) {
+                                    final list = game.getPlayerRewards('player$i', category);
+                                    if (list.isEmpty) {
+                                      return Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          'No rewards collected yet',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 12,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return Column(
+                                      children: list.map((r) {
+                                        return Container(
+                                          margin: const EdgeInsets.only(bottom: 6),
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: color.withAlpha(51),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.check_circle,
+                                                size: 14,
+                                                color: color,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  r,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF2C3E50),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    );
+                                  }),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Builder(builder: (ctx) {
-                              final list = game.getPlayerRewards('player$i', category);
-                              if (list.isEmpty) {
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: color.withAlpha(40)),
-                                  ),
-                                  child: Text('No rewards yet for ${game.playerNames['player$i'] ?? 'Player $i'}', style: TextStyle(color: Colors.grey.shade700)),
-                                );
-                              }
-                              return Column(
-                                children: list.map((r) {
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade50,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: color.withAlpha(40)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                                        const SizedBox(width: 10),
-                                        Expanded(child: Text(r, style: const TextStyle(fontSize: 14, color: Color(0xFF2C3E50)))),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            }),
                           ]
                         ],
                       ],
@@ -311,16 +421,24 @@ class ProgressDashboard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                    elevation: 4,
                   ),
-                  child: const Text('Close'),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -331,7 +449,6 @@ class ProgressDashboard extends StatelessWidget {
   }
 
   void _showAllTips(BuildContext context, GameService game) {
-    // Keep the existing "View Tips" behavior (shows preexisting tips)
     showDialog(
       context: context,
       builder: (context) {
@@ -340,15 +457,45 @@ class ProgressDashboard extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 450, maxHeight: 600),
             padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.purple.shade50,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x4D667eea),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Text('💡', style: TextStyle(fontSize: 32)),
+                ),
+                const SizedBox(height: 16),
                 const Text(
-                  '💡 All Health Tips',
+                  'All Health Tips',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2C3E50),
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -371,12 +518,20 @@ class ProgressDashboard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF667eea),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 4,
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  child: const Text('Close'),
                 ),
               ],
             ),
@@ -391,7 +546,14 @@ class ProgressDashboard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withAlpha(25),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withAlpha(25),
+            color.withAlpha(13),
+          ],
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: color.withAlpha(76),
@@ -403,14 +565,22 @@ class ProgressDashboard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withAlpha(51),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 10),
               Text(
                 title,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: color,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
@@ -423,9 +593,29 @@ class ProgressDashboard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withAlpha(30)),
+                border: Border.all(color: color.withAlpha(51)),
               ),
-              child: Text(t, style: TextStyle(color: Colors.grey.shade800)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 16,
+                    color: color,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      t,
+                      style: TextStyle(
+                        color: Colors.grey.shade800,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
         ],
       ),

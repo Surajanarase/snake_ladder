@@ -69,11 +69,11 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
     }
 
     return Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Players info
+          // Players info - Uniform layout for 2 or 3 players
           if (game.numberOfPlayers == 2)
             Row(
               children: [
@@ -99,38 +99,37 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
               ],
             )
           else
-            Column(
+            // Three players - all uniform size
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _playerCard(
-                        game.playerNames['player1']!,
-                        game.playerPositions['player1']!,
-                        game.playerScores['player1']!,
-                        game.playerColors['player1']!,
-                        isActive: game.currentPlayer == 'player1',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _playerCard(
-                        game.playerNames['player2']!,
-                        game.playerPositions['player2']!,
-                        game.playerScores['player2']!,
-                        game.playerColors['player2']!,
-                        isActive: game.currentPlayer == 'player2',
-                      ),
-                    ),
-                  ],
+                Expanded(
+                  child: _playerCard(
+                    game.playerNames['player1']!,
+                    game.playerPositions['player1']!,
+                    game.playerScores['player1']!,
+                    game.playerColors['player1']!,
+                    isActive: game.currentPlayer == 'player1',
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _playerCard(
-                  game.playerNames['player3']!,
-                  game.playerPositions['player3']!,
-                  game.playerScores['player3']!,
-                  game.playerColors['player3']!,
-                  isActive: game.currentPlayer == 'player3',
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _playerCard(
+                    game.playerNames['player2']!,
+                    game.playerPositions['player2']!,
+                    game.playerScores['player2']!,
+                    game.playerColors['player2']!,
+                    isActive: game.currentPlayer == 'player2',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _playerCard(
+                    game.playerNames['player3']!,
+                    game.playerPositions['player3']!,
+                    game.playerScores['player3']!,
+                    game.playerColors['player3']!,
+                    isActive: game.currentPlayer == 'player3',
+                  ),
                 ),
               ],
             ),
@@ -161,28 +160,35 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
                       width: diceSize,
                       height: diceSize,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white,
+                            Colors.grey.shade50,
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: game.isCurrentPlayerBot() 
                               ? Colors.grey.shade400
                               : game.playerColors[game.currentPlayer]!,
-                          width: 3,
+                          width: 3.5,
                         ),
                         boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(51),
-                            blurRadius: 12,
+                          const BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 15,
                             spreadRadius: 0,
-                            offset: const Offset(0, 4),
+                            offset: Offset(0, 5),
                           ),
                           BoxShadow(
                             color: (game.isCurrentPlayerBot() 
                                 ? Colors.grey.shade400
                                 : game.playerColors[game.currentPlayer]!).withAlpha(76),
-                            blurRadius: 20,
-                            spreadRadius: -2,
-                            offset: const Offset(0, 8),
+                            blurRadius: 25,
+                            spreadRadius: -3,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
@@ -219,7 +225,7 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
                                     color: game.isCurrentPlayerBot()
                                         ? Colors.grey.shade600
                                         : game.playerColors[game.currentPlayer]!,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -249,9 +255,19 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
   Widget _playerCard(String title, int position, int score, Color color, {required bool isActive}) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: isActive ? color.withAlpha(38) : const Color(0xFFF8F9FA),
+        gradient: isActive 
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withAlpha(38),
+                  color.withAlpha(13),
+                ],
+              )
+            : null,
+        color: isActive ? null : const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isActive ? color : Colors.grey.shade300,
@@ -268,6 +284,7 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
             : null,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             title,
@@ -276,22 +293,25 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
               fontWeight: FontWeight.bold,
               color: isActive ? color : Colors.black87,
             ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           Text(
-            'Position: ${position == 0 ? 'Start' : position}',
+            'Pos: ${position == 0 ? 'Start' : position}',
             style: TextStyle(
               fontSize: 11, 
               color: Colors.grey.shade700,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('❤️', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 4),
+              const Text('❤️', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 3),
               Text(
                 '$score',
                 style: const TextStyle(
@@ -324,7 +344,20 @@ class _StandardDicePainter extends CustomPainter {
     final margin = size.width * 0.22;
 
     void drawDot(double x, double y) {
+      // Shadow for 3D effect
+      canvas.drawCircle(
+        Offset(x + 1, y + 1), 
+        dotRadius, 
+        Paint()..color = const Color(0x26000000)
+      );
+      // Main dot
       canvas.drawCircle(Offset(x, y), dotRadius, paint);
+      // Highlight
+      canvas.drawCircle(
+        Offset(x - dotRadius * 0.3, y - dotRadius * 0.3), 
+        dotRadius * 0.3, 
+        Paint()..color = const Color(0x66FFFFFF)
+      );
     }
 
     final centerX = size.width / 2;
