@@ -5,7 +5,7 @@ import 'dart:math';
 class GameService extends ChangeNotifier {
   // Game state
   String currentPlayer = 'player1';
-  int numberOfPlayers = 2; // Can be 2, 3, or include bot
+  int numberOfPlayers = 2;
   bool hasBot = false;
   Map<String, int> playerPositions = {
     'player1': 0,
@@ -32,7 +32,11 @@ class GameService extends ChangeNotifier {
   bool gameActive = false;
   int lastRoll = 0;
 
-  // --- Reward system (refactored to be per-player) ---
+  // Animation states
+  int? animatingSnake;
+  int? animatingLadder;
+  DateTime? lastAnimationTime;
+
   Map<String, List<String>> rewards = {
     'nutrition': [],
     'exercise': [],
@@ -68,14 +72,13 @@ class GameService extends ChangeNotifier {
     'mental': 0,
   };
 
-  // Health tips for each category
   final Map<String, List<String>> healthTips = {
     'nutrition': [
       '🥗 Eat 5 servings of fruits and vegetables daily',
       '💧 Drink 8 glasses of water throughout the day',
       '🥜 Include nuts and seeds for healthy fats',
       '🐟 Eat fish twice a week for omega-3',
-      '🍎 Choose whole fruits over fruit juices',
+      '🎁 Choose whole fruits over fruit juices',
     ],
     'exercise': [
       '🏃 Get 30 minutes of exercise daily',
@@ -94,17 +97,15 @@ class GameService extends ChangeNotifier {
     'mental': [
       '🧘 Practice meditation for 10 minutes daily',
       '📝 Journal your thoughts and feelings',
-      '🤝 Connect with friends and family',
+      '🤗 Connect with friends and family',
       '🎨 Engage in creative hobbies',
       '🌳 Spend time in nature regularly',
     ],
   };
 
-  // Dynamic snakes and ladders - will be regenerated each game
   Map<int, Map<String, dynamic>> snakes = {};
   Map<int, Map<String, dynamic>> ladders = {};
 
-  // Template data for generating dynamic snakes
   final List<Map<String, dynamic>> snakeTemplates = [
     {'message': "Skipped breakfast! Energy levels drop.", 'icon': '🍳', 'category': 'nutrition'},
     {'message': "Forgot to wash hands! Germs spread.", 'icon': '🦠', 'category': 'hygiene'},
@@ -118,9 +119,8 @@ class GameService extends ChangeNotifier {
     {'message': "Ate too much sugar! Energy crash.", 'icon': '🍬', 'category': 'nutrition'},
   ];
 
-  // Template data for generating dynamic ladders
   final List<Map<String, dynamic>> ladderTemplates = [
-    {'message': "Ate fruits! Immunity boost!", 'icon': '🍎', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
+    {'message': "Ate fruits! Immunity boost!", 'icon': '🎁', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
     {'message': "Morning exercise! Energy increased!", 'icon': '💪', 'category': 'exercise', 'tip': "30 minutes of daily exercise improves mood and energy levels."},
     {'message': "Drank 8 glasses of water! Well hydrated!", 'icon': '💧', 'category': 'nutrition', 'tip': "Proper hydration helps your body function optimally."},
     {'message': "Regular checkup! Early detection saves!", 'icon': '👨‍⚕️', 'category': 'health', 'tip': "Annual health checkups can catch problems early."},
@@ -131,44 +131,58 @@ class GameService extends ChangeNotifier {
     {'message': "Perfect health habits! You're a health champion!", 'icon': '🏆', 'category': 'health', 'tip': "Consistency in healthy habits leads to a better life!"},
   ];
 
-  // Generate random board layout
+  // Snake color palette (vibrant and varied)
+  final List<List<Color>> snakeColorPalettes = [
+    [const Color(0xFF2E7D32), const Color(0xFF66BB6A)], // Green
+    [const Color(0xFFD32F2F), const Color(0xFFEF5350)], // Red
+    [const Color(0xFF7B1FA2), const Color(0xFFBA68C8)], // Purple
+    [const Color(0xFFE65100), const Color(0xFFFF9800)], // Orange
+    [const Color(0xFF1565C0), const Color(0xFF42A5F5)], // Blue
+    [const Color(0xFF6A1B9A), const Color(0xFFAB47BC)], // Deep Purple
+    [const Color(0xFFC62828), const Color(0xFFE57373)], // Deep Red
+    [const Color(0xFF00695C), const Color(0xFF4DB6AC)], // Teal
+  ];
+
   void generateRandomBoard() {
     snakes = {};
     ladders = {};
     final random = Random();
     final usedPositions = <int>{};
 
-    // Generate 8-10 snakes
     final numSnakes = 8 + random.nextInt(3);
     for (int i = 0; i < numSnakes && i < snakeTemplates.length; i++) {
       int start, end;
       int attempts = 0;
       do {
-        start = 20 + random.nextInt(75); // Start between 20-94
-        end = 5 + random.nextInt(start - 5); // End must be less than start
+        start = 20 + random.nextInt(75);
+        end = 5 + random.nextInt(start - 5);
         attempts++;
       } while ((usedPositions.contains(start) || usedPositions.contains(end) || start - end < 5) && attempts < 50);
 
       if (attempts < 50) {
         usedPositions.add(start);
         usedPositions.add(end);
+        
+        // Assign random color palette to each snake
+        final colorIndex = random.nextInt(snakeColorPalettes.length);
+        
         snakes[start] = {
           'end': end,
           'message': snakeTemplates[i]['message'],
           'icon': snakeTemplates[i]['icon'],
           'category': snakeTemplates[i]['category'],
+          'colorIndex': colorIndex,
         };
       }
     }
 
-    // Generate 8-10 ladders
     final numLadders = 8 + random.nextInt(3);
     for (int i = 0; i < numLadders && i < ladderTemplates.length; i++) {
       int start, end;
       int attempts = 0;
       do {
-        start = 4 + random.nextInt(85); // Start between 4-88
-        end = start + 5 + random.nextInt(20); // End is 5-24 squares higher
+        start = 4 + random.nextInt(85);
+        end = start + 5 + random.nextInt(20);
         if (end > 99) end = 99;
         attempts++;
       } while ((usedPositions.contains(start) || usedPositions.contains(end) || end - start < 5) && attempts < 50);
@@ -186,9 +200,8 @@ class GameService extends ChangeNotifier {
       }
     }
 
-    // Ensure there's always a winning ladder near the end
     if (!ladders.values.any((l) => l['end'] == 100)) {
-      int winStart = 75 + random.nextInt(15); // Between 75-89
+      int winStart = 75 + random.nextInt(15);
       while (usedPositions.contains(winStart)) {
         winStart = 75 + random.nextInt(15);
       }
@@ -202,14 +215,11 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  // Start game with new random board
   void startGame(int numPlayers, bool withBot) {
     numberOfPlayers = numPlayers;
     hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
-
-    // Generate new random board layout
     generateRandomBoard();
 
     if (withBot) {
@@ -228,6 +238,8 @@ class GameService extends ChangeNotifier {
     };
     moveCount = 0;
     lastRoll = 0;
+    animatingSnake = null;
+    animatingLadder = null;
     healthProgress = {
       'nutrition': 0,
       'exercise': 0,
@@ -264,9 +276,7 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Reset game with new random board
   void resetGame() {
-    // Generate new random board for the reset
     generateRandomBoard();
     
     playerPositions = {
@@ -284,6 +294,8 @@ class GameService extends ChangeNotifier {
     gameActive = false;
     lastRoll = 0;
     hasBot = false;
+    animatingSnake = null;
+    animatingLadder = null;
     healthProgress = {
       'nutrition': 0,
       'exercise': 0,
@@ -319,12 +331,10 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Check if current player is bot
   bool isCurrentPlayerBot() {
     return hasBot && currentPlayer == 'player$numberOfPlayers';
   }
 
-  // Roll dice
   Future<int> rollDice() async {
     if (isRolling || !gameActive) return 0;
 
@@ -341,58 +351,69 @@ class GameService extends ChangeNotifier {
     return roll;
   }
 
-  // Move player
   Future<void> movePlayer(String player, int steps, {required Function(String, String) onNotify}) async {
     moveCount++;
     int oldPosition = playerPositions[player]!;
     int newPosition = oldPosition + steps;
 
-    // Check if exact landing on 100
     if (newPosition > 100) {
       onNotify('Need exact roll to win!', '🎯');
       switchTurn(onNotify);
       return;
     }
 
-    // Update position
     playerPositions[player] = newPosition;
     notifyListeners();
 
-    // Check for snakes or ladders
     await Future.delayed(const Duration(milliseconds: 300));
     await checkSpecialCell(newPosition, player, onNotify);
   }
 
-  // Check special cells
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
     if (snakes.containsKey(position)) {
       final snake = snakes[position]!;
+      
+      // Trigger snake animation
+      animatingSnake = position;
+      lastAnimationTime = DateTime.now();
+      notifyListeners();
+      
       onNotify(snake['message'], snake['icon']);
 
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1500));
+      
       playerPositions[player] = snake['end'];
+      animatingSnake = null;
       notifyListeners();
+      
       checkWinCondition(onNotify);
 
     } else if (ladders.containsKey(position)) {
       final ladder = ladders[position]!;
+      
+      // Trigger ladder animation
+      animatingLadder = position;
+      lastAnimationTime = DateTime.now();
+      notifyListeners();
+      
       onNotify(ladder['message'], ladder['icon']);
 
-      // Update score and progress
       playerScores[player] = playerScores[player]! + 10;
       updateHealthProgress(ladder['category']);
       notifyListeners();
 
-      // Signal UI with player-aware reward message
       final category = ladder['category']?.toString() ?? '';
       String rewardText = ladder['message'] ?? 'You got a reward!';
       if (['nutrition', 'exercise', 'sleep', 'mental'].contains(category)) {
         onNotify('REWARD::$player::$category::$rewardText', ladder['icon']);
       }
 
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1500));
+      
       playerPositions[player] = ladder['end'];
+      animatingLadder = null;
       notifyListeners();
+      
       checkWinCondition(onNotify);
 
     } else {
@@ -400,7 +421,6 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  // Update health progress
   void updateHealthProgress(String category) {
     if (category == 'nutrition') {
       healthProgress['nutrition'] = (healthProgress['nutrition']! + 25).clamp(0, 100);
@@ -414,14 +434,12 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Add a reward into the stored compartment (global)
   void addReward(String category, String rewardText) {
     if (!rewards.containsKey(category)) return;
     rewards[category]!.insert(0, rewardText);
     notifyListeners();
   }
 
-  // Add reward for a specific player
   void addRewardForPlayer(String player, String category, String rewardText) {
     if (!playerRewards.containsKey(player)) return;
     if (!playerRewards[player]!.containsKey(category)) return;
@@ -431,17 +449,14 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get rewards for a category (global)
   List<String> getRewards(String category) {
     return rewards[category] ?? [];
   }
 
-  // Get rewards for specific player/category
   List<String> getPlayerRewards(String player, String category) {
     return playerRewards[player]?[category] ?? [];
   }
 
-  // Check win condition
   void checkWinCondition(Function(String, String) onNotify) {
     for (var entry in playerPositions.entries) {
       if (entry.value == 100) {
@@ -453,7 +468,6 @@ class GameService extends ChangeNotifier {
     switchTurn(onNotify);
   }
 
-  // Switch turn
   void switchTurn(Function(String, String) onNotify) {
     if (numberOfPlayers == 2) {
       currentPlayer = currentPlayer == 'player1' ? 'player2' : 'player1';
@@ -469,7 +483,6 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get winner
   String? getWinner() {
     for (var entry in playerPositions.entries) {
       if (entry.value == 100) {
@@ -479,7 +492,6 @@ class GameService extends ChangeNotifier {
     return null;
   }
 
-  // Get total knowledge progress
   int getTotalKnowledgeProgress() {
     return ((healthProgress['nutrition']! +
              healthProgress['exercise']! +
@@ -487,13 +499,11 @@ class GameService extends ChangeNotifier {
              healthProgress['mental']!) / 4).round();
   }
 
-  // Get dice emoji
   String getDiceEmoji(int number) {
     const diceEmojis = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
     return diceEmojis[number];
   }
 
-  // Get random health tip
   String getRandomTip(String category) {
     if (healthTips.containsKey(category)) {
       final tips = healthTips[category]!;

@@ -11,7 +11,24 @@ class BoardWidget extends StatefulWidget {
   State<BoardWidget> createState() => _BoardWidgetState();
 }
 
-class _BoardWidgetState extends State<BoardWidget> {
+class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin {
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
@@ -73,7 +90,6 @@ class _BoardWidgetState extends State<BoardWidget> {
   Widget _buildBoardContents(double boardSize, GameService game) {
     return Stack(
       children: [
-        // Grid of cells
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -90,7 +106,6 @@ class _BoardWidgetState extends State<BoardWidget> {
             final actualCol = isRowReversed ? 9 - col : col;
             final cellNumber = rowFromBottom * 10 + actualCol + 1;
 
-            // Check if any player is on this cell
             bool hasPlayer = false;
             Color? occupyingColor;
             for (var entry in game.playerPositions.entries) {
@@ -103,7 +118,6 @@ class _BoardWidgetState extends State<BoardWidget> {
               }
             }
 
-            // Alternating pastel colors for a more playful look
             final bool isLightRow = rowFromBottom % 2 == 0;
             final bool isLightCol = actualCol % 2 == 0;
             Color cellColor;
@@ -121,22 +135,19 @@ class _BoardWidgetState extends State<BoardWidget> {
               }
             }
 
-            // Special cells
             final bool isSnake = game.snakes.containsKey(cellNumber);
             final bool isLadder = game.ladders.containsKey(cellNumber);
 
-            // Special cell highlights
             if (isSnake && !hasPlayer) {
-              cellColor = const Color(0xFFFFEBEE); // Light red tint
+              cellColor = const Color(0xFFFFEBEE);
             } else if (isLadder && !hasPlayer) {
-              cellColor = const Color(0xFFE8F5E9); // Light green tint
+              cellColor = const Color(0xFFE8F5E9);
             }
 
-            // Start and end cell special styling
             if (cellNumber == 1) {
-              cellColor = const Color(0xFFE3F2FD); // Light blue for start
+              cellColor = const Color(0xFFE3F2FD);
             } else if (cellNumber == 100) {
-              cellColor = const Color(0xFFFFF9C4); // Light yellow for finish
+              cellColor = const Color(0xFFFFF9C4);
             }
 
             Color numberColor = const Color(0xFF424242);
@@ -168,7 +179,6 @@ class _BoardWidgetState extends State<BoardWidget> {
               ),
               child: Stack(
                 children: [
-                  // Cell number
                   Center(
                     child: Text(
                       '$cellNumber',
@@ -185,7 +195,6 @@ class _BoardWidgetState extends State<BoardWidget> {
                       ),
                     ),
                   ),
-                  // Special cell indicator (larger and more visible)
                   if (isSnake || isLadder)
                     Positioned(
                       top: 1,
@@ -208,7 +217,6 @@ class _BoardWidgetState extends State<BoardWidget> {
                         ),
                       ),
                     ),
-                  // Start/End markers
                   if (cellNumber == 1)
                     const Positioned(
                       bottom: 2,
@@ -227,14 +235,21 @@ class _BoardWidgetState extends State<BoardWidget> {
           },
         ),
 
-        // CustomPaint for snakes and ladders
         Positioned.fill(
-          child: CustomPaint(
-            painter: _BoardConnectionsPainter(game, boardSize),
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _BoardConnectionsPainter(
+                  game, 
+                  boardSize, 
+                  _animationController.value,
+                ),
+              );
+            },
           ),
         ),
 
-        // Player tokens
         Positioned.fill(
           child: LayoutBuilder(builder: (context, box) {
             final cellSize = box.maxWidth / 10;
@@ -268,7 +283,6 @@ class _BoardWidgetState extends State<BoardWidget> {
 
     final rc = _cellToRowCol(pos);
 
-    // Smart positioning for multiple players
     double offsetX = cellSize * 0.5 - tokenSize * 0.5;
     double offsetY = cellSize * 0.5 - tokenSize * 0.5;
 
@@ -362,8 +376,9 @@ class _BoardWidgetState extends State<BoardWidget> {
 class _BoardConnectionsPainter extends CustomPainter {
   final GameService game;
   final double boardSize;
+  final double animationValue;
 
-  _BoardConnectionsPainter(this.game, this.boardSize);
+  _BoardConnectionsPainter(this.game, this.boardSize, this.animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -379,23 +394,25 @@ class _BoardConnectionsPainter extends CustomPainter {
       return Offset(col * cellSize + cellSize / 2, row * cellSize + cellSize / 2);
     }
 
-    // Draw ladders
+    // Draw ladders with glow animation
     for (var e in game.ladders.entries) {
       final start = centerOf(e.key);
       final end = centerOf((e.value['end'] ?? e.value) as int);
-      _drawStylishLadder(canvas, start, end, cellSize);
+      final isAnimating = game.animatingLadder == e.key;
+      _drawStylishLadder(canvas, start, end, cellSize, isAnimating);
     }
 
-    // Draw snakes
+    // Draw snakes with wiggle animation
     for (var e in game.snakes.entries) {
       final head = centerOf(e.key);
       final tail = centerOf((e.value['end'] ?? e.value) as int);
-      _drawStylishSnake(canvas, head, tail, cellSize);
+      final isAnimating = game.animatingSnake == e.key;
+      final colorIndex = e.value['colorIndex'] ?? 0;
+      _drawStylishSnake(canvas, head, tail, cellSize, isAnimating, colorIndex);
     }
   }
 
-  void _drawStylishLadder(Canvas canvas, Offset start, Offset end, double cellSize) {
-    // Beautiful gradient ladder with 3D effect
+  void _drawStylishLadder(Canvas canvas, Offset start, Offset end, double cellSize, bool isAnimating) {
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final len = math.sqrt(dx * dx + dy * dy);
@@ -407,7 +424,25 @@ class _BoardConnectionsPainter extends CustomPainter {
     final railWidth = cellSize * 0.14;
     final perp = Offset(-uy, ux) * railWidth;
 
-    // Shadow for 3D effect
+    // Glow effect when animating
+    if (isAnimating) {
+      final glowIntensity = (math.sin(animationValue * math.pi * 4) + 1) / 2;
+      final glowPaint = Paint()
+        ..color = Color.lerp(
+          const Color(0x40FFD700),
+          const Color(0xAAFFD700),
+          glowIntensity,
+        )!
+        ..strokeWidth = cellSize * 0.25
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8)
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawLine(start + perp, end + perp, glowPaint);
+      canvas.drawLine(start - perp, end - perp, glowPaint);
+    }
+
+    // Shadow
     final shadowPaint = Paint()
       ..color = const Color(0x26000000)
       ..strokeWidth = cellSize * 0.11
@@ -417,7 +452,7 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawLine(start + perp + const Offset(2, 2), end + perp + const Offset(2, 2), shadowPaint);
     canvas.drawLine(start - perp + const Offset(2, 2), end - perp + const Offset(2, 2), shadowPaint);
 
-    // Main rails with gradient effect
+    // Rails
     final railPaint = Paint()
       ..shader = const LinearGradient(
         colors: [
@@ -432,7 +467,7 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawLine(start + perp, end + perp, railPaint);
     canvas.drawLine(start - perp, end - perp, railPaint);
 
-    // Highlight on rails
+    // Highlight
     final highlightPaint = Paint()
       ..color = const Color(0x99DEB887)
       ..strokeWidth = cellSize * 0.04
@@ -441,21 +476,19 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawLine(start + perp * 0.7, end + perp * 0.7, highlightPaint);
     canvas.drawLine(start - perp * 0.7, end - perp * 0.7, highlightPaint);
 
-    // Rungs with shadow
+    // Rungs
     final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
     
     for (int i = 0; i <= rungCount; i++) {
       final t = i / rungCount;
       final center = Offset(start.dx + dx * t, start.dy + dy * t);
       
-      // Rung shadow
       final rungShadowPaint = Paint()
         ..color = const Color(0x26000000)
         ..strokeWidth = cellSize * 0.08
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(center - perp * 0.95 + const Offset(1, 1), center + perp * 0.95 + const Offset(1, 1), rungShadowPaint);
       
-      // Main rung
       final rungPaint = Paint()
         ..shader = const LinearGradient(
           colors: [
@@ -469,14 +502,19 @@ class _BoardConnectionsPainter extends CustomPainter {
     }
   }
 
-  void _drawStylishSnake(Canvas canvas, Offset head, Offset tail, double cellSize) {
+  void _drawStylishSnake(Canvas canvas, Offset head, Offset tail, double cellSize, bool isAnimating, int colorIndex) {
     final distance = (head - tail).distance;
     if (distance == 0) return;
+
+    // Get color palette for this snake
+    final colorPalette = game.snakeColorPalettes[colorIndex % game.snakeColorPalettes.length];
 
     final segments = math.max(25, (distance / (cellSize * 0.25)).round());
     final List<Offset> points = [];
 
-    // Create wavy snake body
+    // Wiggle animation when hit
+    final wiggleOffset = isAnimating ? math.sin(animationValue * math.pi * 6) * cellSize * 0.15 : 0.0;
+
     for (int i = 0; i <= segments; i++) {
       final t = i / segments;
       final x = head.dx + (tail.dx - head.dx) * t;
@@ -486,13 +524,29 @@ class _BoardConnectionsPainter extends CustomPainter {
       final perpX = -(tail.dy - head.dy) / distance;
       final perpY = (tail.dx - head.dx) / distance;
 
-      points.add(Offset(x + perpX * wave, y + perpY * wave));
+      points.add(Offset(
+        x + perpX * (wave + wiggleOffset), 
+        y + perpY * (wave + wiggleOffset),
+      ));
     }
 
     final path = Path();
     path.moveTo(points[0].dx, points[0].dy);
     for (int i = 1; i < points.length; i++) {
       path.lineTo(points[i].dx, points[i].dy);
+    }
+
+    // Pulsing glow when animating
+    if (isAnimating) {
+      final pulseIntensity = (math.sin(animationValue * math.pi * 4) + 1) / 2;
+      final glowPaint = Paint()
+        ..color = colorPalette[1].withAlpha((76 + pulseIntensity * 102).round())
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = cellSize * 0.28
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+      
+      canvas.drawPath(path, glowPaint);
     }
 
     // Shadow
@@ -507,12 +561,12 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawPath(path, shadowPaint);
     canvas.restore();
 
-    // Outer body (darker)
+    // Outer body
     final outerPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         colors: [
-          Color(0xFF2E7D32),
-          Color(0xFF66BB6A),
+          colorPalette[0],
+          colorPalette[1],
         ],
       ).createShader(Rect.fromPoints(head, tail))
       ..style = PaintingStyle.stroke
@@ -520,12 +574,13 @@ class _BoardConnectionsPainter extends CustomPainter {
       ..strokeWidth = cellSize * 0.18;
     canvas.drawPath(path, outerPaint);
 
-    // Inner body (lighter)
+    // Inner body
+    final innerColor = Color.lerp(colorPalette[0], colorPalette[1], 0.5)!;
     final innerPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         colors: [
-          Color(0xFF4CAF50),
-          Color(0xFF81C784),
+          innerColor.withAlpha(229),
+          colorPalette[1].withAlpha(229),
         ],
       ).createShader(Rect.fromPoints(head, tail))
       ..style = PaintingStyle.stroke
@@ -533,46 +588,42 @@ class _BoardConnectionsPainter extends CustomPainter {
       ..strokeWidth = cellSize * 0.13;
     canvas.drawPath(path, innerPaint);
 
-    // Pattern on snake body
+    // Pattern
     for (int i = 0; i < points.length; i += 3) {
       final patternPaint = Paint()
-        ..color = const Color(0x4D1B5E20)
+        ..color = colorPalette[0].withAlpha(76)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(points[i], cellSize * 0.03, patternPaint);
     }
 
-    // Snake head with shadow
+    // Head
     final headSize = cellSize * 0.18;
     
-    // Head shadow
     canvas.drawCircle(head + const Offset(2, 2), headSize, Paint()
       ..color = const Color(0x33000000));
     
-    // Head gradient
     final headPaint = Paint()
-      ..shader = const RadialGradient(
+      ..shader = RadialGradient(
         colors: [
-          Color(0xFF66BB6A),
-          Color(0xFF2E7D32),
+          colorPalette[1],
+          colorPalette[0],
         ],
       ).createShader(Rect.fromCircle(center: head, radius: headSize));
     canvas.drawCircle(head, headSize, headPaint);
 
-    // Head outline
     canvas.drawCircle(head, headSize, Paint()
-      ..color = const Color(0xFF1B5E20)
+      ..color = colorPalette[0].withAlpha(204)
       ..style = PaintingStyle.stroke
       ..strokeWidth = cellSize * 0.03);
 
-    // Eyes with white background
+    // Eyes
     final eyeSize = cellSize * 0.045;
     final eyeWhite = Paint()..color = Colors.white;
     canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.4), eyeSize, eyeWhite);
     canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.4), eyeSize, eyeWhite);
 
-    // Pupils
     final pupilSize = eyeSize * 0.65;
-    final pupilPaint = Paint()..color = const Color(0xFF1B5E20);
+    final pupilPaint = Paint()..color = colorPalette[0].withAlpha(229);
     canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.4), pupilSize, pupilPaint);
     canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.4), pupilSize, pupilPaint);
 
