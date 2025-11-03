@@ -1,4 +1,8 @@
+// =============================================================================
 // lib/widgets/progress_dashboard.dart
+// Change: "Mental" label changed to "Mindfulness"
+// =============================================================================
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -117,7 +121,7 @@ class ProgressDashboard extends StatelessWidget {
                 child: _buildRewardTile(
                   context,
                   '🧘',
-                  'Mental',
+                  'Mindfulness', // ✓ Changed from 'Mental'
                   game,
                   'mental',
                   const Color(0xFFFF9800),
@@ -507,7 +511,7 @@ class ProgressDashboard extends StatelessWidget {
                         _buildTipSection('🎯', 'Nutrition', game.healthTips['nutrition']!, const Color(0xFF4CAF50)),
                         _buildTipSection('💪', 'Exercise', game.healthTips['exercise']!, const Color(0xFF2196F3)),
                         _buildTipSection('😴', 'Sleep', game.healthTips['sleep']!, const Color(0xFF9C27B0)),
-                        _buildTipSection('🧘', 'Mental Health', game.healthTips['mental']!, const Color(0xFFFF9800)),
+                        _buildTipSection('🧘', 'Mindfulness', game.healthTips['mental']!, const Color(0xFFFF9800)), // ✓ Changed label
                       ],
                     ),
                   ),
@@ -621,4 +625,4 @@ class ProgressDashboard extends StatelessWidget {
       ),
     );
   }
-}
+}              

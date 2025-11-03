@@ -1,4 +1,11 @@
+// =============================================================================
 // lib/widgets/control_panel.dart
+// Changes: 
+// 1. Dice shows clean face without text during roll
+// 2. Final result displayed separately on right side
+// 3. Player cards redesigned without heart emoji
+// =============================================================================
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -73,7 +80,7 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Players info - Uniform layout for 2 or 3 players
+          // ✓ NEW: Improved player cards without heart emoji
           if (game.numberOfPlayers == 2)
             Row(
               children: [
@@ -99,7 +106,6 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
               ],
             )
           else
-            // Three players - all uniform size
             Row(
               children: [
                 Expanded(
@@ -136,105 +142,150 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
 
           const SizedBox(height: 16),
 
-          // Enhanced Professional Dice
+          // ✓ UPDATED: Compact dice with elegant result display
           Center(
-            child: GestureDetector(
-              onTap: () async {
-                if (!game.gameActive) {
-                  widget.onNotify('Start a game first', '⚠️');
-                  return;
-                }
-                if (game.isRolling || game.isCurrentPlayerBot()) return;
-                
-                _diceController.forward(from: 0);
-                final roll = await game.rollDice();
-                if (roll == 0) return;
-                await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
-              },
-              child: AnimatedBuilder(
-                animation: _diceRotation,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    angle: game.isRolling ? _diceRotation.value : 0,
-                    child: Container(
-                      width: diceSize,
-                      height: diceSize,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white,
-                            Colors.grey.shade50,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: game.isCurrentPlayerBot() 
-                              ? Colors.grey.shade400
-                              : game.playerColors[game.currentPlayer]!,
-                          width: 3.5,
-                        ),
-                        boxShadow: [
-                          const BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 15,
-                            spreadRadius: 0,
-                            offset: Offset(0, 5),
-                          ),
-                          BoxShadow(
-                            color: (game.isCurrentPlayerBot() 
-                                ? Colors.grey.shade400
-                                : game.playerColors[game.currentPlayer]!).withAlpha(76),
-                            blurRadius: 25,
-                            spreadRadius: -3,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: game.isRolling
-                          ? Center(
-                              child: Icon(
-                                Icons.casino_outlined,
-                                color: game.playerColors[game.currentPlayer]!,
-                                size: diceSize * 0.5,
-                              ),
-                            )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (game.lastRoll > 0)
-                                  _buildStandardDiceFace(
-                                    game.lastRoll, 
-                                    diceSize * 0.65,
-                                    game.isCurrentPlayerBot() 
-                                        ? Colors.grey.shade400
-                                        : game.playerColors[game.currentPlayer]!,
-                                  )
-                                else
-                                  Icon(
-                                    Icons.casino_outlined,
-                                    size: diceSize * 0.45,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                SizedBox(height: diceSize * 0.08),
-                                Text(
-                                  game.lastRoll > 0 ? '${game.lastRoll}' : 'Roll',
-                                  style: TextStyle(
-                                    fontSize: diceSize * 0.16,
-                                    color: game.isCurrentPlayerBot()
-                                        ? Colors.grey.shade600
-                                        : game.playerColors[game.currentPlayer]!,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Main Dice
+                GestureDetector(
+                  onTap: () async {
+                    if (!game.gameActive) {
+                      widget.onNotify('Start a game first', '⚠️');
+                      return;
+                    }
+                    if (game.isRolling || game.isCurrentPlayerBot()) return;
+                    
+                    _diceController.forward(from: 0);
+                    final roll = await game.rollDice();
+                    if (roll == 0) return;
+                    await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
+                  },
+                  child: AnimatedBuilder(
+                    animation: _diceRotation,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: game.isRolling ? _diceRotation.value : 0,
+                        child: Container(
+                          width: diceSize,
+                          height: diceSize,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                Colors.grey.shade50,
                               ],
                             ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: game.isCurrentPlayerBot() 
+                                  ? Colors.grey.shade400
+                                  : game.playerColors[game.currentPlayer]!,
+                              width: 3.5,
+                            ),
+                            boxShadow: [
+                              const BoxShadow(
+                                color: Color(0x1A000000),
+                                blurRadius: 15,
+                                spreadRadius: 0,
+                                offset: Offset(0, 5),
+                              ),
+                              BoxShadow(
+                                color: (game.isCurrentPlayerBot() 
+                                    ? Colors.grey.shade400
+                                    : game.playerColors[game.currentPlayer]!).withAlpha(76),
+                                blurRadius: 25,
+                                spreadRadius: -3,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: game.isRolling
+                                ? Icon(
+                                    Icons.casino_outlined,
+                                    color: game.playerColors[game.currentPlayer]!,
+                                    size: diceSize * 0.5,
+                                  )
+                                : game.lastRoll > 0
+                                    ? _buildStandardDiceFace(
+                                        game.lastRoll, 
+                                        diceSize * 0.7,
+                                        game.isCurrentPlayerBot() 
+                                            ? Colors.grey.shade400
+                                            : game.playerColors[game.currentPlayer]!,
+                                      )
+                                    : Icon(
+                                        Icons.casino_outlined,
+                                        size: diceSize * 0.5,
+                                        color: Colors.grey.shade400,
+                                      ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                
+                // ✓ UPDATED: Compact elegant result badge
+                if (game.lastRoll > 0 && !game.isRolling) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          (game.isCurrentPlayerBot() 
+                              ? Colors.grey.shade300
+                              : game.playerColors[game.currentPlayer]!).withAlpha(230),
+                          (game.isCurrentPlayerBot() 
+                              ? Colors.grey.shade400
+                              : game.playerColors[game.currentPlayer]!),
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (game.isCurrentPlayerBot() 
+                              ? Colors.grey.shade400
+                              : game.playerColors[game.currentPlayer]!).withAlpha(127),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                    child: Center(
+                      child: Text(
+                        '${game.lastRoll}',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          height: 1.0,
+                          shadows: [
+                            Shadow(
+                              color: Color(0x40000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -252,6 +303,7 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
     );
   }
 
+  // ✓ NEW: Redesigned player card without heart emoji
   Widget _playerCard(String title, int position, int score, Color color, {required bool isActive}) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -262,12 +314,18 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  color.withAlpha(38),
-                  color.withAlpha(13),
+                  color.withAlpha(51),
+                  color.withAlpha(25),
                 ],
               )
-            : null,
-        color: isActive ? null : const Color(0xFFF8F9FA),
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFFFAFAFA),
+                  Colors.grey.shade50,
+                ],
+              ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isActive ? color : Colors.grey.shade300,
@@ -281,43 +339,133 @@ class _ControlPanelState extends State<ControlPanel> with SingleTickerProviderSt
                   offset: const Offset(0, 4),
                 )
               ]
-            : null,
+            : [
+                const BoxShadow(
+                  color: Color(0x0D000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                )
+              ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: isActive ? color : Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Pos: ${position == 0 ? 'Start' : position}',
-            style: TextStyle(
-              fontSize: 11, 
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
+          // Player name with color indicator
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('❤️', style: TextStyle(fontSize: 13)),
-              const SizedBox(width: 3),
-              Text(
-                '$score',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4CAF50),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withAlpha(127),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? color : Colors.black87,
+                    letterSpacing: 0.3,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Position and Score in a clean layout
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // Position
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isActive 
+                        ? Colors.white.withValues(alpha: 0.7)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Position',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        position == 0 ? 'Start' : '$position',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? color : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Awards (instead of Score)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isActive 
+                        ? Colors.white.withValues(alpha: 0.7)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Awards',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            '🏆',
+                            style: TextStyle(fontSize: 10),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$score',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFFFB300),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
