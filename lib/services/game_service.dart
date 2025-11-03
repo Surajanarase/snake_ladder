@@ -108,6 +108,25 @@ class GameService extends ChangeNotifier {
     ],
   };
 
+  // ========== NEW: Per-player unique tips & per-ladder per-player category ==========
+  // Track which tips each player has received for each category (no repeats per player)
+  Map<String, Map<String, Set<String>>> playerAssignedTips = {
+    'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+    'player2': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+    'player3': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+  };
+
+  // Overflow counters when a player's tips in a category are exhausted (keeps uniqueness via variants)
+  Map<String, Map<String, int>> playerTipOverflow = {
+    'player1': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+    'player2': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+    'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+  };
+
+  // For each ladder start cell, store which category was assigned for each player
+  // Example: ladderPlayerCategories[10]['player1'] = 'nutrition'
+  Map<int, Map<String, String>> ladderPlayerCategories = {};
+
   Map<int, Map<String, dynamic>> snakes = {};
   Map<int, Map<String, dynamic>> ladders = {};
 
@@ -217,46 +236,58 @@ class GameService extends ChangeNotifier {
     return _rowColOf(end)['row']! > _rowColOf(start)['row']!;
   }
 
-  // ========== Unique tips management ==========
-  Map<String, Set<String>> assignedTipsPerCategory = {
-    'nutrition': <String>{},
-    'exercise': <String>{},
-    'sleep': <String>{},
-    'mental': <String>{},
-  };
-  Map<String, int> _tipCursor = {
-    'nutrition': 0,
-    'exercise': 0,
-    'sleep': 0,
-    'mental': 0,
-  };
-  Map<String, int> _tipOverflowCounter = {
-    'nutrition': 0,
-    'exercise': 0,
-    'sleep': 0,
-    'mental': 0,
-  };
+  // ========== REMOVED OLD unique tips management (replaced by per-player system) ==========
+  // (assignedTipsPerCategory, _tipCursor, _tipOverflowCounter, _pickUniqueTipForCategory) — deleted
 
-  String _pickUniqueTipForCategory(String category) {
-    final tips = healthTips[category] ?? const <String>[];
+  // ========== NEW helpers: per-player unique tips & per-ladder per-player category ==========
+  String _pickUniqueTipForPlayer(String player, String baseCategory, int ladderPosition) {
+    // Ensure ladder map exists
+    ladderPlayerCategories.putIfAbsent(ladderPosition, () => {});
+
+    // Assign (or reuse) a category for this player on this ladder
+    String assignedCategory;
+    if (ladderPlayerCategories[ladderPosition]!.containsKey(player)) {
+      assignedCategory = ladderPlayerCategories[ladderPosition]![player]!;
+    } else {
+      final allCategories = ['nutrition', 'exercise', 'sleep', 'mental'];
+      final used = ladderPlayerCategories[ladderPosition]!.values.toSet();
+      final available = allCategories.where((c) => !used.contains(c)).toList();
+
+      if (available.isNotEmpty) {
+        assignedCategory = available[_random.nextInt(available.length)];
+      } else {
+        assignedCategory = allCategories[_random.nextInt(allCategories.length)];
+      }
+      ladderPlayerCategories[ladderPosition]![player] = assignedCategory;
+    }
+
+    // Now pick a unique tip for THIS player in assignedCategory
+    final tips = healthTips[assignedCategory] ?? const <String>[];
     if (tips.isEmpty) return 'Stay healthy!';
 
-    final used = assignedTipsPerCategory[category]!;
-    for (int i = 0; i < tips.length; i++) {
-      final idx = (_tipCursor[category]! + i) % tips.length;
-      final cand = tips[idx];
-      if (!used.contains(cand)) {
-        _tipCursor[category] = (idx + 1) % tips.length;
-        used.add(cand);
-        return cand;
+    final usedByPlayer = playerAssignedTips[player]?[assignedCategory] ?? <String>{};
+    final shuffled = List<String>.from(tips)..shuffle(_random);
+
+    for (final tip in shuffled) {
+      if (!usedByPlayer.contains(tip)) {
+        usedByPlayer.add(tip);
+        playerAssignedTips[player]![assignedCategory] = usedByPlayer;
+        return tip;
       }
     }
-    final idx = _tipCursor[category]! % tips.length;
-    _tipCursor[category] = (idx + 1) % tips.length;
-    _tipOverflowCounter[category] = (_tipOverflowCounter[category]! + 1);
-    final variant = '${tips[idx]} • Challenge ${_tipOverflowCounter[category]}';
-    used.add(variant);
+
+    // All tips exhausted for this player in this category — create a unique variant
+    final baseIdx = _random.nextInt(tips.length);
+    playerTipOverflow[player]![assignedCategory] =
+        (playerTipOverflow[player]![assignedCategory]! + 1);
+    final variant = '${tips[baseIdx]} • Level ${playerTipOverflow[player]![assignedCategory]}';
+    usedByPlayer.add(variant);
+    playerAssignedTips[player]![assignedCategory] = usedByPlayer;
     return variant;
+  }
+
+  String _getAssignedCategory(String player, int ladderPosition) {
+    return ladderPlayerCategories[ladderPosition]?[player] ?? 'health';
   }
 
   int _healthCategoryIndex = 0;
@@ -414,14 +445,18 @@ class GameService extends ChangeNotifier {
     gameActive = true;
     currentPlayer = 'player1';
 
-    assignedTipsPerCategory = {
-      'nutrition': <String>{},
-      'exercise': <String>{},
-      'sleep': <String>{},
-      'mental': <String>{},
+    // RESET new per-player/category trackers
+    ladderPlayerCategories = {};
+    playerAssignedTips = {
+      'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+      'player2': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+      'player3': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
     };
-    _tipCursor = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
-    _tipOverflowCounter = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
+    playerTipOverflow = {
+      'player1': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+      'player2': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+      'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+    };
 
     generateRandomBoard();
 
@@ -447,14 +482,18 @@ class GameService extends ChangeNotifier {
   }
 
   void resetGame() {
-    assignedTipsPerCategory = {
-      'nutrition': <String>{},
-      'exercise': <String>{},
-      'sleep': <String>{},
-      'mental': <String>{},
+    // RESET new per-player/category trackers
+    ladderPlayerCategories = {};
+    playerAssignedTips = {
+      'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+      'player2': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
+      'player3': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
     };
-    _tipCursor = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
-    _tipOverflowCounter = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
+    playerTipOverflow = {
+      'player1': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+      'player2': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+      'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
+    };
 
     generateRandomBoard();
 
@@ -544,17 +583,23 @@ class GameService extends ChangeNotifier {
 
       final String categoryKey = ladder['category'] as String;
       playerScores[player] = playerScores[player]! + 10;
+      // Progress remains tied to ladder's base category
       updateHealthProgress(categoryKey);
       notifyListeners();
 
       final String icon = ladder['icon']?.toString() ?? '🏅';
       final String msg = ladder['message'] as String? ?? 'You got a reward!';
-      final String uniqueTip = _pickUniqueTipForCategory(categoryKey);
+
+      // NEW: pick a unique tip and assign per-player category for THIS ladder
+      final int ladderStartCell = position;
+      final String uniqueTip = _pickUniqueTipForPlayer(player, categoryKey, ladderStartCell);
+      final String assignedCategory = _getAssignedCategory(player, ladderStartCell);
+
       final String rewardText = '$icon $msg — $uniqueTip';
+      addRewardForPlayer(player, assignedCategory, rewardText);
 
-      addRewardForPlayer(player, categoryKey, rewardText);
-
-      final String displayCategory = _displayCategory(categoryKey);
+      // Popup uses display name of the ASSIGNED category (e.g., "Mindfulness")
+      final String displayCategory = _displayCategory(assignedCategory);
       onNotify('REWARD::$player::$displayCategory::$msg', ladder['icon']);
 
       await Future.delayed(const Duration(milliseconds: 1500));
