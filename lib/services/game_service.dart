@@ -1,8 +1,12 @@
 // lib/services/game_service.dart
+// IMPROVEMENT: Single Random instance for better randomness distribution
 import 'package:flutter/material.dart';
 import 'dart:math';
 
 class GameService extends ChangeNotifier {
+  // ========== IMPROVEMENT: Reusable Random instance ==========
+  final Random _random = Random();
+  
   // Game state
   String currentPlayer = 'player1';
   int numberOfPlayers = 2;
@@ -42,7 +46,7 @@ class GameService extends ChangeNotifier {
     'nutrition': [],
     'exercise': [],
     'sleep': [],
-    'mental': [], // internal key retained
+    'mental': [],
   };
 
   Map<String, Map<String, List<String>>> playerRewards = {
@@ -70,7 +74,7 @@ class GameService extends ChangeNotifier {
     'nutrition': 0,
     'exercise': 0,
     'sleep': 0,
-    'mental': 0, // internal key retained
+    'mental': 0,
   };
 
   final Map<String, List<String>> healthTips = {
@@ -95,7 +99,6 @@ class GameService extends ChangeNotifier {
       '⏰ Maintain consistent sleep schedule',
       '☕ Avoid caffeine after 2 PM',
     ],
-    // user-facing text uses Mindfulness; key stays 'mental'
     'mental': [
       '🧘 Practice mindfulness for 10 minutes daily',
       '📝 Journal your thoughts and feelings mindfully',
@@ -133,23 +136,22 @@ class GameService extends ChangeNotifier {
     {'message': "Perfect health habits! You're a health champion!", 'icon': '🏆', 'category': 'health', 'tip': "Consistency in healthy habits leads to a better life!"},
   ];
 
-  // Snake color palette (vibrant and varied)
   final List<List<Color>> snakeColorPalettes = [
-    [const Color(0xFF2E7D32), const Color(0xFF66BB6A)], // Green
-    [const Color(0xFFD32F2F), const Color(0xFFEF5350)], // Red
-    [const Color(0xFF7B1FA2), const Color(0xFFBA68C8)], // Purple
-    [const Color(0xFFE65100), const Color(0xFFFF9800)], // Orange
-    [const Color(0xFF1565C0), const Color(0xFF42A5F5)], // Blue
-    [const Color(0xFF6A1B9A), const Color(0xFFAB47BC)], // Deep Purple
-    [const Color(0xFFC62828), const Color(0xFFE57373)], // Deep Red
-    [const Color(0xFF00695C), const Color(0xFF4DB6AC)], // Teal
+    [const Color(0xFF2E7D32), const Color(0xFF66BB6A)],
+    [const Color(0xFFD32F2F), const Color(0xFFEF5350)],
+    [const Color(0xFF7B1FA2), const Color(0xFFBA68C8)],
+    [const Color(0xFFE65100), const Color(0xFFFF9800)],
+    [const Color(0xFF1565C0), const Color(0xFF42A5F5)],
+    [const Color(0xFF6A1B9A), const Color(0xFFAB47BC)],
+    [const Color(0xFFC62828), const Color(0xFFE57373)],
+    [const Color(0xFF00695C), const Color(0xFF4DB6AC)],
   ];
 
-  // ---------- Helpers for board geometry & spacing ----------
+  // ========== Board geometry helpers ==========
   Map<String, int> _rowColOf(int cell) {
     final idx = cell - 1;
     final rowFromBottom = idx ~/ 10;
-    final row = 9 - rowFromBottom; // 9 = bottom, 0 = top (canvas origin top-left)
+    final row = 9 - rowFromBottom;
     final offset = idx % 10;
     final reversed = rowFromBottom % 2 == 1;
     final col = reversed ? 9 - offset : offset;
@@ -173,7 +175,6 @@ class GameService extends ChangeNotifier {
   }
 
   int _bestSpacedCandidate({
-    required Random rng,
     required int minCell,
     required int maxCell,
     required Set<int> forbidden,
@@ -183,7 +184,7 @@ class GameService extends ChangeNotifier {
     int best = -1;
     double bestScore = -1;
     for (int i = 0; i < samples; i++) {
-      final cand = minCell + rng.nextInt(maxCell - minCell + 1);
+      final cand = minCell + _random.nextInt(maxCell - minCell + 1);
       if (forbidden.contains(cand)) continue;
       if (cand <= 1 || cand >= 100) continue;
 
@@ -208,18 +209,15 @@ class GameService extends ChangeNotifier {
     return best;
   }
 
-  // Direction helpers to avoid flat (same-row) connections
   bool _isClimbing(int start, int end) {
-    // climbing means going UP the board visually => end row index LOWER than start row
     return _rowColOf(end)['row']! < _rowColOf(start)['row']!;
   }
 
   bool _isDescending(int start, int end) {
-    // descending means going DOWN the board visually => end row index HIGHER than start row
     return _rowColOf(end)['row']! > _rowColOf(start)['row']!;
   }
 
-  // ---------- UNIQUE tips per category across players ----------
+  // ========== Unique tips management ==========
   Map<String, Set<String>> assignedTipsPerCategory = {
     'nutrition': <String>{},
     'exercise': <String>{},
@@ -253,7 +251,6 @@ class GameService extends ChangeNotifier {
         return cand;
       }
     }
-    // exhausted → distinct variant
     final idx = _tipCursor[category]! % tips.length;
     _tipCursor[category] = (idx + 1) % tips.length;
     _tipOverflowCounter[category] = (_tipOverflowCounter[category]! + 1);
@@ -262,7 +259,6 @@ class GameService extends ChangeNotifier {
     return variant;
   }
 
-  // Round-robin mapper for non-core categories
   int _healthCategoryIndex = 0;
   static const List<String> _fourCategories = ['nutrition', 'exercise', 'sleep', 'mental'];
 
@@ -273,29 +269,26 @@ class GameService extends ChangeNotifier {
     return cat;
   }
 
-  // ---------- SPREAD-OUT BOARD GENERATION (no clustering, no flat lines, no ladder to 100) ----------
+  // ========== Board generation (using _random) ==========
   void generateRandomBoard() {
     snakes = {};
     ladders = {};
-    final rng = Random();
 
-    final numSnakes = 8 + rng.nextInt(3);
-    final numLadders = 8 + rng.nextInt(3);
+    final numSnakes = 8 + _random.nextInt(3);
+    final numLadders = 8 + _random.nextInt(3);
 
-    final usedPositions = <int>{}; // reserve starts & ends
-    final startAnchors = <int>[];  // spread starts
+    final usedPositions = <int>{};
+    final startAnchors = <int>[];
 
     const double minStartSpacing = 3.5;
 
-    // --------- Snakes (start high, end lower), ensure DESCENT and NOT same row ----------
+    // Generate snakes
     for (int i = 0; i < numSnakes && i < snakeTemplates.length; i++) {
       int start = -1;
       int end = -1;
 
-      // pick a well-spaced start in upper portion
       for (int tries = 0; tries < 120; tries++) {
         final candidate = _bestSpacedCandidate(
-          rng: rng,
           minCell: 26,
           maxCell: 96,
           forbidden: usedPositions,
@@ -310,7 +303,6 @@ class GameService extends ChangeNotifier {
       }
       if (start == -1) {
         start = _bestSpacedCandidate(
-          rng: rng,
           minCell: 26,
           maxCell: 96,
           forbidden: usedPositions,
@@ -320,15 +312,11 @@ class GameService extends ChangeNotifier {
       }
       if (start == -1) continue;
 
-      // choose an end below, not flat (must change row)
       for (int tries = 0; tries < 120; tries++) {
-        int candidateEnd = max(2, start - (5 + rng.nextInt(25))); // drop 5–29
+        int candidateEnd = max(2, start - (5 + _random.nextInt(25)));
         if (usedPositions.contains(candidateEnd)) continue;
-
-        // not same row & true descent
         if (!_isDescending(start, candidateEnd)) continue;
 
-        // keep snake ends a bit apart
         final endsSoFar = snakes.values.map<int>((s) => s['end'] as int);
         if (!_isFarFromAll(candidateEnd, endsSoFar, 2.5)) continue;
 
@@ -341,7 +329,7 @@ class GameService extends ChangeNotifier {
       usedPositions.add(end);
       startAnchors.add(start);
 
-      final colorIndex = rng.nextInt(snakeColorPalettes.length);
+      final colorIndex = _random.nextInt(snakeColorPalettes.length);
       snakes[start] = {
         'end': end,
         'message': snakeTemplates[i]['message'],
@@ -351,15 +339,13 @@ class GameService extends ChangeNotifier {
       };
     }
 
-    // --------- Ladders (start low/mid, end higher), ensure CLIMB and NOT same row ----------
+    // Generate ladders
     for (int i = 0; i < numLadders && i < ladderTemplates.length; i++) {
       int start = -1;
       int end = -1;
 
-      // spaced start
       for (int tries = 0; tries < 120; tries++) {
         final candidate = _bestSpacedCandidate(
-          rng: rng,
           minCell: 4,
           maxCell: 88,
           forbidden: usedPositions,
@@ -374,7 +360,6 @@ class GameService extends ChangeNotifier {
       }
       if (start == -1) {
         start = _bestSpacedCandidate(
-          rng: rng,
           minCell: 4,
           maxCell: 88,
           forbidden: usedPositions,
@@ -384,16 +369,12 @@ class GameService extends ChangeNotifier {
       }
       if (start == -1) continue;
 
-      // end: +4..+14, never to 100, not flat, must climb (row decreases)
       for (int tries = 0; tries < 120; tries++) {
-        int candidateEnd = start + (4 + rng.nextInt(11)); // +4..+14
+        int candidateEnd = start + (4 + _random.nextInt(11));
         if (candidateEnd >= 100) candidateEnd = 99;
         if (usedPositions.contains(candidateEnd)) continue;
-
-        // not same row & true climb
         if (!_isClimbing(start, candidateEnd)) continue;
 
-        // keep ladder ends a bit apart
         final endsSoFar = ladders.values.map<int>((l) => l['end'] as int);
         if (!_isFarFromAll(candidateEnd, endsSoFar, 2.5)) continue;
 
@@ -406,7 +387,6 @@ class GameService extends ChangeNotifier {
       usedPositions.add(end);
       startAnchors.add(start);
 
-      // normalize category to one of the 4 keys
       final rawCat = (ladderTemplates[i]['category'] as String?) ?? 'health';
       final cat = _normalizeCategory(rawCat);
 
@@ -415,27 +395,25 @@ class GameService extends ChangeNotifier {
         'message': ladderTemplates[i]['message'],
         'icon': ladderTemplates[i]['icon'],
         'category': cat,
-        // tip is chosen uniquely at earn time
       };
     }
   }
 
-  // Provide a random tip (legacy use)
   String _tipForCategory(String category) {
     final tips = healthTips[category];
     if (tips != null && tips.isNotEmpty) {
-      return tips[Random().nextInt(tips.length)];
+      return tips[_random.nextInt(tips.length)];
     }
     return 'Stay healthy!';
   }
 
+  // ========== Game management ==========
   void startGame(int numPlayers, bool withBot) {
     numberOfPlayers = numPlayers;
     hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
 
-    // reset unique-tip trackers
     assignedTipsPerCategory = {
       'nutrition': <String>{},
       'exercise': <String>{},
@@ -469,7 +447,6 @@ class GameService extends ChangeNotifier {
   }
 
   void resetGame() {
-    // reset unique-tip trackers
     assignedTipsPerCategory = {
       'nutrition': <String>{},
       'exercise': <String>{},
@@ -504,12 +481,16 @@ class GameService extends ChangeNotifier {
     return hasBot && currentPlayer == 'player$numberOfPlayers';
   }
 
+  // ========== IMPROVED: Fair dice rolling with single Random instance ==========
   Future<int> rollDice() async {
     if (isRolling || !gameActive) return 0;
     isRolling = true;
     notifyListeners();
     await Future.delayed(const Duration(milliseconds: 500));
-    final roll = Random().nextInt(6) + 1;
+    
+    // ✅ TRUE RANDOMNESS: Each roll is independent and fair
+    final roll = _random.nextInt(6) + 1;
+    
     lastRoll = roll;
     isRolling = false;
     notifyListeners();
@@ -538,7 +519,6 @@ class GameService extends ChangeNotifier {
     if (snakes.containsKey(position)) {
       final snake = snakes[position]!;
 
-      // Trigger snake animation
       animatingSnake = position;
       lastAnimationTime = DateTime.now();
       notifyListeners();
@@ -556,29 +536,24 @@ class GameService extends ChangeNotifier {
     } else if (ladders.containsKey(position)) {
       final ladder = ladders[position]!;
 
-      // Trigger ladder animation
       animatingLadder = position;
       lastAnimationTime = DateTime.now();
       notifyListeners();
 
       onNotify(ladder['message'], ladder['icon']);
 
-      // Score + health progress
-      final String categoryKey = ladder['category'] as String; // normalized to 4 keys
+      final String categoryKey = ladder['category'] as String;
       playerScores[player] = playerScores[player]! + 10;
       updateHealthProgress(categoryKey);
       notifyListeners();
 
-      // UNIQUE reward text per category across players
       final String icon = ladder['icon']?.toString() ?? '🏅';
       final String msg = ladder['message'] as String? ?? 'You got a reward!';
       final String uniqueTip = _pickUniqueTipForCategory(categoryKey);
       final String rewardText = '$icon $msg — $uniqueTip';
 
-      // store for player (also adds to global list)
       addRewardForPlayer(player, categoryKey, rewardText);
 
-      // Popup notification with user-facing category label
       final String displayCategory = _displayCategory(categoryKey);
       onNotify('REWARD::$player::$displayCategory::$msg', ladder['icon']);
 
@@ -595,7 +570,6 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  // Map internal keys to user-facing labels
   String _displayCategory(String key) {
     switch (key) {
       case 'nutrition':
@@ -605,7 +579,7 @@ class GameService extends ChangeNotifier {
       case 'sleep':
         return 'Sleep';
       case 'mental':
-        return 'Mindfulness'; // user-facing
+        return 'Mindfulness';
       default:
         if (key.isEmpty) return key;
         return key[0].toUpperCase() + key.substring(1);
@@ -636,7 +610,7 @@ class GameService extends ChangeNotifier {
     if (!playerRewards[player]!.containsKey(category)) return;
     if (playerRewards[player]![category]!.contains(rewardText)) return;
     playerRewards[player]![category]!.insert(0, rewardText);
-    addReward(category, rewardText); // also add to global feed
+    addReward(category, rewardText);
     notifyListeners();
   }
 
