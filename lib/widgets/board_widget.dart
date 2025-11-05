@@ -33,46 +33,51 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final availableWidth = constraints.maxWidth;
-      final availableHeight = MediaQuery.of(context).size.height * 0.55;
-      final boardSize = math.min(availableWidth, availableHeight);
+    final mq = MediaQuery.of(context);
+    return MediaQuery(
+      data: mq.copyWith(
+        textScaler: const TextScaler.linear(0.85),
+      ),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final availableHeight = MediaQuery.of(context).size.height * 0.55;
+        final boardSize = math.min(availableWidth, availableHeight);
 
-      return Center(
-        child: Container(
-          width: boardSize,
-          height: boardSize,
-          // === Frame & board design exactly like OLD code ===
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B6F47), // brown wooden frame
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 20,
-                offset: Offset(0, 10),
-              )
-            ],
-          ),
-          padding: const EdgeInsets.all(12),
+        return Center(
           child: Container(
+            width: boardSize,
+            height: boardSize,
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5DC), // light cream/beige
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF654321), width: 2),
+              color: const Color(0xFF8B6F47),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                )
+              ],
             ),
-            padding: const EdgeInsets.all(6),
-            child: _buildBoardContents(boardSize, game),
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5DC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF654321), width: 2),
+              ),
+              padding: const EdgeInsets.all(6),
+              child: _buildBoardContents(boardSize, game),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      }),
+    );
   }
 
   Widget _buildBoardContents(double boardSize, GameService game) {
     return Stack(
       children: [
-        // === Grid styling exactly like OLD code (light/alt cells, simple numbering) ===
+        // Base grid
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -116,14 +121,21 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
           },
         ),
 
-        // === Translucent color box overlay on occupied cells ===
+        // START and FINISH blocks overlay
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _StartFinishPainter(boardSize),
+          ),
+        ),
+
+        // Occupied cells overlay
         Positioned.fill(
           child: CustomPaint(
             painter: _OccupiedCellsPainter(game),
           ),
         ),
 
-        // === Snakes & Ladders drawing switched to OLD colorful style ===
+        // Snakes & Ladders
         Positioned.fill(
           child: AnimatedBuilder(
             animation: _animationController,
@@ -132,14 +144,14 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
                 painter: _BoardConnectionsPainter(
                   game,
                   boardSize,
-                  _animationController.value, // kept for compatibility (not used)
+                  _animationController.value,
                 ),
               );
             },
           ),
         ),
 
-        // === Keep your NEW multi-player token system exactly as-is ===
+        // Player tokens
         Positioned.fill(
           child: LayoutBuilder(builder: (context, box) {
             final cellSize = box.maxWidth / 10;
@@ -270,7 +282,166 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
   }
 }
 
-// === NEW painter: draws a translucent fill on any cell where a player stands ===
+// NEW: Painter for START (cell 1) and FINISH (cell 100) blocks
+class _StartFinishPainter extends CustomPainter {
+  final double boardSize;
+  _StartFinishPainter(this.boardSize);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cellSize = size.width / 10;
+
+    // START block at cell 1 (bottom-left corner)
+    _drawStartBlock(canvas, cellSize, 1);
+
+    // FINISH block at cell 100 (top-left corner)
+    _drawFinishBlock(canvas, cellSize, 100);
+  }
+
+  void _drawStartBlock(Canvas canvas, double cellSize, int cellNumber) {
+    final rc = _cellToRowCol(cellNumber);
+    final rect = Rect.fromLTWH(
+      rc['col']! * cellSize + 1,
+      rc['row']! * cellSize + 1,
+      cellSize - 2,
+      cellSize - 2,
+    );
+
+    // Gradient background for START
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        const Color(0xFF4CAF50).withValues(alpha: 0.3),
+        const Color(0xFF66BB6A).withValues(alpha: 0.2),
+      ],
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.fill;
+
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+    canvas.drawRRect(rrect, paint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = const Color(0xFF4CAF50)
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawRRect(rrect, borderPaint);
+
+    // "START" text
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'START',
+        style: TextStyle(
+          color: const Color(0xFF2E7D32),
+          fontSize: cellSize * 0.20,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        rect.center.dx - textPainter.width / 2,
+        rect.center.dy - textPainter.height / 2,
+      ),
+    );
+  }
+
+  void _drawFinishBlock(Canvas canvas, double cellSize, int cellNumber) {
+    final rc = _cellToRowCol(cellNumber);
+    final rect = Rect.fromLTWH(
+      rc['col']! * cellSize + 1,
+      rc['row']! * cellSize + 1,
+      cellSize - 2,
+      cellSize - 2,
+    );
+
+    // Gradient background for FINISH
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        const Color(0xFFFFD700).withValues(alpha: 0.4),
+        const Color(0xFFFFA500).withValues(alpha: 0.3),
+      ],
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.fill;
+
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+    canvas.drawRRect(rrect, paint);
+
+    // Border with gold shimmer effect
+    final borderPaint = Paint()
+      ..color = const Color(0xFFFFD700)
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawRRect(rrect, borderPaint);
+
+    // "FINISH" text
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'FINISH',
+        style: TextStyle(
+          color: const Color(0xFFFF8C00),
+          fontSize: cellSize * 0.18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        rect.center.dx - textPainter.width / 2,
+        rect.center.dy - textPainter.height / 2,
+      ),
+    );
+
+    // Trophy icon above text
+    final iconPainter = TextPainter(
+      text: const TextSpan(
+        text: '🏆',
+        style: TextStyle(fontSize: 16),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    iconPainter.layout();
+    iconPainter.paint(
+      canvas,
+      Offset(
+        rect.center.dx - iconPainter.width / 2,
+        rect.top + cellSize * 0.15,
+      ),
+    );
+  }
+
+  Map<String, int> _cellToRowCol(int cellNumber) {
+    final idx = cellNumber - 1;
+    final rowFromBottom = idx ~/ 10;
+    final row = 9 - rowFromBottom;
+    final offset = idx % 10;
+    final reversed = rowFromBottom % 2 == 1;
+    final col = reversed ? 9 - offset : offset;
+    return {'row': row, 'col': col};
+  }
+
+  @override
+  bool shouldRepaint(covariant _StartFinishPainter oldDelegate) => false;
+}
+
+// Occupied cells painter
 class _OccupiedCellsPainter extends CustomPainter {
   final GameService game;
   _OccupiedCellsPainter(this.game);
@@ -278,7 +449,7 @@ class _OccupiedCellsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final double cell = size.width / 10;
-    const double inset = 0.8; // keep inside the grid borders a bit
+    const double inset = 0.8;
 
     RRect rrectForCell(int cellNum) {
       final idx = cellNum - 1;
@@ -297,7 +468,6 @@ class _OccupiedCellsPainter extends CustomPainter {
       return RRect.fromRectAndRadius(rect, const Radius.circular(2.5));
     }
 
-    // Draw one translucent box per active player's current cell
     for (final entry in game.playerPositions.entries) {
       final playerIndex = int.tryParse(entry.key.replaceAll('player', '')) ?? 0;
       final pos = entry.value;
@@ -307,7 +477,6 @@ class _OccupiedCellsPainter extends CustomPainter {
       final Color? base = game.playerColors[entry.key];
       if (base == null) continue;
 
-      // Use .withValues() so the number remains visible
       final Color fill = base.withValues(alpha: 0.55);
 
       final paint = Paint()
@@ -321,11 +490,11 @@ class _OccupiedCellsPainter extends CustomPainter {
   bool shouldRepaint(covariant _OccupiedCellsPainter oldDelegate) => true;
 }
 
-// === Painter that matches the OLD colorful snakes & ladders style ===
+// Board connections painter (snakes & ladders)
 class _BoardConnectionsPainter extends CustomPainter {
   final GameService game;
   final double boardSize;
-  final double animationValue; // kept for compatibility, not used for style
+  final double animationValue;
 
   _BoardConnectionsPainter(this.game, this.boardSize, this.animationValue);
 
@@ -343,7 +512,6 @@ class _BoardConnectionsPainter extends CustomPainter {
       return Offset(col * cellSize + cellSize / 2, row * cellSize + cellSize / 2);
     }
 
-    // Draw ladders first (OLD style)
     for (final e in game.ladders.entries) {
       final start = centerOf(e.key);
       final int endCell = _endCellOf(e.value);
@@ -351,7 +519,6 @@ class _BoardConnectionsPainter extends CustomPainter {
       _drawColorfulLadder(canvas, start, end, cellSize, e.key);
     }
 
-    // Draw snakes second (OLD style)
     for (final e in game.snakes.entries) {
       final head = centerOf(e.key);
       final int endCell = _endCellOf(e.value);
@@ -360,24 +527,22 @@ class _BoardConnectionsPainter extends CustomPainter {
     }
   }
 
-  // ---------- value helper (kept) ----------
   int _endCellOf(dynamic v) {
     if (v is int) return v;
     if (v is Map && v['end'] is int) return v['end'] as int;
     throw StateError('Invalid snake/ladder value: $v');
   }
 
-  // ----- OLD ladder look: bright rails & rungs, simple shadow -----
   void _drawColorfulLadder(Canvas canvas, Offset start, Offset end, double cellSize, int startPos) {
     final colors = [
-      const Color(0xFFFF6B6B), // Red
-      const Color(0xFF4ECDC4), // Cyan
-      const Color(0xFFFFE66D), // Yellow
-      const Color(0xFF95E1D3), // Mint
-      const Color(0xFFFF9FF3), // Pink
-      const Color(0xFFFECA57), // Orange
-      const Color(0xFF48DBFB), // Light Blue
-      const Color(0xFF00D2D3), // Turquoise
+      const Color(0xFFFF6B6B),
+      const Color(0xFF4ECDC4),
+      const Color(0xFFFFE66D),
+      const Color(0xFF95E1D3),
+      const Color(0xFFFF9FF3),
+      const Color(0xFFFECA57),
+      const Color(0xFF48DBFB),
+      const Color(0xFF00D2D3),
     ];
 
     final colorIndex = startPos % colors.length;
@@ -393,7 +558,6 @@ class _BoardConnectionsPainter extends CustomPainter {
     final railWidth = cellSize * 0.10;
     final perp = Offset(-uy, ux) * railWidth;
 
-    // Shadow
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.15)
       ..strokeWidth = cellSize * 0.12
@@ -402,7 +566,6 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawLine(start + perp + const Offset(2, 2), end + perp + const Offset(2, 2), shadowPaint);
     canvas.drawLine(start - perp + const Offset(2, 2), end - perp + const Offset(2, 2), shadowPaint);
 
-    // Side rails
     final railPaint = Paint()
       ..color = ladderColor
       ..strokeWidth = cellSize * 0.10
@@ -411,7 +574,6 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawLine(start + perp, end + perp, railPaint);
     canvas.drawLine(start - perp, end - perp, railPaint);
 
-    // Rungs
     final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
     final rungPaint = Paint()
       ..color = ladderColor.withValues(alpha: 0.9)
@@ -425,17 +587,16 @@ class _BoardConnectionsPainter extends CustomPainter {
     }
   }
 
-  // ----- OLD snake look: smooth colorful body, outline, head/eyes/tongue -----
   void _drawColorfulSnake(Canvas canvas, Offset head, Offset tail, double cellSize, int startPos) {
     final snakeColors = [
-      const Color(0xFF6BCB77), // Green
-      const Color(0xFFFFC93C), // Yellow
-      const Color(0xFFFF6B9D), // Pink
-      const Color(0xFF9B72AA), // Purple
-      const Color(0xFFFF8364), // Orange
-      const Color(0xFF00D9FF), // Cyan
-      const Color(0xFFB4E197), // Light Green
-      const Color(0xFFFFB5DA), // Light Pink
+      const Color(0xFF6BCB77),
+      const Color(0xFFFFC93C),
+      const Color(0xFFFF6B9D),
+      const Color(0xFF9B72AA),
+      const Color(0xFFFF8364),
+      const Color(0xFF00D9FF),
+      const Color(0xFFB4E197),
+      const Color(0xFFFFB5DA),
     ];
 
     final colorIndex = startPos % snakeColors.length;
@@ -445,7 +606,6 @@ class _BoardConnectionsPainter extends CustomPainter {
     final distance = (head - tail).distance;
     if (distance == 0) return;
 
-    // Build wavy path
     final segments = math.max(20, (distance / (cellSize * 0.3)).round());
     final List<Offset> points = [];
     for (int i = 0; i <= segments; i++) {
@@ -465,7 +625,6 @@ class _BoardConnectionsPainter extends CustomPainter {
       path.lineTo(points[i].dx, points[i].dy);
     }
 
-    // Shadow
     final shadowPath = Path()..moveTo(points[0].dx + 2, points[0].dy + 2);
     for (int i = 1; i < points.length; i++) {
       shadowPath.lineTo(points[i].dx + 2, points[i].dy + 2);
@@ -477,7 +636,6 @@ class _BoardConnectionsPainter extends CustomPainter {
       ..strokeWidth = cellSize * 0.20;
     canvas.drawPath(shadowPath, shadowPaint);
 
-    // Body + outline
     final bodyPaint = Paint()
       ..color = snakeColor
       ..style = PaintingStyle.stroke
@@ -492,7 +650,6 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawPath(path, outlinePaint);
     canvas.drawPath(path, bodyPaint);
 
-    // Head
     final headSize = cellSize * 0.18;
     canvas.drawCircle(head + const Offset(2, 2), headSize, Paint()..color = Colors.black.withValues(alpha: 0.25));
     canvas.drawCircle(head, headSize, Paint()..color = snakeColor);
@@ -501,7 +658,6 @@ class _BoardConnectionsPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = cellSize * 0.03);
 
-    // Eyes
     final eyeSize = cellSize * 0.04;
     canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
     canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
@@ -509,7 +665,6 @@ class _BoardConnectionsPainter extends CustomPainter {
     canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
     canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
 
-    // Tongue
     final tonguePath = Path();
     tonguePath.moveTo(head.dx, head.dy + headSize * 0.5);
     tonguePath.lineTo(head.dx - headSize * 0.25, head.dy + headSize * 0.9);
@@ -521,7 +676,6 @@ class _BoardConnectionsPainter extends CustomPainter {
       ..strokeWidth = cellSize * 0.02
       ..strokeCap = StrokeCap.round);
 
-    // Tail tip
     final tailSize = cellSize * 0.10;
     canvas.drawCircle(tail, tailSize, Paint()..color = darkSnakeColor);
   }

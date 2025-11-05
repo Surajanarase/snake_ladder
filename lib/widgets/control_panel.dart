@@ -426,10 +426,16 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
-  Widget _playerCard(String title, int position, int score, Color color, {required bool isActive}) {
+ Widget _playerCard(String title, int position, int score, Color color, {required bool isActive}) {
+    final game = Provider.of<GameService>(context, listen: false);
+    final isThreePlayers = game.numberOfPlayers == 3;
+    
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isThreePlayers ? 6 : 10, 
+        vertical: isThreePlayers ? 8 : 12,
+      ),
       decoration: BoxDecoration(
         gradient: isActive 
             ? LinearGradient(
@@ -448,7 +454,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                   Colors.grey.shade50,
                 ],
               ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isThreePlayers ? 10 : 12),
         border: Border.all(
           color: isActive ? color : Colors.grey.shade300,
           width: isActive ? 2.5 : 1.5,
@@ -477,8 +483,8 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 8,
-                height: 8,
+                width: isThreePlayers ? 6 : 8,
+                height: isThreePlayers ? 6 : 8,
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
@@ -491,23 +497,24 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: isThreePlayers ? 4 : 6),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: isThreePlayers ? 11 : 13,
                     fontWeight: FontWeight.bold,
                     color: isActive ? color : Colors.black87,
-                    letterSpacing: 0.3,
+                    letterSpacing: 0.2,
                   ),
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isThreePlayers ? 6 : 8),
           
           // Position and Score in a clean layout
           Row(
@@ -516,7 +523,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
               // Position
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isThreePlayers ? 4 : 6, 
+                    vertical: isThreePlayers ? 3 : 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive 
                         ? Colors.white.withValues(alpha: 0.7)
@@ -528,29 +538,35 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                       Text(
                         'Position',
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: isThreePlayers ? 8 : 9,
                           color: Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: isThreePlayers ? 1 : 2),
                       Text(
                         position == 0 ? 'Start' : '$position',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isThreePlayers ? 12 : 14,
                           fontWeight: FontWeight.bold,
                           color: isActive ? color : Colors.black87,
                         ),
+                        maxLines: 1,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              // Awards
+              SizedBox(width: isThreePlayers ? 4 : 6),
+              // Rewards
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isThreePlayers ? 4 : 6, 
+                    vertical: isThreePlayers ? 3 : 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive 
                         ? Colors.white.withValues(alpha: 0.7)
@@ -560,31 +576,24 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                   child: Column(
                     children: [
                       Text(
-                        'Awards',
+                        'Rewards',
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: isThreePlayers ? 8 : 9,
                           color: Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            '🏆',
-                            style: TextStyle(fontSize: 10),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '$score',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFFB300),
-                            ),
-                          ),
-                        ],
+                      SizedBox(height: isThreePlayers ? 1 : 2),
+                      Text(
+                        '$score',
+                        style: TextStyle(
+                          fontSize: isThreePlayers ? 12 : 14,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? color : const Color(0xFFFFB300),
+                        ),
+                        maxLines: 1,
                       ),
                     ],
                   ),
