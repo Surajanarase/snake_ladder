@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'board_widget.dart';
 import 'control_panel.dart';
-import 'progress_dashboard.dart';
+//import 'progress_dashboard.dart';
 import 'dart:math' as math;
 import '../services/sound_service.dart';
 
@@ -224,20 +224,27 @@ Row(
                             child: Column(
                               children: [
                                 // Board area
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                  child: AspectRatio(
-                                    aspectRatio: 1.0,
-                                    child: BoardWidget(),
-                                  ),
-                                ),
+                                 Padding(
+  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      final size = constraints.maxWidth * 1.08; // increase board size slightly
 
-                                // Control Panel
-                                ControlPanel(onNotify: (m, i) => _showToast(context, m, i)),
+      return Center(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: const BoardWidget(),
+        ),
+      );
+    },
+  ),
+),
 
-                                // Progress Dashboard
-                                const ProgressDashboard(),
-                                const SizedBox(height: 12),
+                                // Control Panel (now includes the player boxes below the dice)
+ControlPanel(onNotify: (m, i) => _showToast(context, m, i)),
+const SizedBox(height: 12),
+
                               ],
                             ),
                           ),

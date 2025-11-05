@@ -116,269 +116,207 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
   }
 
   @override
-  Widget build(BuildContext context) {
-    final game = Provider.of<GameService>(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final diceSize = (screenWidth * 0.16).clamp(80.0, 110.0);
+Widget build(BuildContext context) {
+  final game = Provider.of<GameService>(context);
+  final screenWidth = MediaQuery.of(context).size.width;
+  final diceSize = (screenWidth * 0.16).clamp(80.0, 110.0);
 
-    if (game.isCurrentPlayerBot() && game.gameActive && !game.isRolling && _displayedRoll == null) {
-      Future.microtask(() => _handleBotTurn(game));
-    }
-
-    final String displayPlayer = _playerWhoRolled ?? game.currentPlayer;
-    final Color diceColor = game.isCurrentPlayerBot() 
-        ? Colors.grey.shade400
-        : (game.playerColors[displayPlayer] ?? game.playerColors[game.currentPlayer]!);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // NEW: Player cards with habits tracking - 2 players only
-          if (game.numberOfPlayers == 2)
-            Row(
-              children: [
-                Expanded(
-                  child: _playerCardWithHabits(
-                    game,
-                    'player1',
-                    isActive: game.currentPlayer == 'player1',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _playerCardWithHabits(
-                    game,
-                    'player2',
-                    isActive: game.currentPlayer == 'player2',
-                  ),
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: _playerCardWithHabits(
-                    game,
-                    'player1',
-                    isActive: game.currentPlayer == 'player1',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _playerCardWithHabits(
-                    game,
-                    'player2',
-                    isActive: game.currentPlayer == 'player2',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _playerCardWithHabits(
-                    game,
-                    'player3',
-                    isActive: game.currentPlayer == 'player3',
-                  ),
-                ),
-              ],
-            ),
-
-          const SizedBox(height: 16),
-
-          // Dice
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    if (!game.gameActive) {
-                      widget.onNotify('Start a game first', '⚠️');
-                      return;
-                    }
-                    if (game.isRolling || game.isCurrentPlayerBot() || _displayedRoll != null) return;
-                    
-                    setState(() {
-                      _playerWhoRolled = game.currentPlayer;
-                      _displayedRoll = null;
-                    });
-                    
-                    _diceController.forward(from: 0);
-                    final roll = await game.rollDice();
-                    if (roll == 0) {
-                      setState(() {
-                        _playerWhoRolled = null;
-                      });
-                      return;
-                    }
-                    
-                    setState(() {
-                      _displayedRoll = roll;
-                    });
-                    
-                    await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
-                    
-                    await Future.delayed(const Duration(milliseconds: 1000));
-                    
-                    await _resetDice();
-                    
-                    await Future.delayed(const Duration(milliseconds: 200));
-                  },
-                  child: AnimatedBuilder(
-                    animation: _diceRotation,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: game.isRolling ? _diceRotation.value : 0,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                          width: diceSize,
-                          height: diceSize,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white,
-                                Colors.grey.shade50,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: diceColor,
-                              width: 3.5,
-                            ),
-                            boxShadow: [
-                              const BoxShadow(
-                                color: Color(0x1A000000),
-                                blurRadius: 15,
-                                spreadRadius: 0,
-                                offset: Offset(0, 5),
-                              ),
-                              BoxShadow(
-                                color: diceColor.withAlpha(76),
-                                blurRadius: 25,
-                                spreadRadius: -3,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              transitionBuilder: (child, animation) {
-                                return ScaleTransition(
-                                  scale: animation,
-                                  child: FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: game.isRolling
-                                  ? Icon(
-                                      key: const ValueKey('rolling'),
-                                      Icons.casino_outlined,
-                                      color: diceColor,
-                                      size: diceSize * 0.5,
-                                    )
-                                  : _displayedRoll != null
-                                      ? _buildStandardDiceFace(
-                                          _displayedRoll!, 
-                                          diceSize * 0.7,
-                                          diceColor,
-                                        )
-                                      : Icon(
-                                          key: const ValueKey('ready'),
-                                          Icons.casino_outlined,
-                                          size: diceSize * 0.5,
-                                          color: Colors.grey.shade400,
-                                        ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                
-                if (_displayedRoll != null)
-                  AnimatedBuilder(
-                    animation: _resultFadeController,
-                    builder: (context, child) {
-                      if (_resultFadeController.value >= 0.99) {
-                        return const SizedBox.shrink();
-                      }
-                      
-                      return Opacity(
-                        opacity: _resultOpacity.value,
-                        child: Transform.scale(
-                          scale: _resultScale.value,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const SizedBox(width: 12),
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      diceColor.withAlpha(230),
-                                      diceColor,
-                                    ],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: diceColor.withAlpha(127),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '$_displayedRoll',
-                                    style: const TextStyle(
-                                      fontSize: 28,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.0,
-                                      shadows: [
-                                        Shadow(
-                                          color: Color(0x40000000),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  if (game.isCurrentPlayerBot() && game.gameActive && !game.isRolling && _displayedRoll == null) {
+    Future.microtask(() => _handleBotTurn(game));
   }
+
+  final String displayPlayer = _playerWhoRolled ?? game.currentPlayer;
+  final Color diceColor = game.isCurrentPlayerBot()
+      ? Colors.grey.shade400
+      : (game.playerColors[displayPlayer] ?? game.playerColors[game.currentPlayer]!);
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // === Dice row (same as before) ===
+        Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ... (unchanged dice GestureDetector + AnimatedBuilder) ...
+              GestureDetector(
+                onTap: () async {
+                  if (!game.gameActive) {
+                    widget.onNotify('Start a game first', '⚠️');
+                    return;
+                  }
+                  if (game.isRolling || game.isCurrentPlayerBot() || _displayedRoll != null) return;
+
+                  setState(() {
+                    _playerWhoRolled = game.currentPlayer;
+                    _displayedRoll = null;
+                  });
+
+                  _diceController.forward(from: 0);
+                  final roll = await game.rollDice();
+                  if (roll == 0) {
+                    setState(() {
+                      _playerWhoRolled = null;
+                    });
+                    return;
+                  }
+
+                  setState(() {
+                    _displayedRoll = roll;
+                  });
+
+                  await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
+                  await Future.delayed(const Duration(milliseconds: 1000));
+                  await _resetDice();
+                  await Future.delayed(const Duration(milliseconds: 200));
+                },
+                child: AnimatedBuilder(
+                  animation: _diceRotation,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: game.isRolling ? _diceRotation.value : 0,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                        width: diceSize,
+                        height: diceSize,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Colors.white, Color(0xFFFAFAFA)],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: diceColor, width: 3.5),
+                          boxShadow: [
+                            const BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 15,
+                              offset: Offset(0, 5),
+                            ),
+                            BoxShadow(
+                              color: diceColor.withAlpha(76),
+                              blurRadius: 25,
+                              spreadRadius: -3,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (child, animation) => ScaleTransition(
+                              scale: animation,
+                              child: FadeTransition(opacity: animation, child: child),
+                            ),
+                            child: game.isRolling
+                                ? Icon(
+                                    key: const ValueKey('rolling'),
+                                    Icons.casino_outlined,
+                                    color: diceColor,
+                                    size: diceSize * 0.5,
+                                  )
+                                : _displayedRoll != null
+                                    ? _buildStandardDiceFace(_displayedRoll!, diceSize * 0.7, diceColor)
+                                    : Icon(
+                                        key: const ValueKey('ready'),
+                                        Icons.casino_outlined,
+                                        size: diceSize * 0.5,
+                                        color: Colors.grey.shade400,
+                                      ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              if (_displayedRoll != null)
+                AnimatedBuilder(
+                  animation: _resultFadeController,
+                  builder: (context, child) {
+                    if (_resultFadeController.value >= 0.99) return const SizedBox.shrink();
+                    return Opacity(
+                      opacity: _resultOpacity.value,
+                      child: Transform.scale(
+                        scale: _resultScale.value,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 12),
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [diceColor.withAlpha(230), diceColor],
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: diceColor.withAlpha(127),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$_displayedRoll',
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.0,
+                                    shadows: [Shadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2))],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // === Player boxes (moved here, replacing the old 4 health tiles) ===
+        if (game.numberOfPlayers == 2)
+          Row(
+            children: [
+              Expanded(child: _playerCardWithHabits(game, 'player1', isActive: game.currentPlayer == 'player1')),
+              const SizedBox(width: 10),
+              Expanded(child: _playerCardWithHabits(game, 'player2', isActive: game.currentPlayer == 'player2')),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(child: _playerCardWithHabits(game, 'player1', isActive: game.currentPlayer == 'player1')),
+              const SizedBox(width: 10),
+              Expanded(child: _playerCardWithHabits(game, 'player2', isActive: game.currentPlayer == 'player2')),
+              const SizedBox(width: 10),
+              Expanded(child: _playerCardWithHabits(game, 'player3', isActive: game.currentPlayer == 'player3')),
+            ],
+          ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildStandardDiceFace(int number, double size, Color dotColor) {
     return SizedBox(
