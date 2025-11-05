@@ -22,7 +22,7 @@ class GameService extends ChangeNotifier {
     'player3': 0,
   };
   
-  // NEW: Track good and bad habits per player
+  // Track good and bad habits per player (counters)
   Map<String, int> playerGoodHabits = {
     'player1': 0,
     'player2': 0,
@@ -32,6 +32,13 @@ class GameService extends ChangeNotifier {
     'player1': 0,
     'player2': 0,
     'player3': 0,
+  };
+
+  // NEW: store concrete bad-habit events per player grouped by category
+  Map<String, Map<String, List<String>>> playerBadEvents = {
+    'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+    'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+    'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
   };
   
   Map<String, Color> playerColors = {
@@ -454,6 +461,14 @@ class GameService extends ChangeNotifier {
     playerScores = {'player1': 0, 'player2': 0, 'player3': 0};
     playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
+
+    // NEW: reset bad events
+    playerBadEvents = {
+      'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+      'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+      'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+    };
+
     moveCount = 0;
     lastRoll = 0;
     animatingSnake = null;
@@ -487,6 +502,14 @@ class GameService extends ChangeNotifier {
     playerScores = {'player1': 0, 'player2': 0, 'player3': 0};
     playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
+
+    // NEW: reset bad events
+    playerBadEvents = {
+      'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+      'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+      'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+    };
+
     moveCount = 0;
     currentPlayer = 'player1';
     gameActive = false;
@@ -555,6 +578,14 @@ class GameService extends ChangeNotifier {
 
       // Increment bad habits counter
       playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+
+      // NEW: record a concrete bad-habit event under its category
+      final String badCat = (snake['category'] as String?) ?? 'mental';
+      final String badText = '${snake['icon']} ${snake['message']}';
+      final list = playerBadEvents[player]![badCat]!;
+      if (!list.contains(badText)) {
+        list.insert(0, badText); // latest first
+      }
 
       animatingSnake = position;
       lastAnimationTime = DateTime.now();
@@ -650,8 +681,19 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Backward-compatibility shim so old UI code keeps working.
+  // Old code calls: addReward(playerId, categoryKey, rewardText)
+  void addReward(String player, String category, String rewardText) {
+    addRewardForPlayer(player, category, rewardText);
+  }
+
   List<String> getPlayerRewards(String player, String category) {
     return playerRewards[player]?[category] ?? [];
+  }
+
+  // NEW: getter for bad events
+  List<String> getPlayerBadEvents(String player, String category) {
+    return playerBadEvents[player]?[category] ?? const [];
   }
 
   void checkWinCondition(Function(String, String) onNotify) {
@@ -704,5 +746,3 @@ class GameService extends ChangeNotifier {
 
   String getRandomTip(String category) => _tipForCategory(category);
 }
-
-

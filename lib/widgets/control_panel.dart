@@ -685,97 +685,134 @@ Widget build(BuildContext context) {
     );
   }
 
-  // Show Bad Habits Dialog (just shows count)
   void _showBadHabitsDialog(BuildContext context, GameService game, String playerId) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  const Color(0xFFE74C3C).withAlpha(25),
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Consumer<GameService>(
+        builder: (context, g, _) {
+          final categories = ['nutrition','exercise','sleep','mental','hygiene'];
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    const Color(0xFFE74C3C).withAlpha(25),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  // Emoji header
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFE74C3C), Color(0xFFEF5350)],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('😞', style: TextStyle(fontSize: 40)),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    g.playerNames[playerId]!,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: g.playerColors[playerId],
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    'Bad Habits: ${g.playerBadHabits[playerId] ?? 0}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFE74C3C),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ✅ NEW: Scroll list of bad events
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: categories.map((cat) {
+                          final events = g.getPlayerBadEvents(playerId, cat);
+
+                          if (events.isEmpty) return const SizedBox.shrink();
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE74C3C).withAlpha(25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE74C3C).withAlpha(76)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cat.toUpperCase(),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                ...events.map((e) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text("• $e",
+                                      style: const TextStyle(fontSize: 13)),
+                                ))
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE74C3C),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const Text('Close'),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(20),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFE74C3C), Color(0xFFEF5350)],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text('😞', style: TextStyle(fontSize: 40)),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${game.playerNames[playerId]}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: game.playerColors[playerId],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Bad Habits: ${game.playerBadHabits[playerId] ?? 0}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFE74C3C),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE74C3C).withAlpha(25),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFE74C3C).withAlpha(76),
-                    ),
-                  ),
-                  child: const Text(
-                    '🐍 Each snake bite represents a bad health habit. Try to avoid them and focus on climbing ladders for good habits!',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF2C3E50),
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE74C3C),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    },
+  );
+}
+
 
   Widget _buildHabitCategory(String icon, String title, List<String> items, Color color) {
     return Container(
