@@ -1,7 +1,4 @@
 // lib/widgets/control_panel.dart
-// Final polished version with smooth animations and perfect timing
-// =============================================================================
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -24,7 +21,6 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
   late Animation<double> _resultOpacity;
   late Animation<double> _resultScale;
   
-  // Track the player who rolled and the displayed roll result
   String? _playerWhoRolled;
   int? _displayedRoll;
   bool _isResetting = false;
@@ -40,7 +36,6 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
       CurvedAnimation(parent: _diceController, curve: Curves.easeInOut),
     );
     
-    // Controller for result badge fade out animation
     _resultFadeController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -68,12 +63,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     super.dispose();
   }
 
-  // Reset dice to clean state with beautiful animation
   Future<void> _resetDice() async {
     if (_isResetting) return;
     _isResetting = true;
     
-    // Start fade out animation
     await _resultFadeController.forward();
     
     if (mounted) {
@@ -82,14 +75,12 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
         _playerWhoRolled = null;
       });
       
-      // Reset controllers
       _resultFadeController.reset();
     }
     
     _isResetting = false;
   }
 
-  // Auto-play for bot
   Future<void> _handleBotTurn(GameService game) async {
     if (!game.isCurrentPlayerBot() || !game.gameActive) return;
     
@@ -97,10 +88,9 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     
     if (!mounted || !game.gameActive) return;
     
-    // Set who is rolling
     setState(() {
       _playerWhoRolled = game.currentPlayer;
-      _displayedRoll = null; // Clear previous roll
+      _displayedRoll = null;
     });
     
     _diceController.forward(from: 0);
@@ -114,16 +104,12 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     widget.onNotify('🤖 Bot rolled $roll', '🎲');
     await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
     
-    // Wait 1 second to show the result (reduced from 1.5s)
     await Future.delayed(const Duration(milliseconds: 1000));
     
-    // Reset dice with smooth animation
     await _resetDice();
     
-    // Small pause for smooth transition
     await Future.delayed(const Duration(milliseconds: 200));
     
-    // Continue if still bot's turn
     if (mounted && game.gameActive) {
       _handleBotTurn(game);
     }
@@ -135,12 +121,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     final screenWidth = MediaQuery.of(context).size.width;
     final diceSize = (screenWidth * 0.16).clamp(80.0, 110.0);
 
-    // Auto-play bot turn
     if (game.isCurrentPlayerBot() && game.gameActive && !game.isRolling && _displayedRoll == null) {
       Future.microtask(() => _handleBotTurn(game));
     }
 
-    // Determine which player's color to show on dice
     final String displayPlayer = _playerWhoRolled ?? game.currentPlayer;
     final Color diceColor = game.isCurrentPlayerBot() 
         ? Colors.grey.shade400
@@ -151,26 +135,22 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Player cards
+          // NEW: Player cards with habits tracking - 2 players only
           if (game.numberOfPlayers == 2)
             Row(
               children: [
                 Expanded(
-                  child: _playerCard(
-                    game.playerNames['player1']!,
-                    game.playerPositions['player1']!,
-                    game.playerScores['player1']!,
-                    game.playerColors['player1']!,
+                  child: _playerCardWithHabits(
+                    game,
+                    'player1',
                     isActive: game.currentPlayer == 'player1',
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _playerCard(
-                    game.playerNames['player2']!,
-                    game.playerPositions['player2']!,
-                    game.playerScores['player2']!,
-                    game.playerColors['player2']!,
+                  child: _playerCardWithHabits(
+                    game,
+                    'player2',
                     isActive: game.currentPlayer == 'player2',
                   ),
                 ),
@@ -180,31 +160,25 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
             Row(
               children: [
                 Expanded(
-                  child: _playerCard(
-                    game.playerNames['player1']!,
-                    game.playerPositions['player1']!,
-                    game.playerScores['player1']!,
-                    game.playerColors['player1']!,
+                  child: _playerCardWithHabits(
+                    game,
+                    'player1',
                     isActive: game.currentPlayer == 'player1',
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _playerCard(
-                    game.playerNames['player2']!,
-                    game.playerPositions['player2']!,
-                    game.playerScores['player2']!,
-                    game.playerColors['player2']!,
+                  child: _playerCardWithHabits(
+                    game,
+                    'player2',
                     isActive: game.currentPlayer == 'player2',
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _playerCard(
-                    game.playerNames['player3']!,
-                    game.playerPositions['player3']!,
-                    game.playerScores['player3']!,
-                    game.playerColors['player3']!,
+                  child: _playerCardWithHabits(
+                    game,
+                    'player3',
                     isActive: game.currentPlayer == 'player3',
                   ),
                 ),
@@ -213,13 +187,12 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
 
           const SizedBox(height: 16),
 
-          // Dice with elegant result display
+          // Dice
           Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Main Dice
                 GestureDetector(
                   onTap: () async {
                     if (!game.gameActive) {
@@ -228,10 +201,9 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                     }
                     if (game.isRolling || game.isCurrentPlayerBot() || _displayedRoll != null) return;
                     
-                    // Set who is rolling and clear any previous result
                     setState(() {
                       _playerWhoRolled = game.currentPlayer;
-                      _displayedRoll = null; // Important: Clear previous roll
+                      _displayedRoll = null;
                     });
                     
                     _diceController.forward(from: 0);
@@ -243,21 +215,16 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                       return;
                     }
                     
-                    // Show the NEW roll result
                     setState(() {
                       _displayedRoll = roll;
                     });
                     
-                    // Move player and wait for movement to complete
                     await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
                     
-                    // Wait 1 second to show the result (reduced from 1.5s for smoother flow)
                     await Future.delayed(const Duration(milliseconds: 1000));
                     
-                    // Reset dice with smooth animation
                     await _resetDice();
                     
-                    // Small pause for smooth transition
                     await Future.delayed(const Duration(milliseconds: 200));
                   },
                   child: AnimatedBuilder(
@@ -338,12 +305,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                   ),
                 ),
                 
-                // Result badge with smooth fade animation - FIXED to disappear properly
                 if (_displayedRoll != null)
                   AnimatedBuilder(
                     animation: _resultFadeController,
                     builder: (context, child) {
-                      // Hide completely when animation is done
                       if (_resultFadeController.value >= 0.99) {
                         return const SizedBox.shrink();
                       }
@@ -426,16 +391,18 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
- Widget _playerCard(String title, int position, int score, Color color, {required bool isActive}) {
-    final game = Provider.of<GameService>(context, listen: false);
+  // NEW: Player card with habits tracking
+  Widget _playerCardWithHabits(GameService game, String playerId, {required bool isActive}) {
     final isThreePlayers = game.numberOfPlayers == 3;
+    final color = game.playerColors[playerId]!;
+    final name = game.playerNames[playerId]!;
+    final position = game.playerPositions[playerId]!;
+    final goodHabits = game.playerGoodHabits[playerId] ?? 0;
+    final badHabits = game.playerBadHabits[playerId] ?? 0;
     
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding: EdgeInsets.symmetric(
-        horizontal: isThreePlayers ? 6 : 10, 
-        vertical: isThreePlayers ? 8 : 12,
-      ),
+      padding: EdgeInsets.all(isThreePlayers ? 8 : 10),
       decoration: BoxDecoration(
         gradient: isActive 
             ? LinearGradient(
@@ -500,7 +467,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
               SizedBox(width: isThreePlayers ? 4 : 6),
               Expanded(
                 child: Text(
-                  title,
+                  name,
                   style: TextStyle(
                     fontSize: isThreePlayers ? 11 : 13,
                     fontWeight: FontWeight.bold,
@@ -516,91 +483,445 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
           ),
           SizedBox(height: isThreePlayers ? 6 : 8),
           
-          // Position and Score in a clean layout
+          // Position
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isThreePlayers ? 6 : 8,
+              vertical: isThreePlayers ? 4 : 5,
+            ),
+            decoration: BoxDecoration(
+              color: isActive 
+                  ? Colors.white.withValues(alpha: 0.7)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Position: ',
+                  style: TextStyle(
+                    fontSize: isThreePlayers ? 9 : 10,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  position == 0 ? 'Start' : '$position',
+                  style: TextStyle(
+                    fontSize: isThreePlayers ? 11 : 13,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? color : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isThreePlayers ? 6 : 8),
+          
+          // Good and Bad Habits buttons
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Position
+              // Good Habits Button
               Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isThreePlayers ? 4 : 6, 
-                    vertical: isThreePlayers ? 3 : 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive 
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Position',
-                        style: TextStyle(
-                          fontSize: isThreePlayers ? 8 : 9,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
+                child: GestureDetector(
+                  onTap: () => _showGoodHabitsDialog(context, game, playerId),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: isThreePlayers ? 6 : 8,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
                       ),
-                      SizedBox(height: isThreePlayers ? 1 : 2),
-                      Text(
-                        position == 0 ? 'Start' : '$position',
-                        style: TextStyle(
-                          fontSize: isThreePlayers ? 12 : 14,
-                          fontWeight: FontWeight.bold,
-                          color: isActive ? color : Colors.black87,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4CAF50).withAlpha(76),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        maxLines: 1,
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '😊',
+                          style: TextStyle(fontSize: isThreePlayers ? 16 : 18),
+                        ),
+                        SizedBox(height: isThreePlayers ? 2 : 4),
+                        Text(
+                          '$goodHabits',
+                          style: TextStyle(
+                            fontSize: isThreePlayers ? 13 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Good',
+                          style: TextStyle(
+                            fontSize: isThreePlayers ? 8 : 9,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               SizedBox(width: isThreePlayers ? 4 : 6),
-              // Rewards
+              
+              // Bad Habits Button
               Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isThreePlayers ? 4 : 6, 
-                    vertical: isThreePlayers ? 3 : 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive 
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Rewards',
-                        style: TextStyle(
-                          fontSize: isThreePlayers ? 8 : 9,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
+                child: GestureDetector(
+                  onTap: () => _showBadHabitsDialog(context, game, playerId),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: isThreePlayers ? 6 : 8,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE74C3C), Color(0xFFEF5350)],
                       ),
-                      SizedBox(height: isThreePlayers ? 1 : 2),
-                      Text(
-                        '$score',
-                        style: TextStyle(
-                          fontSize: isThreePlayers ? 12 : 14,
-                          fontWeight: FontWeight.bold,
-                          color: isActive ? color : const Color(0xFFFFB300),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE74C3C).withAlpha(76),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        maxLines: 1,
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '😞',
+                          style: TextStyle(fontSize: isThreePlayers ? 16 : 18),
+                        ),
+                        SizedBox(height: isThreePlayers ? 2 : 4),
+                        Text(
+                          '$badHabits',
+                          style: TextStyle(
+                            fontSize: isThreePlayers ? 13 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Bad',
+                          style: TextStyle(
+                            fontSize: isThreePlayers ? 8 : 9,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // Show Good Habits Dialog with all 4 categories of positive tips
+  void _showGoodHabitsDialog(BuildContext context, GameService game, String playerId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450, maxHeight: 600),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  const Color(0xFF4CAF50).withAlpha(25),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    gradient:  LinearGradient(
+                      colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('😊', style: TextStyle(fontSize: 32)),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${game.playerNames[playerId]}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: game.playerColors[playerId],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Good Habits: ${game.playerGoodHabits[playerId] ?? 0}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4CAF50),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Positive Health Messages',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildHabitCategory(
+                          '🎯',
+                          'Nutrition',
+                          game.getPlayerRewards(playerId, 'nutrition'),
+                          const Color(0xFF4CAF50),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildHabitCategory(
+                          '💪',
+                          'Exercise',
+                          game.getPlayerRewards(playerId, 'exercise'),
+                          const Color(0xFF2196F3),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildHabitCategory(
+                          '😴',
+                          'Sleep',
+                          game.getPlayerRewards(playerId, 'sleep'),
+                          const Color(0xFF9C27B0),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildHabitCategory(
+                          '🧘',
+                          'Mindfulness',
+                          game.getPlayerRewards(playerId, 'mental'),
+                          const Color(0xFFFF9800),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Show Bad Habits Dialog (just shows count)
+  void _showBadHabitsDialog(BuildContext context, GameService game, String playerId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  const Color(0xFFE74C3C).withAlpha(25),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFE74C3C), Color(0xFFEF5350)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('😞', style: TextStyle(fontSize: 40)),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '${game.playerNames[playerId]}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: game.playerColors[playerId],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bad Habits: ${game.playerBadHabits[playerId] ?? 0}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFE74C3C),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE74C3C).withAlpha(25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE74C3C).withAlpha(76),
+                    ),
+                  ),
+                  child: const Text(
+                    '🐍 Each snake bite represents a bad health habit. Try to avoid them and focus on climbing ladders for good habits!',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF2C3E50),
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE74C3C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHabitCategory(String icon, String title, List<String> items, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withAlpha(76),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${items.length}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (items.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...items.map((item) => Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: color.withAlpha(51)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, size: 14, color: color),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'No items collected yet',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -623,15 +944,12 @@ class _StandardDicePainter extends CustomPainter {
     final margin = size.width * 0.22;
 
     void drawDot(double x, double y) {
-      // Shadow for 3D effect
       canvas.drawCircle(
         Offset(x + 1, y + 1), 
         dotRadius, 
         Paint()..color = const Color(0x26000000)
       );
-      // Main dot
       canvas.drawCircle(Offset(x, y), dotRadius, paint);
-      // Highlight
       canvas.drawCircle(
         Offset(x - dotRadius * 0.3, y - dotRadius * 0.3), 
         dotRadius * 0.3, 

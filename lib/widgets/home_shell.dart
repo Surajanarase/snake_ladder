@@ -911,8 +911,9 @@ Row(
             return;
           } else {
             final category = parts[1];
-            final rewardText = parts.sublist(2).join('::');
-            game.addReward(category, rewardText);
+final rewardText = parts.sublist(2).join('::');
+final playerId = game.currentPlayer;           // or pick a specific player if you prefer
+game.addRewardForPlayer(playerId, category, rewardText);  // ✅ new API
 
             if (!mounted) return;
             showDialog<void>(

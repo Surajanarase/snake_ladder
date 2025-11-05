@@ -21,6 +21,19 @@ class GameService extends ChangeNotifier {
     'player2': 0,
     'player3': 0,
   };
+  
+  // NEW: Track good and bad habits per player
+  Map<String, int> playerGoodHabits = {
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+  Map<String, int> playerBadHabits = {
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+  
   Map<String, Color> playerColors = {
     'player1': const Color(0xFF4A90E2),
     'player2': const Color(0xFFE74C3C),
@@ -40,14 +53,6 @@ class GameService extends ChangeNotifier {
   int? animatingSnake;
   int? animatingLadder;
   DateTime? lastAnimationTime;
-
-  // Rewards
-  Map<String, List<String>> rewards = {
-    'nutrition': [],
-    'exercise': [],
-    'sleep': [],
-    'mental': [],
-  };
 
   Map<String, Map<String, List<String>>> playerRewards = {
     'player1': {
@@ -83,7 +88,7 @@ class GameService extends ChangeNotifier {
       '💧 Drink 8 glasses of water throughout the day',
       '🥜 Include nuts and seeds for healthy fats',
       '🐟 Eat fish twice a week for omega-3',
-      '🎎 Choose whole fruits over fruit juices',
+      '🍎 Choose whole fruits over fruit juices',
     ],
     'exercise': [
       '🏃 Get 30 minutes of exercise daily',
@@ -447,12 +452,13 @@ class GameService extends ChangeNotifier {
 
     playerPositions = {'player1': 0, 'player2': 0, 'player3': 0};
     playerScores = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     moveCount = 0;
     lastRoll = 0;
     animatingSnake = null;
     animatingLadder = null;
     healthProgress = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
-    rewards = {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []};
     playerRewards = {
       'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
       'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
@@ -479,6 +485,8 @@ class GameService extends ChangeNotifier {
 
     playerPositions = {'player1': 0, 'player2': 0, 'player3': 0};
     playerScores = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     moveCount = 0;
     currentPlayer = 'player1';
     gameActive = false;
@@ -487,7 +495,6 @@ class GameService extends ChangeNotifier {
     animatingSnake = null;
     animatingLadder = null;
     healthProgress = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
-    rewards = {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []};
     playerRewards = {
       'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
       'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
@@ -505,7 +512,6 @@ class GameService extends ChangeNotifier {
     isRolling = true;
     notifyListeners();
     
-    // Play dice roll sound
     _soundService.playDiceRoll();
     
     await Future.delayed(const Duration(milliseconds: 500));
@@ -518,7 +524,6 @@ class GameService extends ChangeNotifier {
     return roll;
   }
 
-  // ✅ FIXED: Step-by-step movement with sound
   Future<void> movePlayer(String player, int steps, {required Function(String, String) onNotify}) async {
     moveCount++;
     final oldPosition = playerPositions[player]!;
@@ -530,16 +535,13 @@ class GameService extends ChangeNotifier {
       return;
     }
 
-    // Animate step-by-step movement
     for (int step = 1; step <= steps; step++) {
       final newPos = oldPosition + step;
       playerPositions[player] = newPos;
       notifyListeners();
       
-      // Play step sound
       _soundService.playMoveStep();
       
-      // Wait between steps
       await Future.delayed(const Duration(milliseconds: 400));
     }
 
@@ -550,6 +552,9 @@ class GameService extends ChangeNotifier {
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
     if (snakes.containsKey(position)) {
       final snake = snakes[position]!;
+
+      // Increment bad habits counter
+      playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
 
       animatingSnake = position;
       lastAnimationTime = DateTime.now();
@@ -567,6 +572,9 @@ class GameService extends ChangeNotifier {
 
     } else if (ladders.containsKey(position)) {
       final ladder = ladders[position]!;
+
+      // Increment good habits counter
+      playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
 
       animatingLadder = position;
       lastAnimationTime = DateTime.now();
@@ -634,23 +642,12 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addReward(String category, String rewardText) {
-    if (!rewards.containsKey(category)) return;
-    rewards[category]!.insert(0, rewardText);
-    notifyListeners();
-  }
-
   void addRewardForPlayer(String player, String category, String rewardText) {
     if (!playerRewards.containsKey(player)) return;
     if (!playerRewards[player]!.containsKey(category)) return;
     if (playerRewards[player]![category]!.contains(rewardText)) return;
     playerRewards[player]![category]!.insert(0, rewardText);
-    addReward(category, rewardText);
     notifyListeners();
-  }
-
-  List<String> getRewards(String category) {
-    return rewards[category] ?? [];
   }
 
   List<String> getPlayerRewards(String player, String category) {
@@ -707,3 +704,5 @@ class GameService extends ChangeNotifier {
 
   String getRandomTip(String category) => _tipForCategory(category);
 }
+
+
