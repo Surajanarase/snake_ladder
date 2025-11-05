@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'dart:math' as math;
+import 'dart:math' show cos, sin;
 
 class BoardWidget extends StatefulWidget {
   const BoardWidget({super.key});
@@ -283,6 +284,7 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
 }
 
 // NEW: Painter for START (cell 1) and FINISH (cell 100) blocks
+// Improved START and FINISH blocks painter
 class _StartFinishPainter extends CustomPainter {
   final double boardSize;
   _StartFinishPainter(this.boardSize);
@@ -301,19 +303,19 @@ class _StartFinishPainter extends CustomPainter {
   void _drawStartBlock(Canvas canvas, double cellSize, int cellNumber) {
     final rc = _cellToRowCol(cellNumber);
     final rect = Rect.fromLTWH(
-      rc['col']! * cellSize + 1,
-      rc['row']! * cellSize + 1,
-      cellSize - 2,
-      cellSize - 2,
+      rc['col']! * cellSize + 2,
+      rc['row']! * cellSize + 2,
+      cellSize - 4,
+      cellSize - 4,
     );
 
-    // Gradient background for START
-    final gradient = LinearGradient(
+    // Gradient background with green theme
+    const gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        const Color(0xFF4CAF50).withValues(alpha: 0.3),
-        const Color(0xFF66BB6A).withValues(alpha: 0.2),
+        Color(0xFF4CAF50),
+        Color(0xFF66BB6A),
       ],
     );
 
@@ -321,25 +323,41 @@ class _StartFinishPainter extends CustomPainter {
       ..shader = gradient.createShader(rect)
       ..style = PaintingStyle.fill;
 
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.15));
     canvas.drawRRect(rrect, paint);
 
-    // Border
+    // White border
     final borderPaint = Paint()
-      ..color = const Color(0xFF4CAF50)
-      ..strokeWidth = 2.5
+      ..color = Colors.white
+      ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
     canvas.drawRRect(rrect, borderPaint);
 
-    // "START" text
+    // Decorative corner dots
+    final dotPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.7)
+      ..style = PaintingStyle.fill;
+    
+    final dotRadius = cellSize * 0.08;
+    canvas.drawCircle(Offset(rect.left + dotRadius * 1.5, rect.top + dotRadius * 1.5), dotRadius, dotPaint);
+    canvas.drawCircle(Offset(rect.right - dotRadius * 1.5, rect.top + dotRadius * 1.5), dotRadius, dotPaint);
+
+    // "START" text with better styling
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'START',
         style: TextStyle(
-          color: const Color(0xFF2E7D32),
-          fontSize: cellSize * 0.20,
-          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          fontSize: cellSize * 0.22,
+          fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
+          shadows: const [
+            Shadow(
+              color: Color(0x80000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -349,71 +367,15 @@ class _StartFinishPainter extends CustomPainter {
       canvas,
       Offset(
         rect.center.dx - textPainter.width / 2,
-        rect.center.dy - textPainter.height / 2,
-      ),
-    );
-  }
-
-  void _drawFinishBlock(Canvas canvas, double cellSize, int cellNumber) {
-    final rc = _cellToRowCol(cellNumber);
-    final rect = Rect.fromLTWH(
-      rc['col']! * cellSize + 1,
-      rc['row']! * cellSize + 1,
-      cellSize - 2,
-      cellSize - 2,
-    );
-
-    // Gradient background for FINISH
-    final gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        const Color(0xFFFFD700).withValues(alpha: 0.4),
-        const Color(0xFFFFA500).withValues(alpha: 0.3),
-      ],
-    );
-
-    final paint = Paint()
-      ..shader = gradient.createShader(rect)
-      ..style = PaintingStyle.fill;
-
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
-    canvas.drawRRect(rrect, paint);
-
-    // Border with gold shimmer effect
-    final borderPaint = Paint()
-      ..color = const Color(0xFFFFD700)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawRRect(rrect, borderPaint);
-
-    // "FINISH" text
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: 'FINISH',
-        style: TextStyle(
-          color: const Color(0xFFFF8C00),
-          fontSize: cellSize * 0.18,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.3,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        rect.center.dx - textPainter.width / 2,
-        rect.center.dy - textPainter.height / 2,
+        rect.center.dy - textPainter.height / 2 + cellSize * 0.05,
       ),
     );
 
-    // Trophy icon above text
+    // Flag icon above text
     final iconPainter = TextPainter(
-      text: const TextSpan(
-        text: '🏆',
-        style: TextStyle(fontSize: 16),
+      text: TextSpan(
+        text: '🚩',
+        style: TextStyle(fontSize: cellSize * 0.28),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -422,9 +384,117 @@ class _StartFinishPainter extends CustomPainter {
       canvas,
       Offset(
         rect.center.dx - iconPainter.width / 2,
-        rect.top + cellSize * 0.15,
+        rect.top + cellSize * 0.08,
       ),
     );
+  }
+
+  void _drawFinishBlock(Canvas canvas, double cellSize, int cellNumber) {
+    final rc = _cellToRowCol(cellNumber);
+    final rect = Rect.fromLTWH(
+      rc['col']! * cellSize + 2,
+      rc['row']! * cellSize + 2,
+      cellSize - 4,
+      cellSize - 4,
+    );
+
+    // Gradient background with gold theme
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFFFFD700),
+        Color(0xFFFFA500),
+      ],
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.fill;
+
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.15));
+    canvas.drawRRect(rrect, paint);
+
+    // White border with shine effect
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawRRect(rrect, borderPaint);
+
+    // Decorative stars in corners
+    final starPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.8)
+      ..style = PaintingStyle.fill;
+    
+    _drawStar(canvas, Offset(rect.left + cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.08, starPaint);
+    _drawStar(canvas, Offset(rect.right - cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.08, starPaint);
+
+    // "FINISH" text with shadow
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'FINISH',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: cellSize * 0.20,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.3,
+          shadows: const [
+            Shadow(
+              color: Color(0x80000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        rect.center.dx - textPainter.width / 2,
+        rect.center.dy - textPainter.height / 2 + cellSize * 0.08,
+      ),
+    );
+
+    // Trophy icon above text
+    final iconPainter = TextPainter(
+      text: TextSpan(
+        text: '🏆',
+        style: TextStyle(fontSize: cellSize * 0.32),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    iconPainter.layout();
+    iconPainter.paint(
+      canvas,
+      Offset(
+        rect.center.dx - iconPainter.width / 2,
+        rect.top + cellSize * 0.05,
+      ),
+    );
+  }
+
+  void _drawStar(Canvas canvas, Offset center, double size, Paint paint) {
+    final path = Path();
+    const numberOfPoints = 5;
+    const angle = (3.14159 * 2) / numberOfPoints;
+    
+    for (int i = 0; i < numberOfPoints * 2; i++) {
+      final radius = i.isEven ? size : size * 0.5;
+      final x = center.dx + radius * cos(i * angle - 3.14159 / 2);
+      final y = center.dy + radius * sin(i * angle - 3.14159 / 2);
+      
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   Map<String, int> _cellToRowCol(int cellNumber) {
@@ -440,7 +510,6 @@ class _StartFinishPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _StartFinishPainter oldDelegate) => false;
 }
-
 // Occupied cells painter
 class _OccupiedCellsPainter extends CustomPainter {
   final GameService game;

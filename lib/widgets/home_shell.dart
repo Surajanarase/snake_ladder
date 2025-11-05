@@ -6,6 +6,7 @@ import 'board_widget.dart';
 import 'control_panel.dart';
 import 'progress_dashboard.dart';
 import 'dart:math' as math;
+import '../services/sound_service.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -131,65 +132,91 @@ class _HomeShellState extends State<HomeShell> {
                             ),
                             borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: const Text('❤️', style: TextStyle(fontSize: 22)),
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Health Heroes',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Learn & Play',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _showLegend(context),
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(51),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.help_outline,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: // Replace the header Row with this:
+Row(
+  children: [
+    Container(
+      width: 40,
+      height: 40,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: const Text('❤️', style: TextStyle(fontSize: 22)),
+    ),
+    const SizedBox(width: 12),
+    const Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Health Heroes',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          Text(
+            'Learn & Play',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    ),
+    // Sound toggle button
+    GestureDetector(
+      onTap: () {
+        setState(() {
+          SoundService().toggleSound();
+        });
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(51),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: Center(
+          child: Icon(
+            SoundService().soundEnabled ? Icons.volume_up : Icons.volume_off,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+      ),
+    ),
+    GestureDetector(
+      onTap: () => _showLegend(context),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(51),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.help_outline,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+      ),
+    ),
+  ],
+)
                           ),
-                        ),
 
                         // Scrollable content area
                         Expanded(

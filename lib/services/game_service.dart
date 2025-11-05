@@ -1,11 +1,11 @@
 // lib/services/game_service.dart
-// IMPROVEMENT: Single Random instance for better randomness distribution
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'sound_service.dart';
 
 class GameService extends ChangeNotifier {
-  // ========== IMPROVEMENT: Reusable Random instance ==========
   final Random _random = Random();
+  final SoundService _soundService = SoundService();
   
   // Game state
   String currentPlayer = 'player1';
@@ -41,7 +41,7 @@ class GameService extends ChangeNotifier {
   int? animatingLadder;
   DateTime? lastAnimationTime;
 
-  // Rewards (global + per player, by 4 categories)
+  // Rewards
   Map<String, List<String>> rewards = {
     'nutrition': [],
     'exercise': [],
@@ -83,7 +83,7 @@ class GameService extends ChangeNotifier {
       '💧 Drink 8 glasses of water throughout the day',
       '🥜 Include nuts and seeds for healthy fats',
       '🐟 Eat fish twice a week for omega-3',
-      '🎁 Choose whole fruits over fruit juices',
+      '🎎 Choose whole fruits over fruit juices',
     ],
     'exercise': [
       '🏃 Get 30 minutes of exercise daily',
@@ -108,23 +108,18 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // ========== NEW: Per-player unique tips & per-ladder per-player category ==========
-  // Track which tips each player has received for each category (no repeats per player)
   Map<String, Map<String, Set<String>>> playerAssignedTips = {
     'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
     'player2': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
     'player3': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
   };
 
-  // Overflow counters when a player's tips in a category are exhausted (keeps uniqueness via variants)
   Map<String, Map<String, int>> playerTipOverflow = {
     'player1': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
     'player2': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
     'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
   };
 
-  // For each ladder start cell, store which category was assigned for each player
-  // Example: ladderPlayerCategories[10]['player1'] = 'nutrition'
   Map<int, Map<String, String>> ladderPlayerCategories = {};
 
   Map<int, Map<String, dynamic>> snakes = {};
@@ -144,7 +139,7 @@ class GameService extends ChangeNotifier {
   ];
 
   final List<Map<String, dynamic>> ladderTemplates = [
-    {'message': "Ate fruits! Immunity boost!", 'icon': '🎁', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
+    {'message': "Ate fruits! Immunity boost!", 'icon': '🍎', 'category': 'nutrition', 'tip': "Fruits contain vitamins and antioxidants that strengthen your immune system."},
     {'message': "Morning exercise! Energy increased!", 'icon': '💪', 'category': 'exercise', 'tip': "30 minutes of daily exercise improves mood and energy levels."},
     {'message': "Drank 8 glasses of water! Well hydrated!", 'icon': '💧', 'category': 'nutrition', 'tip': "Proper hydration helps your body function optimally."},
     {'message': "Regular checkup! Early detection saves!", 'icon': '👨‍⚕️', 'category': 'health', 'tip': "Annual health checkups can catch problems early."},
@@ -166,7 +161,6 @@ class GameService extends ChangeNotifier {
     [const Color(0xFF00695C), const Color(0xFF4DB6AC)],
   ];
 
-  // ========== Board geometry helpers ==========
   Map<String, int> _rowColOf(int cell) {
     final idx = cell - 1;
     final rowFromBottom = idx ~/ 10;
@@ -236,15 +230,9 @@ class GameService extends ChangeNotifier {
     return _rowColOf(end)['row']! > _rowColOf(start)['row']!;
   }
 
-  // ========== REMOVED OLD unique tips management (replaced by per-player system) ==========
-  // (assignedTipsPerCategory, _tipCursor, _tipOverflowCounter, _pickUniqueTipForCategory) — deleted
-
-  // ========== NEW helpers: per-player unique tips & per-ladder per-player category ==========
   String _pickUniqueTipForPlayer(String player, String baseCategory, int ladderPosition) {
-    // Ensure ladder map exists
     ladderPlayerCategories.putIfAbsent(ladderPosition, () => {});
 
-    // Assign (or reuse) a category for this player on this ladder
     String assignedCategory;
     if (ladderPlayerCategories[ladderPosition]!.containsKey(player)) {
       assignedCategory = ladderPlayerCategories[ladderPosition]![player]!;
@@ -261,7 +249,6 @@ class GameService extends ChangeNotifier {
       ladderPlayerCategories[ladderPosition]![player] = assignedCategory;
     }
 
-    // Now pick a unique tip for THIS player in assignedCategory
     final tips = healthTips[assignedCategory] ?? const <String>[];
     if (tips.isEmpty) return 'Stay healthy!';
 
@@ -276,7 +263,6 @@ class GameService extends ChangeNotifier {
       }
     }
 
-    // All tips exhausted for this player in this category — create a unique variant
     final baseIdx = _random.nextInt(tips.length);
     playerTipOverflow[player]![assignedCategory] =
         (playerTipOverflow[player]![assignedCategory]! + 1);
@@ -300,7 +286,6 @@ class GameService extends ChangeNotifier {
     return cat;
   }
 
-  // ========== Board generation (using _random) ==========
   void generateRandomBoard() {
     snakes = {};
     ladders = {};
@@ -313,7 +298,6 @@ class GameService extends ChangeNotifier {
 
     const double minStartSpacing = 3.5;
 
-    // Generate snakes
     for (int i = 0; i < numSnakes && i < snakeTemplates.length; i++) {
       int start = -1;
       int end = -1;
@@ -370,7 +354,6 @@ class GameService extends ChangeNotifier {
       };
     }
 
-    // Generate ladders
     for (int i = 0; i < numLadders && i < ladderTemplates.length; i++) {
       int start = -1;
       int end = -1;
@@ -438,14 +421,12 @@ class GameService extends ChangeNotifier {
     return 'Stay healthy!';
   }
 
-  // ========== Game management ==========
   void startGame(int numPlayers, bool withBot) {
     numberOfPlayers = numPlayers;
     hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
 
-    // RESET new per-player/category trackers
     ladderPlayerCategories = {};
     playerAssignedTips = {
       'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
@@ -482,7 +463,6 @@ class GameService extends ChangeNotifier {
   }
 
   void resetGame() {
-    // RESET new per-player/category trackers
     ladderPlayerCategories = {};
     playerAssignedTips = {
       'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
@@ -520,14 +500,16 @@ class GameService extends ChangeNotifier {
     return hasBot && currentPlayer == 'player$numberOfPlayers';
   }
 
-  // ========== IMPROVED: Fair dice rolling with single Random instance ==========
   Future<int> rollDice() async {
     if (isRolling || !gameActive) return 0;
     isRolling = true;
     notifyListeners();
+    
+    // Play dice roll sound
+    _soundService.playDiceRoll();
+    
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // ✅ TRUE RANDOMNESS: Each roll is independent and fair
     final roll = _random.nextInt(6) + 1;
     
     lastRoll = roll;
@@ -536,22 +518,33 @@ class GameService extends ChangeNotifier {
     return roll;
   }
 
+  // ✅ FIXED: Step-by-step movement with sound
   Future<void> movePlayer(String player, int steps, {required Function(String, String) onNotify}) async {
     moveCount++;
     final oldPosition = playerPositions[player]!;
-    final newPosition = oldPosition + steps;
+    final targetPosition = oldPosition + steps;
 
-    if (newPosition > 100) {
+    if (targetPosition > 100) {
       onNotify('Need exact roll to win!', '🎯');
       switchTurn(onNotify);
       return;
     }
 
-    playerPositions[player] = newPosition;
-    notifyListeners();
+    // Animate step-by-step movement
+    for (int step = 1; step <= steps; step++) {
+      final newPos = oldPosition + step;
+      playerPositions[player] = newPos;
+      notifyListeners();
+      
+      // Play step sound
+      _soundService.playMoveStep();
+      
+      // Wait between steps
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
 
-    await Future.delayed(const Duration(milliseconds: 300));
-    await checkSpecialCell(newPosition, player, onNotify);
+    await Future.delayed(const Duration(milliseconds: 200));
+    await checkSpecialCell(targetPosition, player, onNotify);
   }
 
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
@@ -583,22 +576,19 @@ class GameService extends ChangeNotifier {
 
       final String categoryKey = ladder['category'] as String;
       playerScores[player] = playerScores[player]! + 10;
-      // Progress remains tied to ladder's base category
       updateHealthProgress(categoryKey);
       notifyListeners();
 
       final String icon = ladder['icon']?.toString() ?? '🏅';
       final String msg = ladder['message'] as String? ?? 'You got a reward!';
 
-      // NEW: pick a unique tip and assign per-player category for THIS ladder
       final int ladderStartCell = position;
       final String uniqueTip = _pickUniqueTipForPlayer(player, categoryKey, ladderStartCell);
       final String assignedCategory = _getAssignedCategory(player, ladderStartCell);
 
-      final String rewardText = '$icon $msg — $uniqueTip';
+      final String rewardText = '$icon $msg – $uniqueTip';
       addRewardForPlayer(player, assignedCategory, rewardText);
 
-      // Popup uses display name of the ASSIGNED category (e.g., "Mindfulness")
       final String displayCategory = _displayCategory(assignedCategory);
       onNotify('REWARD::$player::$displayCategory::$msg', ladder['icon']);
 
