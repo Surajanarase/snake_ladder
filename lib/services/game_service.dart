@@ -1,4 +1,4 @@
-// lib/services/game_service.dart
+// lib/services/game_service.dart (ENHANCED VERSION)
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'sound_service.dart';
@@ -34,12 +34,35 @@ class GameService extends ChangeNotifier {
     'player3': 0,
   };
 
-  // NEW: store concrete bad-habit events per player grouped by category
+  // Store concrete bad-habit events per player grouped by category
   Map<String, Map<String, List<String>>> playerBadEvents = {
     'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
     'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
     'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
   };
+  
+  // 🆕 NEW: Quiz tracking per player per category
+  Map<String, Map<String, QuizStats>> playerQuizStats = {
+    'player1': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+    'player2': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+    'player3': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+  };
+
+  // 🆕 NEW: Action Challenge tracking
+  Map<String, int> playerActionChallengesCompleted = {
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+
+  Map<String, int> playerBonusSteps = {
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+
+  // 🆕 NEW: Define Action Challenge tiles (specific board positions)
+  final Set<int> actionChallengeTiles = {8, 23, 35, 47, 62, 78, 89};
   
   Map<String, Color> playerColors = {
     'player1': const Color(0xFF4A90E2),
@@ -95,7 +118,7 @@ class GameService extends ChangeNotifier {
       '💧 Drink 8 glasses of water throughout the day',
       '🥜 Include nuts and seeds for healthy fats',
       '🐟 Eat fish twice a week for omega-3',
-      '🍎 Choose whole fruits over fruit juices',
+      '🎁 Choose whole fruits over fruit juices',
     ],
     'exercise': [
       '🏃 Get 30 minutes of exercise daily',
@@ -119,6 +142,174 @@ class GameService extends ChangeNotifier {
       '🌳 Spend time in nature and be present',
     ],
   };
+
+  // 🆕 NEW: Quiz Questions Database
+  final Map<String, List<QuizQuestion>> quizDatabase = {
+    'nutrition': [
+      QuizQuestion(
+        question: 'How many servings of fruits and vegetables should adults eat daily?',
+        options: ['2-3 servings', '5 servings', '10 servings', '15 servings'],
+        correctIndex: 1,
+        explanation: '5 servings of fruits and vegetables daily provide essential vitamins, minerals, and fiber for optimal health.',
+      ),
+      QuizQuestion(
+        question: 'How many glasses of water should you drink per day?',
+        options: ['2-3 glasses', '4-5 glasses', '8 glasses', '12 glasses'],
+        correctIndex: 2,
+        explanation: '8 glasses (about 2 liters) of water daily helps maintain proper hydration and body function.',
+      ),
+      QuizQuestion(
+        question: 'Which nutrient is essential for building and repairing tissues?',
+        options: ['Carbohydrates', 'Protein', 'Fats', 'Vitamins'],
+        correctIndex: 1,
+        explanation: 'Protein is crucial for building and repairing tissues, making enzymes, and supporting immune function.',
+      ),
+      QuizQuestion(
+        question: 'What type of fats are considered healthiest?',
+        options: ['Saturated fats', 'Trans fats', 'Unsaturated fats', 'Hydrogenated fats'],
+        correctIndex: 2,
+        explanation: 'Unsaturated fats (found in nuts, fish, and olive oil) support heart health and reduce inflammation.',
+      ),
+    ],
+    'exercise': [
+      QuizQuestion(
+        question: 'How many minutes of moderate exercise should adults get daily?',
+        options: ['10 minutes', '20 minutes', '30 minutes', '60 minutes'],
+        correctIndex: 2,
+        explanation: '30 minutes of moderate exercise daily improves cardiovascular health, mood, and energy levels.',
+      ),
+      QuizQuestion(
+        question: 'How many steps should you aim for each day?',
+        options: ['5,000 steps', '7,500 steps', '10,000 steps', '15,000 steps'],
+        correctIndex: 2,
+        explanation: '10,000 steps daily helps maintain fitness, supports weight management, and improves overall health.',
+      ),
+      QuizQuestion(
+        question: 'How often should you do strength training per week?',
+        options: ['Once a week', 'Twice a week', 'Every day', 'Once a month'],
+        correctIndex: 1,
+        explanation: 'Strength training twice a week builds muscle, strengthens bones, and boosts metabolism.',
+      ),
+      QuizQuestion(
+        question: 'What should you do before exercising?',
+        options: ['Eat a heavy meal', 'Stretch and warm up', 'Skip hydration', 'Start intensely'],
+        correctIndex: 1,
+        explanation: 'Stretching and warming up prepares muscles, prevents injuries, and improves performance.',
+      ),
+    ],
+    'sleep': [
+      QuizQuestion(
+        question: 'How many hours of sleep do adults need per night?',
+        options: ['4-5 hours', '5-6 hours', '7-9 hours', '10-12 hours'],
+        correctIndex: 2,
+        explanation: '7-9 hours of quality sleep is essential for physical recovery, mental clarity, and immune function.',
+      ),
+      QuizQuestion(
+        question: 'When should you avoid screens before bed?',
+        options: ['30 minutes before', '1 hour before', '2 hours before', 'No need to avoid'],
+        correctIndex: 1,
+        explanation: 'Avoiding screens 1 hour before bed reduces blue light exposure, helping your brain produce sleep hormones.',
+      ),
+      QuizQuestion(
+        question: 'What is the ideal bedroom temperature for sleep?',
+        options: ['75-80°F', '68-72°F', '60-65°F', '50-55°F'],
+        correctIndex: 2,
+        explanation: 'A cool bedroom (60-65°F) promotes better sleep quality by supporting your body\'s natural temperature drop.',
+      ),
+      QuizQuestion(
+        question: 'When should you stop consuming caffeine?',
+        options: ['After 12 PM', 'After 2 PM', 'After 6 PM', 'Anytime is fine'],
+        correctIndex: 1,
+        explanation: 'Stopping caffeine after 2 PM ensures it doesn\'t interfere with your sleep cycle later.',
+      ),
+    ],
+    'mental': [
+      QuizQuestion(
+        question: 'How many minutes of mindfulness should you practice daily?',
+        options: ['2 minutes', '5 minutes', '10 minutes', '30 minutes'],
+        correctIndex: 2,
+        explanation: '10 minutes of daily mindfulness reduces stress, improves focus, and enhances emotional well-being.',
+      ),
+      QuizQuestion(
+        question: 'Which activity promotes mental well-being?',
+        options: ['Social isolation', 'Journaling', 'Skipping meals', 'Overworking'],
+        correctIndex: 1,
+        explanation: 'Journaling helps process emotions, reduces anxiety, and improves self-awareness.',
+      ),
+      QuizQuestion(
+        question: 'What is a key benefit of spending time in nature?',
+        options: ['Increased stress', 'Reduced focus', 'Improved mood', 'More anxiety'],
+        correctIndex: 2,
+        explanation: 'Time in nature reduces stress hormones, improves mood, and enhances mental clarity.',
+      ),
+      QuizQuestion(
+        question: 'How does creative activity help mental health?',
+        options: ['Increases stress', 'Promotes mindfulness', 'Causes fatigue', 'Reduces creativity'],
+        correctIndex: 1,
+        explanation: 'Creative hobbies promote mindfulness, reduce stress, and provide a healthy outlet for emotions.',
+      ),
+    ],
+  };
+
+  // 🆕 NEW: Action Challenge Database
+  final List<ActionChallenge> actionChallenges = [
+    ActionChallenge(
+      title: 'Push-Up Power! 💪',
+      description: 'Do 5 push-ups right now!',
+      icon: '💪',
+      timeLimit: 120, // 2 minutes
+      category: 'exercise',
+    ),
+    ActionChallenge(
+      title: 'Hydration Break! 💧',
+      description: 'Drink a full glass of water',
+      icon: '💧',
+      timeLimit: 90,
+      category: 'nutrition',
+    ),
+    ActionChallenge(
+      title: 'Stretch Time! 🧘',
+      description: 'Do 10 arm stretches',
+      icon: '🧘',
+      timeLimit: 120,
+      category: 'exercise',
+    ),
+    ActionChallenge(
+      title: 'Deep Breathing! 🌬️',
+      description: 'Take 5 deep breaths slowly',
+      icon: '🌬️',
+      timeLimit: 60,
+      category: 'mental',
+    ),
+    ActionChallenge(
+      title: 'Jump It Out! 🦘',
+      description: 'Do 10 jumping jacks',
+      icon: '🦘',
+      timeLimit: 90,
+      category: 'exercise',
+    ),
+    ActionChallenge(
+      title: 'Eye Rest! 👀',
+      description: 'Look away from screen for 20 seconds',
+      icon: '👀',
+      timeLimit: 60,
+      category: 'mental',
+    ),
+    ActionChallenge(
+      title: 'Squat Challenge! 🏋️',
+      description: 'Do 5 squats',
+      icon: '🏋️',
+      timeLimit: 120,
+      category: 'exercise',
+    ),
+    ActionChallenge(
+      title: 'Gratitude Moment! 🙏',
+      description: 'Think of 3 things you\'re grateful for',
+      icon: '🙏',
+      timeLimit: 90,
+      category: 'mental',
+    ),
+  ];
 
   Map<String, Map<String, Set<String>>> playerAssignedTips = {
     'player1': {'nutrition': <String>{}, 'exercise': <String>{}, 'sleep': <String>{}, 'mental': <String>{}},
@@ -172,6 +363,36 @@ class GameService extends ChangeNotifier {
     [const Color(0xFFC62828), const Color(0xFFE57373)],
     [const Color(0xFF00695C), const Color(0xFF4DB6AC)],
   ];
+
+  // 🆕 NEW: Get quiz question for category
+  QuizQuestion getRandomQuizQuestion(String category) {
+    final questions = quizDatabase[category] ?? quizDatabase['nutrition']!;
+    return questions[_random.nextInt(questions.length)];
+  }
+
+  // 🆕 NEW: Get random action challenge
+  ActionChallenge getRandomActionChallenge() {
+    return actionChallenges[_random.nextInt(actionChallenges.length)];
+  }
+
+  // 🆕 NEW: Record quiz result
+  void recordQuizResult(String player, String category, bool correct) {
+    playerQuizStats[player]?[category]?.recordAttempt(correct);
+    notifyListeners();
+  }
+
+  // 🆕 NEW: Complete action challenge
+  void completeActionChallenge(String player) {
+    playerActionChallengesCompleted[player] = (playerActionChallengesCompleted[player] ?? 0) + 1;
+    playerBonusSteps[player] = (playerBonusSteps[player] ?? 0) + 2;
+    playerScores[player] = (playerScores[player] ?? 0) + 15; // Bonus points
+    notifyListeners();
+  }
+
+  // 🆕 NEW: Check if position is an action challenge tile
+  bool isActionChallengeTile(int position) {
+    return actionChallengeTiles.contains(position);
+  }
 
   Map<String, int> _rowColOf(int cell) {
     final idx = cell - 1;
@@ -307,6 +528,9 @@ class GameService extends ChangeNotifier {
 
     final usedPositions = <int>{};
     final startAnchors = <int>[];
+
+    // 🆕 Reserve action challenge tiles
+    usedPositions.addAll(actionChallengeTiles);
 
     const double minStartSpacing = 3.5;
 
@@ -451,6 +675,17 @@ class GameService extends ChangeNotifier {
       'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
     };
 
+    // 🆕 Reset quiz stats
+    playerQuizStats = {
+      'player1': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+      'player2': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+      'player3': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+    };
+
+    // 🆕 Reset action challenge stats
+    playerActionChallengesCompleted = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerBonusSteps = {'player1': 0, 'player2': 0, 'player3': 0};
+
     generateRandomBoard();
 
     if (withBot) {
@@ -462,7 +697,6 @@ class GameService extends ChangeNotifier {
     playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
 
-    // NEW: reset bad events
     playerBadEvents = {
       'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
       'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
@@ -496,6 +730,17 @@ class GameService extends ChangeNotifier {
       'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
     };
 
+    // 🆕 Reset quiz stats
+    playerQuizStats = {
+      'player1': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+      'player2': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+      'player3': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
+    };
+
+    // 🆕 Reset action challenge stats
+    playerActionChallengesCompleted = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerBonusSteps = {'player1': 0, 'player2': 0, 'player3': 0};
+
     generateRandomBoard();
 
     playerPositions = {'player1': 0, 'player2': 0, 'player3': 0};
@@ -503,7 +748,6 @@ class GameService extends ChangeNotifier {
     playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
 
-    // NEW: reset bad events
     playerBadEvents = {
       'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
       'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
@@ -573,18 +817,22 @@ class GameService extends ChangeNotifier {
   }
 
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
+    // 🆕 NEW: Check for Action Challenge first
+    if (isActionChallengeTile(position)) {
+      onNotify('ACTION_CHALLENGE::$player::$position', '⚡');
+      return; // Don't switch turn - wait for challenge completion
+    }
+
     if (snakes.containsKey(position)) {
       final snake = snakes[position]!;
 
-      // Increment bad habits counter
       playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
 
-      // NEW: record a concrete bad-habit event under its category
       final String badCat = (snake['category'] as String?) ?? 'mental';
       final String badText = '${snake['icon']} ${snake['message']}';
       final list = playerBadEvents[player]![badCat]!;
       if (!list.contains(badText)) {
-        list.insert(0, badText); // latest first
+        list.insert(0, badText);
       }
 
       animatingSnake = position;
@@ -604,44 +852,59 @@ class GameService extends ChangeNotifier {
     } else if (ladders.containsKey(position)) {
       final ladder = ladders[position]!;
 
-      // Increment good habits counter
-      playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
-
-      animatingLadder = position;
-      lastAnimationTime = DateTime.now();
-      notifyListeners();
-
-      onNotify(ladder['message'], ladder['icon']);
-
+      // 🆕 NEW: Show quiz before climbing ladder
       final String categoryKey = ladder['category'] as String;
-      playerScores[player] = playerScores[player]! + 10;
-      updateHealthProgress(categoryKey);
-      notifyListeners();
-
-      final String icon = ladder['icon']?.toString() ?? '🏅';
-      final String msg = ladder['message'] as String? ?? 'You got a reward!';
-
-      final int ladderStartCell = position;
-      final String uniqueTip = _pickUniqueTipForPlayer(player, categoryKey, ladderStartCell);
-      final String assignedCategory = _getAssignedCategory(player, ladderStartCell);
-
-      final String rewardText = '$icon $msg – $uniqueTip';
-      addRewardForPlayer(player, assignedCategory, rewardText);
-
-      final String displayCategory = _displayCategory(assignedCategory);
-      onNotify('REWARD::$player::$displayCategory::$msg', ladder['icon']);
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      playerPositions[player] = ladder['end'];
-      animatingLadder = null;
-      notifyListeners();
-
-      checkWinCondition(onNotify);
+      onNotify('QUIZ::$player::$position::$categoryKey', '🧠');
+      return; // Don't climb yet - wait for quiz completion
 
     } else {
       checkWinCondition(onNotify);
     }
+  }
+
+  // 🆕 NEW: Handle successful quiz (called from UI after correct answer)
+  Future<void> onQuizSuccess(int position, String player, Function(String, String) onNotify) async {
+    final ladder = ladders[position]!;
+    
+    playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+
+    animatingLadder = position;
+    lastAnimationTime = DateTime.now();
+    notifyListeners();
+
+    onNotify(ladder['message'], ladder['icon']);
+
+    final String categoryKey = ladder['category'] as String;
+    playerScores[player] = playerScores[player]! + 10;
+    updateHealthProgress(categoryKey);
+    notifyListeners();
+
+    final String icon = ladder['icon']?.toString() ?? '🏅';
+    final String msg = ladder['message'] as String? ?? 'You got a reward!';
+
+    final int ladderStartCell = position;
+    final String uniqueTip = _pickUniqueTipForPlayer(player, categoryKey, ladderStartCell);
+    final String assignedCategory = _getAssignedCategory(player, ladderStartCell);
+
+    final String rewardText = '$icon $msg — $uniqueTip';
+    addRewardForPlayer(player, assignedCategory, rewardText);
+
+    final String displayCategory = _displayCategory(assignedCategory);
+    onNotify('REWARD::$player::$displayCategory::$msg', ladder['icon']);
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    playerPositions[player] = ladder['end'];
+    animatingLadder = null;
+    notifyListeners();
+
+    checkWinCondition(onNotify);
+  }
+
+  // 🆕 NEW: Handle failed quiz (stay in place)
+  void onQuizFailed(String player, Function(String, String) onNotify) {
+    onNotify('Better luck next time! Keep learning!', '📚');
+    switchTurn(onNotify);
   }
 
   String _displayCategory(String key) {
@@ -681,8 +944,6 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Backward-compatibility shim so old UI code keeps working.
-  // Old code calls: addReward(playerId, categoryKey, rewardText)
   void addReward(String player, String category, String rewardText) {
     addRewardForPlayer(player, category, rewardText);
   }
@@ -691,7 +952,6 @@ class GameService extends ChangeNotifier {
     return playerRewards[player]?[category] ?? [];
   }
 
-  // NEW: getter for bad events
   List<String> getPlayerBadEvents(String player, String category) {
     return playerBadEvents[player]?[category] ?? const [];
   }
@@ -745,4 +1005,52 @@ class GameService extends ChangeNotifier {
   }
 
   String getRandomTip(String category) => _tipForCategory(category);
+}
+
+// 🆕 NEW: Quiz Question Model
+class QuizQuestion {
+  final String question;
+  final List<String> options;
+  final int correctIndex;
+  final String explanation;
+
+  QuizQuestion({
+    required this.question,
+    required this.options,
+    required this.correctIndex,
+    required this.explanation,
+  });
+}
+
+// 🆕 NEW: Quiz Statistics Model
+class QuizStats {
+  int totalAttempts = 0;
+  int correctAnswers = 0;
+
+  void recordAttempt(bool correct) {
+    totalAttempts++;
+    if (correct) correctAnswers++;
+  }
+
+  double get accuracy => totalAttempts > 0 ? (correctAnswers / totalAttempts) * 100 : 0;
+}
+
+// 🆕 NEW: Action Challenge Model
+class ActionChallenge {
+  final String title;
+  final String description;
+  final String icon;
+  final int timeLimit; // in seconds
+  final String category;
+
+  ActionChallenge({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.timeLimit,
+    required this.category,
+  });
+
+  // Add after the completeActionChallenge method
+
 }

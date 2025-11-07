@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'dart:async';
-
+import 'player_stats_dialog.dart'; 
 typedef NotifyCallback = void Function(String message, String icon);
 
 class ControlPanel extends StatefulWidget {
@@ -56,6 +56,8 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
+  
+
   @override
   void dispose() {
     _diceController.dispose();
@@ -102,7 +104,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     });
     
     widget.onNotify('🤖 Bot rolled $roll', '🎲');
-    await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
+await game.movePlayer(game.currentPlayer, roll, onNotify: (msg, ic) => widget.onNotify(msg, ic));
     
     await Future.delayed(const Duration(milliseconds: 1000));
     
@@ -168,7 +170,7 @@ Widget build(BuildContext context) {
                     _displayedRoll = roll;
                   });
 
-                  await game.movePlayer(game.currentPlayer, roll, onNotify: widget.onNotify);
+                 await game.movePlayer(game.currentPlayer, roll, onNotify: (msg, ic) => widget.onNotify(msg, ic));
                   await Future.delayed(const Duration(milliseconds: 1000));
                   await _resetDice();
                   await Future.delayed(const Duration(milliseconds: 200));
@@ -562,10 +564,41 @@ Widget build(BuildContext context) {
               ),
             ],
           ),
+          // In the _playerCardWithHabits method, add after the good/bad habits buttons:
+          
+
+const SizedBox(height: 8),
+ElevatedButton.icon(
+  
+  onPressed: () => _showPlayerStats(context, game, playerId),
+  icon: const Icon(Icons.bar_chart, size: 16),
+  label: const Text('Stats', style: TextStyle(fontSize: 11)),
+  style: ElevatedButton.styleFrom(
+    backgroundColor: color.withAlpha(51),
+    foregroundColor: color,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    minimumSize: Size.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  ),
+),
+
+
         ],
       ),
     );
   }
+
+  void _showPlayerStats(BuildContext context, GameService game, String playerId) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return PlayerStatsDialog(
+        playerId: playerId,
+        game: game,
+      );
+    },
+  );
+}
 
   // Show Good Habits Dialog with all 4 categories of positive tips
   void _showGoodHabitsDialog(BuildContext context, GameService game, String playerId) {
@@ -978,4 +1011,5 @@ class _StandardDicePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  
 }

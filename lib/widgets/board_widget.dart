@@ -129,6 +129,13 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
           ),
         ),
 
+        // Action Challenge tiles overlay
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _ActionChallengeTilesPainter(game),
+          ),
+        ),
+
         // Occupied cells overlay
         Positioned.fill(
           child: CustomPaint(
@@ -283,8 +290,7 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
   }
 }
 
-// NEW: Painter for START (cell 1) and FINISH (cell 100) blocks
-// Improved START and FINISH blocks painter
+// START and FINISH blocks painter
 class _StartFinishPainter extends CustomPainter {
   final double boardSize;
   _StartFinishPainter(this.boardSize);
@@ -292,11 +298,7 @@ class _StartFinishPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final double cellSize = size.width / 10;
-
-    // START block at cell 1 (bottom-left corner)
     _drawStartBlock(canvas, cellSize, 1);
-
-    // FINISH block at cell 100 (top-left corner)
     _drawFinishBlock(canvas, cellSize, 100);
   }
 
@@ -309,14 +311,10 @@ class _StartFinishPainter extends CustomPainter {
       cellSize - 4,
     );
 
-    // Gradient background with green theme
     const gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF4CAF50),
-        Color(0xFF66BB6A),
-      ],
+      colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
     );
 
     final paint = Paint()
@@ -326,14 +324,12 @@ class _StartFinishPainter extends CustomPainter {
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.15));
     canvas.drawRRect(rrect, paint);
 
-    // White border
     final borderPaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
     canvas.drawRRect(rrect, borderPaint);
 
-    // Decorative corner dots
     final dotPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
@@ -342,7 +338,6 @@ class _StartFinishPainter extends CustomPainter {
     canvas.drawCircle(Offset(rect.left + dotRadius * 1.5, rect.top + dotRadius * 1.5), dotRadius, dotPaint);
     canvas.drawCircle(Offset(rect.right - dotRadius * 1.5, rect.top + dotRadius * 1.5), dotRadius, dotPaint);
 
-    // "START" text with better styling
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'START',
@@ -352,11 +347,7 @@ class _StartFinishPainter extends CustomPainter {
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
           shadows: const [
-            Shadow(
-              color: Color(0x80000000),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
+            Shadow(color: Color(0x80000000), blurRadius: 3, offset: Offset(0, 1)),
           ],
         ),
       ),
@@ -371,7 +362,6 @@ class _StartFinishPainter extends CustomPainter {
       ),
     );
 
-    // Flag icon above text
     final iconPainter = TextPainter(
       text: TextSpan(
         text: '🚩',
@@ -398,14 +388,10 @@ class _StartFinishPainter extends CustomPainter {
       cellSize - 4,
     );
 
-    // Gradient background with gold theme
     const gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [
-        Color(0xFFFFD700),
-        Color(0xFFFFA500),
-      ],
+      colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
     );
 
     final paint = Paint()
@@ -415,14 +401,12 @@ class _StartFinishPainter extends CustomPainter {
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.15));
     canvas.drawRRect(rrect, paint);
 
-    // White border with shine effect
     final borderPaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
     canvas.drawRRect(rrect, borderPaint);
 
-    // Decorative stars in corners
     final starPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.8)
       ..style = PaintingStyle.fill;
@@ -430,7 +414,6 @@ class _StartFinishPainter extends CustomPainter {
     _drawStar(canvas, Offset(rect.left + cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.08, starPaint);
     _drawStar(canvas, Offset(rect.right - cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.08, starPaint);
 
-    // "FINISH" text with shadow
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'FINISH',
@@ -440,11 +423,7 @@ class _StartFinishPainter extends CustomPainter {
           fontWeight: FontWeight.w900,
           letterSpacing: 0.3,
           shadows: const [
-            Shadow(
-              color: Color(0x80000000),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
+            Shadow(color: Color(0x80000000), blurRadius: 3, offset: Offset(0, 1)),
           ],
         ),
       ),
@@ -459,7 +438,6 @@ class _StartFinishPainter extends CustomPainter {
       ),
     );
 
-    // Trophy icon above text
     final iconPainter = TextPainter(
       text: TextSpan(
         text: '🏆',
@@ -510,6 +488,80 @@ class _StartFinishPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _StartFinishPainter oldDelegate) => false;
 }
+
+// ⚡ NEW: Action Challenge Tiles Painter
+class _ActionChallengeTilesPainter extends CustomPainter {
+  final GameService game;
+  
+  _ActionChallengeTilesPainter(this.game);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cellSize = size.width / 10;
+    
+    for (final cell in game.actionChallengeTiles) {
+      final rc = _cellToRowCol(cell);
+      final rect = Rect.fromLTWH(
+        rc['col']! * cellSize + 2,
+        rc['row']! * cellSize + 2,
+        cellSize - 4,
+        cellSize - 4,
+      );
+
+      // Gradient background
+      const gradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+      );
+
+      final paint = Paint()
+        ..shader = gradient.createShader(rect)
+        ..style = PaintingStyle.fill;
+
+      final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.12));
+      canvas.drawRRect(rrect, paint);
+
+      // Border
+      final borderPaint = Paint()
+        ..color = const Color(0xFFFF8C00)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      canvas.drawRRect(rrect, borderPaint);
+
+      // Lightning bolt icon
+      final iconPainter = TextPainter(
+        text: TextSpan(
+          text: '⚡',
+          style: TextStyle(fontSize: cellSize * 0.4),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      iconPainter.layout();
+      iconPainter.paint(
+        canvas,
+        Offset(
+          rect.center.dx - iconPainter.width / 2,
+          rect.center.dy - iconPainter.height / 2,
+        ),
+      );
+    }
+  }
+
+  Map<String, int> _cellToRowCol(int cellNumber) {
+    final idx = cellNumber - 1;
+    final rowFromBottom = idx ~/ 10;
+    final row = 9 - rowFromBottom;
+    final offset = idx % 10;
+    final reversed = rowFromBottom % 2 == 1;
+    final col = reversed ? 9 - offset : offset;
+    return {'row': row, 'col': col};
+  }
+
+  @override
+  bool shouldRepaint(covariant _ActionChallengeTilesPainter oldDelegate) => true;
+}
+
 // Occupied cells painter
 class _OccupiedCellsPainter extends CustomPainter {
   final GameService game;
