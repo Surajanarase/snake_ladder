@@ -1,7 +1,9 @@
-// lib/services/game_service.dart (ENHANCED VERSION)
+// lib/services/game_service.dart
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'sound_service.dart';
+
+enum GameMode { quiz, knowledge }
 
 class GameService extends ChangeNotifier {
   final Random _random = Random();
@@ -11,44 +13,62 @@ class GameService extends ChangeNotifier {
   String currentPlayer = 'player1';
   int numberOfPlayers = 2;
   bool hasBot = false;
+  GameMode currentMode = GameMode.quiz; // New: Track game mode
+  
   Map<String, int> playerPositions = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
   };
+  
   Map<String, int> playerScores = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
   };
   
-  // Track good and bad habits per player (counters)
+  Map<String, int> playerCoins = { // New: Coin system
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+  
   Map<String, int> playerGoodHabits = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
   };
+  
   Map<String, int> playerBadHabits = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
   };
+  
+  Map<String, int> playerLaddersHit = { // New: Track ladder hits
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
+  
+  Map<String, int> playerSnakesHit = { // New: Track snake hits
+    'player1': 0,
+    'player2': 0,
+    'player3': 0,
+  };
 
-  // Store concrete bad-habit events per player grouped by category
   Map<String, Map<String, List<String>>> playerBadEvents = {
     'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
     'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
     'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
   };
   
-  // 🆕 NEW: Quiz tracking per player per category
   Map<String, Map<String, QuizStats>> playerQuizStats = {
     'player1': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
     'player2': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
     'player3': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
   };
 
-  // 🆕 NEW: Action Challenge tracking
   Map<String, int> playerActionChallengesCompleted = {
     'player1': 0,
     'player2': 0,
@@ -61,48 +81,34 @@ class GameService extends ChangeNotifier {
     'player3': 0,
   };
 
-  // 🆕 NEW: Define Action Challenge tiles (specific board positions)
   final Set<int> actionChallengeTiles = {8, 23, 35, 47, 62, 78, 89};
+  final Set<int> adviceSquares = {15, 30, 45, 60, 75, 90}; // New: Advice tiles
   
   Map<String, Color> playerColors = {
     'player1': const Color(0xFF4A90E2),
     'player2': const Color(0xFFE74C3C),
     'player3': const Color(0xFF2ECC71),
   };
+  
   Map<String, String> playerNames = {
     'player1': '👤 Player 1',
     'player2': '👤 Player 2',
     'player3': '👤 Player 3',
   };
+  
   bool isRolling = false;
   int moveCount = 0;
   bool gameActive = false;
   int lastRoll = 0;
 
-  // Animation states
   int? animatingSnake;
   int? animatingLadder;
   DateTime? lastAnimationTime;
 
   Map<String, Map<String, List<String>>> playerRewards = {
-    'player1': {
-      'nutrition': [],
-      'exercise': [],
-      'sleep': [],
-      'mental': [],
-    },
-    'player2': {
-      'nutrition': [],
-      'exercise': [],
-      'sleep': [],
-      'mental': [],
-    },
-    'player3': {
-      'nutrition': [],
-      'exercise': [],
-      'sleep': [],
-      'mental': [],
-    },
+    'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+    'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+    'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
   };
 
   Map<String, int> healthProgress = {
@@ -118,7 +124,7 @@ class GameService extends ChangeNotifier {
       '💧 Drink 8 glasses of water throughout the day',
       '🥜 Include nuts and seeds for healthy fats',
       '🐟 Eat fish twice a week for omega-3',
-      '🎁 Choose whole fruits over fruit juices',
+      '🍎 Choose whole fruits over fruit juices',
     ],
     'exercise': [
       '🏃 Get 30 minutes of exercise daily',
@@ -143,7 +149,7 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // 🆕 NEW: Quiz Questions Database
+  // NEW: Quiz Questions Database
   final Map<String, List<QuizQuestion>> quizDatabase = {
     'nutrition': [
       QuizQuestion(
@@ -251,13 +257,157 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // 🆕 NEW: Action Challenge Database
+  // NEW: Knowledge Bytes Database (Dos and Don'ts)
+  final Map<String, List<KnowledgeByte>> knowledgeDatabase = {
+    'nutrition_dos': [
+      KnowledgeByte(
+        title: "Eat a Rainbow",
+        text: "DO eat colorful fruits and vegetables daily",
+        reason: "Different colors provide different vitamins and antioxidants for optimal health",
+        tips: [
+          "🔴 Red foods (tomatoes, berries) support heart health",
+          "🟠 Orange foods (carrots, oranges) boost immune system",
+          "🟢 Green foods (spinach, broccoli) strengthen bones"
+        ],
+        category: 'nutrition',
+      ),
+      KnowledgeByte(
+        title: "Stay Hydrated",
+        text: "DO drink water before, during, and after meals",
+        reason: "Proper hydration aids digestion and nutrient absorption",
+        tips: [
+          "💧 Start your day with a glass of water",
+          "🥤 Carry a reusable water bottle",
+          "⏰ Set reminders to drink water hourly"
+        ],
+        category: 'nutrition',
+      ),
+    ],
+    'nutrition_donts': [
+      KnowledgeByte(
+        title: "Skip Breakfast",
+        text: "DON'T skip breakfast regularly",
+        reason: "Skipping breakfast can slow metabolism and lead to overeating later",
+        tips: [
+          "🥣 Prepare quick breakfast options",
+          "🍌 Keep portable options like fruits",
+          "⏰ Wake up 10 minutes earlier"
+        ],
+        category: 'nutrition',
+      ),
+      KnowledgeByte(
+        title: "Late Night Eating",
+        text: "DON'T eat heavy meals late at night",
+        reason: "Late eating disrupts sleep and can lead to weight gain",
+        tips: [
+          "🕰️ Finish dinner 3 hours before bed",
+          "🥗 Choose light snacks if hungry",
+          "💧 Try herbal tea instead"
+        ],
+        category: 'nutrition',
+      ),
+    ],
+    'exercise_dos': [
+      KnowledgeByte(
+        title: "Morning Movement",
+        text: "DO exercise in the morning when possible",
+        reason: "Morning exercise boosts metabolism and energy for the entire day",
+        tips: [
+          "🌅 Even 10 minutes makes a difference",
+          "🏃 Try a quick walk or yoga session",
+          "📱 Use fitness apps for guided workouts"
+        ],
+        category: 'exercise',
+      ),
+    ],
+    'exercise_donts': [
+      KnowledgeByte(
+        title: "Weekend Warrior",
+        text: "DON'T exercise intensely only on weekends",
+        reason: "Irregular intense exercise increases injury risk",
+        tips: [
+          "📅 Spread activity throughout the week",
+          "🚶 Start with light daily walks",
+          "📈 Gradually increase intensity"
+        ],
+        category: 'exercise',
+      ),
+    ],
+    'mental_dos': [
+      KnowledgeByte(
+        title: "Quality Sleep",
+        text: "DO maintain a consistent sleep schedule",
+        reason: "Regular sleep patterns improve mental clarity and physical recovery",
+        tips: [
+          "🛏️ Go to bed at the same time daily",
+          "📵 Avoid screens 1 hour before bed",
+          "🌙 Keep your bedroom cool and dark"
+        ],
+        category: 'mental',
+      ),
+    ],
+    'mental_donts': [
+      KnowledgeByte(
+        title: "Ignore Stress",
+        text: "DON'T ignore chronic stress symptoms",
+        reason: "Unmanaged stress can lead to serious health problems",
+        tips: [
+          "🧘 Practice daily relaxation",
+          "📝 Keep a stress journal",
+          "🤝 Seek support when needed"
+        ],
+        category: 'mental',
+      ),
+    ],
+  };
+
+  // NEW: Health Advice Database
+  final List<HealthAdvice> healthAdviceList = [
+    HealthAdvice(
+      title: "Small Steps, Big Changes",
+      text: "Health improvements don't require drastic changes. Small, consistent actions lead to lasting results.",
+      tip: "Choose one healthy habit to focus on this week!",
+      icon: "💡",
+    ),
+    HealthAdvice(
+      title: "Listen to Your Body",
+      text: "Your body sends signals about what it needs. Pay attention to hunger, thirst, and fatigue cues.",
+      tip: "Take a moment to check in with yourself right now!",
+      icon: "🎯",
+    ),
+    HealthAdvice(
+      title: "Prevention is Key",
+      text: "Regular check-ups and screenings can catch problems early when they're most treatable.",
+      tip: "Schedule your annual health check-up today!",
+      icon: "🏥",
+    ),
+    HealthAdvice(
+      title: "Balanced Diet Basics",
+      text: "A balanced diet includes fruits, vegetables, whole grains, lean proteins, and healthy fats.",
+      tip: "Fill half your plate with colorful vegetables at every meal!",
+      icon: "🥗",
+    ),
+    HealthAdvice(
+      title: "Move More, Sit Less",
+      text: "Regular physical activity reduces the risk of chronic diseases and improves mental health.",
+      tip: "Take a 5-minute walk every hour if you have a desk job!",
+      icon: "🚶",
+    ),
+    HealthAdvice(
+      title: "Stress Less, Live More",
+      text: "Chronic stress can harm your physical and mental health. Practice relaxation techniques daily.",
+      tip: "Try the 4-7-8 breathing technique: Inhale for 4, hold for 7, exhale for 8!",
+      icon: "😌",
+    ),
+  ];
+
+  // NEW: Action Challenge Database
   final List<ActionChallenge> actionChallenges = [
     ActionChallenge(
       title: 'Push-Up Power! 💪',
       description: 'Do 5 push-ups right now!',
       icon: '💪',
-      timeLimit: 120, // 2 minutes
+      timeLimit: 120,
       category: 'exercise',
     ),
     ActionChallenge(
@@ -364,34 +514,47 @@ class GameService extends ChangeNotifier {
     [const Color(0xFF00695C), const Color(0xFF4DB6AC)],
   ];
 
-  // 🆕 NEW: Get quiz question for category
   QuizQuestion getRandomQuizQuestion(String category) {
     final questions = quizDatabase[category] ?? quizDatabase['nutrition']!;
     return questions[_random.nextInt(questions.length)];
   }
 
-  // 🆕 NEW: Get random action challenge
+  // NEW: Get knowledge byte (Do or Don't)
+  KnowledgeByte getKnowledgeByte(bool isLadder, String category) {
+    final key = isLadder ? '${category}_dos' : '${category}_donts';
+    final bytes = knowledgeDatabase[key] ?? knowledgeDatabase['nutrition_dos']!;
+    return bytes[_random.nextInt(bytes.length)];
+  }
+
+  // NEW: Get random health advice
+  HealthAdvice getRandomHealthAdvice() {
+    return healthAdviceList[_random.nextInt(healthAdviceList.length)];
+  }
+
   ActionChallenge getRandomActionChallenge() {
     return actionChallenges[_random.nextInt(actionChallenges.length)];
   }
 
-  // 🆕 NEW: Record quiz result
   void recordQuizResult(String player, String category, bool correct) {
     playerQuizStats[player]?[category]?.recordAttempt(correct);
     notifyListeners();
   }
 
-  // 🆕 NEW: Complete action challenge
   void completeActionChallenge(String player) {
     playerActionChallengesCompleted[player] = (playerActionChallengesCompleted[player] ?? 0) + 1;
     playerBonusSteps[player] = (playerBonusSteps[player] ?? 0) + 2;
-    playerScores[player] = (playerScores[player] ?? 0) + 15; // Bonus points
+    playerScores[player] = (playerScores[player] ?? 0) + 15;
+    playerCoins[player] = (playerCoins[player] ?? 0) + 15;
     notifyListeners();
   }
 
-  // 🆕 NEW: Check if position is an action challenge tile
   bool isActionChallengeTile(int position) {
     return actionChallengeTiles.contains(position);
+  }
+
+  // NEW: Check if position is an advice square
+  bool isAdviceSquare(int position) {
+    return adviceSquares.contains(position);
   }
 
   Map<String, int> _rowColOf(int cell) {
@@ -463,52 +626,7 @@ class GameService extends ChangeNotifier {
     return _rowColOf(end)['row']! > _rowColOf(start)['row']!;
   }
 
-  String _pickUniqueTipForPlayer(String player, String baseCategory, int ladderPosition) {
-    ladderPlayerCategories.putIfAbsent(ladderPosition, () => {});
-
-    String assignedCategory;
-    if (ladderPlayerCategories[ladderPosition]!.containsKey(player)) {
-      assignedCategory = ladderPlayerCategories[ladderPosition]![player]!;
-    } else {
-      final allCategories = ['nutrition', 'exercise', 'sleep', 'mental'];
-      final used = ladderPlayerCategories[ladderPosition]!.values.toSet();
-      final available = allCategories.where((c) => !used.contains(c)).toList();
-
-      if (available.isNotEmpty) {
-        assignedCategory = available[_random.nextInt(available.length)];
-      } else {
-        assignedCategory = allCategories[_random.nextInt(allCategories.length)];
-      }
-      ladderPlayerCategories[ladderPosition]![player] = assignedCategory;
-    }
-
-    final tips = healthTips[assignedCategory] ?? const <String>[];
-    if (tips.isEmpty) return 'Stay healthy!';
-
-    final usedByPlayer = playerAssignedTips[player]?[assignedCategory] ?? <String>{};
-    final shuffled = List<String>.from(tips)..shuffle(_random);
-
-    for (final tip in shuffled) {
-      if (!usedByPlayer.contains(tip)) {
-        usedByPlayer.add(tip);
-        playerAssignedTips[player]![assignedCategory] = usedByPlayer;
-        return tip;
-      }
-    }
-
-    final baseIdx = _random.nextInt(tips.length);
-    playerTipOverflow[player]![assignedCategory] =
-        (playerTipOverflow[player]![assignedCategory]! + 1);
-    final variant = '${tips[baseIdx]} • Level ${playerTipOverflow[player]![assignedCategory]}';
-    usedByPlayer.add(variant);
-    playerAssignedTips[player]![assignedCategory] = usedByPlayer;
-    return variant;
-  }
-
-  String _getAssignedCategory(String player, int ladderPosition) {
-    return ladderPlayerCategories[ladderPosition]?[player] ?? 'health';
-  }
-
+  
   int _healthCategoryIndex = 0;
   static const List<String> _fourCategories = ['nutrition', 'exercise', 'sleep', 'mental'];
 
@@ -529,8 +647,8 @@ class GameService extends ChangeNotifier {
     final usedPositions = <int>{};
     final startAnchors = <int>[];
 
-    // 🆕 Reserve action challenge tiles
     usedPositions.addAll(actionChallengeTiles);
+    usedPositions.addAll(adviceSquares);
 
     const double minStartSpacing = 3.5;
 
@@ -657,11 +775,12 @@ class GameService extends ChangeNotifier {
     return 'Stay healthy!';
   }
 
-  void startGame(int numPlayers, bool withBot) {
+  void startGame(int numPlayers, bool withBot, GameMode mode) {
     numberOfPlayers = numPlayers;
     hasBot = withBot;
     gameActive = true;
     currentPlayer = 'player1';
+    currentMode = mode;
 
     ladderPlayerCategories = {};
     playerAssignedTips = {
@@ -675,14 +794,12 @@ class GameService extends ChangeNotifier {
       'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
     };
 
-    // 🆕 Reset quiz stats
     playerQuizStats = {
       'player1': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
       'player2': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
       'player3': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
     };
 
-    // 🆕 Reset action challenge stats
     playerActionChallengesCompleted = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBonusSteps = {'player1': 0, 'player2': 0, 'player3': 0};
 
@@ -694,8 +811,11 @@ class GameService extends ChangeNotifier {
 
     playerPositions = {'player1': 0, 'player2': 0, 'player3': 0};
     playerScores = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerCoins = {'player1': 0, 'player2': 0, 'player3': 0};
     playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerLaddersHit = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerSnakesHit = {'player1': 0, 'player2': 0, 'player3': 0};
 
     playerBadEvents = {
       'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
@@ -730,14 +850,12 @@ class GameService extends ChangeNotifier {
       'player3': {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0},
     };
 
-    // 🆕 Reset quiz stats
     playerQuizStats = {
       'player1': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
       'player2': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
       'player3': {'nutrition': QuizStats(), 'exercise': QuizStats(), 'sleep': QuizStats(), 'mental': QuizStats()},
     };
 
-    // 🆕 Reset action challenge stats
     playerActionChallengesCompleted = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBonusSteps = {'player1': 0, 'player2': 0, 'player3': 0};
 
@@ -745,8 +863,11 @@ class GameService extends ChangeNotifier {
 
     playerPositions = {'player1': 0, 'player2': 0, 'player3': 0};
     playerScores = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerCoins = {'player1': 0, 'player2': 0, 'player3': 0};
     playerGoodHabits = {'player1': 0, 'player2': 0, 'player3': 0};
     playerBadHabits = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerLaddersHit = {'player1': 0, 'player2': 0, 'player3': 0};
+    playerSnakesHit = {'player1': 0, 'player2': 0, 'player3': 0};
 
     playerBadEvents = {
       'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
@@ -817,80 +938,69 @@ class GameService extends ChangeNotifier {
   }
 
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
-    // 🆕 NEW: Check for Action Challenge first
+    // Check for Action Challenge first
     if (isActionChallengeTile(position)) {
       onNotify('ACTION_CHALLENGE::$player::$position', '⚡');
-      return; // Don't switch turn - wait for challenge completion
+      return;
+    }
+
+    // NEW: Check for Advice Square
+    if (isAdviceSquare(position)) {
+      onNotify('ADVICE::$player::$position', '💡');
+      return;
     }
 
     if (snakes.containsKey(position)) {
       final snake = snakes[position]!;
 
-      playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
-
-      final String badCat = (snake['category'] as String?) ?? 'mental';
-      final String badText = '${snake['icon']} ${snake['message']}';
-      final list = playerBadEvents[player]![badCat]!;
-      if (!list.contains(badText)) {
-        list.insert(0, badText);
+      // QUIZ MODE: Show quiz to avoid snake
+      if (currentMode == GameMode.quiz) {
+        final String categoryKey = (snake['category'] as String?) ?? 'nutrition';
+        onNotify('SNAKE_QUIZ::$player::$position::$categoryKey', '🐍');
+        return;
       }
 
-      animatingSnake = position;
-      lastAnimationTime = DateTime.now();
-      notifyListeners();
-
-      onNotify(snake['message'], snake['icon']);
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      playerPositions[player] = snake['end'];
-      animatingSnake = null;
-      notifyListeners();
-
-      checkWinCondition(onNotify);
+      // KNOWLEDGE MODE: Show don't and apply penalty
+      if (currentMode == GameMode.knowledge) {
+        final String categoryKey = (snake['category'] as String?) ?? 'nutrition';
+        onNotify('SNAKE_KNOWLEDGE::$player::$position::$categoryKey', '🐍');
+        return;
+      }
 
     } else if (ladders.containsKey(position)) {
       final ladder = ladders[position]!;
-
-      // 🆕 NEW: Show quiz before climbing ladder
       final String categoryKey = ladder['category'] as String;
-      onNotify('QUIZ::$player::$position::$categoryKey', '🧠');
-      return; // Don't climb yet - wait for quiz completion
+
+      // QUIZ MODE: Show quiz to climb ladder
+      if (currentMode == GameMode.quiz) {
+        onNotify('LADDER_QUIZ::$player::$position::$categoryKey', '🪜');
+        return;
+      }
+
+      // KNOWLEDGE MODE: Show do and climb
+      if (currentMode == GameMode.knowledge) {
+        onNotify('LADDER_KNOWLEDGE::$player::$position::$categoryKey', '🪜');
+        return;
+      }
 
     } else {
       checkWinCondition(onNotify);
     }
   }
 
-  // 🆕 NEW: Handle successful quiz (called from UI after correct answer)
-  Future<void> onQuizSuccess(int position, String player, Function(String, String) onNotify) async {
+  // QUIZ MODE: Handle quiz success for ladder
+  Future<void> onLadderQuizSuccess(int position, String player, Function(String, String) onNotify) async {
     final ladder = ladders[position]!;
     
     playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+    playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
+    playerCoins[player] = (playerCoins[player] ?? 0) + 20;
 
     animatingLadder = position;
     lastAnimationTime = DateTime.now();
     notifyListeners();
 
-    onNotify(ladder['message'], ladder['icon']);
-
-    final String categoryKey = ladder['category'] as String;
-    playerScores[player] = playerScores[player]! + 10;
-    updateHealthProgress(categoryKey);
-    notifyListeners();
-
-    final String icon = ladder['icon']?.toString() ?? '🏅';
-    final String msg = ladder['message'] as String? ?? 'You got a reward!';
-
-    final int ladderStartCell = position;
-    final String uniqueTip = _pickUniqueTipForPlayer(player, categoryKey, ladderStartCell);
-    final String assignedCategory = _getAssignedCategory(player, ladderStartCell);
-
-    final String rewardText = '$icon $msg — $uniqueTip';
-    addRewardForPlayer(player, assignedCategory, rewardText);
-
-    final String displayCategory = _displayCategory(assignedCategory);
-    onNotify('REWARD::$player::$displayCategory::$msg', ladder['icon']);
+    onNotify('Correct! You climbed the ladder and earned 20 coins!', '✅');
 
     await Future.delayed(const Duration(milliseconds: 1500));
 
@@ -901,26 +1011,108 @@ class GameService extends ChangeNotifier {
     checkWinCondition(onNotify);
   }
 
-  // 🆕 NEW: Handle failed quiz (stay in place)
-  void onQuizFailed(String player, Function(String, String) onNotify) {
-    onNotify('Better luck next time! Keep learning!', '📚');
+  // QUIZ MODE: Handle quiz failure for ladder
+  void onLadderQuizFailed(String player, Function(String, String) onNotify) {
+    playerCoins[player] = (playerCoins[player] ?? 0) - 10;
+    if (playerCoins[player]! < 0) playerCoins[player] = 0;
+    
+    onNotify('Incorrect! You stay at your current position.', '❌');
     switchTurn(onNotify);
   }
 
-  String _displayCategory(String key) {
-    switch (key) {
-      case 'nutrition':
-        return 'Nutrition';
-      case 'exercise':
-        return 'Exercise';
-      case 'sleep':
-        return 'Sleep';
-      case 'mental':
-        return 'Mindfulness';
-      default:
-        if (key.isEmpty) return key;
-        return key[0].toUpperCase() + key.substring(1);
+  // QUIZ MODE: Handle quiz success for snake (avoid it)
+  void onSnakeQuizSuccess(int position, String player, Function(String, String) onNotify) {
+    playerCoins[player] = (playerCoins[player] ?? 0) + 30;
+    
+    onNotify('Correct! You avoided the snake and earned 30 coins!', '✅');
+    switchTurn(onNotify);
+  }
+
+  // QUIZ MODE: Handle quiz failure for snake (get bitten)
+  Future<void> onSnakeQuizFailed(int position, String player, Function(String, String) onNotify) async {
+    final snake = snakes[position]!;
+    
+    playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+    playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
+    playerCoins[player] = (playerCoins[player] ?? 0) - 15;
+    if (playerCoins[player]! < 0) playerCoins[player] = 0;
+
+    final String badCat = (snake['category'] as String?) ?? 'mental';
+    final String badText = '${snake['icon']} ${snake['message']}';
+    final list = playerBadEvents[player]![badCat]!;
+    if (!list.contains(badText)) {
+      list.insert(0, badText);
     }
+
+    animatingSnake = position;
+    lastAnimationTime = DateTime.now();
+    notifyListeners();
+
+    onNotify('Incorrect! The snake got you!', '❌');
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    playerPositions[player] = snake['end'];
+    animatingSnake = null;
+    notifyListeners();
+
+    checkWinCondition(onNotify);
+  }
+
+  // KNOWLEDGE MODE: Show knowledge and climb ladder
+  Future<void> onLadderKnowledge(int position, String player, Function(String, String) onNotify) async {
+    final ladder = ladders[position]!;
+    
+    playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+    playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
+    playerCoins[player] = (playerCoins[player] ?? 0) + 25;
+
+    animatingLadder = position;
+    lastAnimationTime = DateTime.now();
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    playerPositions[player] = ladder['end'];
+    animatingLadder = null;
+    notifyListeners();
+
+    checkWinCondition(onNotify);
+  }
+
+  // KNOWLEDGE MODE: Show knowledge and slide down snake
+  Future<void> onSnakeKnowledge(int position, String player, Function(String, String) onNotify) async {
+    final snake = snakes[position]!;
+    
+    playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+    playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
+    playerCoins[player] = (playerCoins[player] ?? 0) - 15;
+    if (playerCoins[player]! < 0) playerCoins[player] = 0;
+
+    final String badCat = (snake['category'] as String?) ?? 'mental';
+    final String badText = '${snake['icon']} ${snake['message']}';
+    final list = playerBadEvents[player]![badCat]!;
+    if (!list.contains(badText)) {
+      list.insert(0, badText);
+    }
+
+    animatingSnake = position;
+    lastAnimationTime = DateTime.now();
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    playerPositions[player] = snake['end'];
+    animatingSnake = null;
+    notifyListeners();
+
+    checkWinCondition(onNotify);
+  }
+
+  // Handle advice square completion
+  void onAdviceRead(String player) {
+    playerCoins[player] = (playerCoins[player] ?? 0) + 5;
+    notifyListeners();
   }
 
   void updateHealthProgress(String category) {
@@ -1007,7 +1199,7 @@ class GameService extends ChangeNotifier {
   String getRandomTip(String category) => _tipForCategory(category);
 }
 
-// 🆕 NEW: Quiz Question Model
+// Models
 class QuizQuestion {
   final String question;
   final List<String> options;
@@ -1022,7 +1214,6 @@ class QuizQuestion {
   });
 }
 
-// 🆕 NEW: Quiz Statistics Model
 class QuizStats {
   int totalAttempts = 0;
   int correctAnswers = 0;
@@ -1035,12 +1226,11 @@ class QuizStats {
   double get accuracy => totalAttempts > 0 ? (correctAnswers / totalAttempts) * 100 : 0;
 }
 
-// 🆕 NEW: Action Challenge Model
 class ActionChallenge {
   final String title;
   final String description;
   final String icon;
-  final int timeLimit; // in seconds
+  final int timeLimit;
   final String category;
 
   ActionChallenge({
@@ -1050,7 +1240,36 @@ class ActionChallenge {
     required this.timeLimit,
     required this.category,
   });
+}
 
-  // Add after the completeActionChallenge method
+// NEW: Knowledge Byte Model
+class KnowledgeByte {
+  final String title;
+  final String text;
+  final String reason;
+  final List<String> tips;
+  final String category;
 
+  KnowledgeByte({
+    required this.title,
+    required this.text,
+    required this.reason,
+    required this.tips,
+    required this.category,
+  });
+}
+
+// NEW: Health Advice Model
+class HealthAdvice {
+  final String title;
+  final String text;
+  final String tip;
+  final String icon;
+
+  HealthAdvice({
+    required this.title,
+    required this.text,
+    required this.tip,
+    required this.icon,
+  });
 }

@@ -118,6 +118,12 @@ class PlayerStatsDialog extends StatelessWidget {
                     _buildStatRow('⚡', 'Action Challenges', '$actionChallenges', const Color(0xFFFFD700)),
                     const Divider(height: 20),
                     _buildStatRow('🎁', 'Bonus Steps Earned', '$bonusSteps', const Color(0xFF2196F3)),
+                    const Divider(height: 20),
+_buildStatRow('🪙', 'Total Coins', '${game.playerCoins[playerId]}', const Color(0xFFF59E0B)),
+const Divider(height: 20),
+_buildStatRow('🪜', 'Ladders Climbed', '${game.playerLaddersHit[playerId]}', const Color(0xFF4CAF50)),
+const Divider(height: 20),
+_buildStatRow('🐍', 'Snakes Hit', '${game.playerSnakesHit[playerId]}', const Color(0xFFE74C3C)),
                   ],
                 ),
               ),
@@ -337,4 +343,4 @@ class PlayerStatsDialog extends StatelessWidget {
   }
 }
 
-// 🆕 Add this method to control_panel.dart to show player stats
+

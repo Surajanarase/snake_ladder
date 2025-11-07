@@ -424,40 +424,73 @@ Widget build(BuildContext context) {
           SizedBox(height: isThreePlayers ? 6 : 8),
           
           // Position
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isThreePlayers ? 6 : 8,
-              vertical: isThreePlayers ? 4 : 5,
-            ),
-            decoration: BoxDecoration(
-              color: isActive 
-                  ? Colors.white.withValues(alpha: 0.7)
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Position: ',
-                  style: TextStyle(
-                    fontSize: isThreePlayers ? 9 : 10,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  position == 0 ? 'Start' : '$position',
-                  style: TextStyle(
-                    fontSize: isThreePlayers ? 11 : 13,
-                    fontWeight: FontWeight.bold,
-                    color: isActive ? color : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: isThreePlayers ? 6 : 8),
+Container(
+  padding: EdgeInsets.symmetric(
+    horizontal: isThreePlayers ? 6 : 8,
+    vertical: isThreePlayers ? 4 : 5,
+  ),
+  decoration: BoxDecoration(
+    color: isActive 
+        ? Colors.white.withValues(alpha: 0.7)
+        : Colors.grey.shade100,
+    borderRadius: BorderRadius.circular(6),
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Text(
+        'Position: ',
+        style: TextStyle(
+          fontSize: isThreePlayers ? 9 : 10,
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      Text(
+        position == 0 ? 'Start' : '$position',
+        style: TextStyle(
+          fontSize: isThreePlayers ? 11 : 13,
+          fontWeight: FontWeight.bold,
+          color: isActive ? color : Colors.black87,
+        ),
+      ),
+    ],
+  ),
+),
+SizedBox(height: isThreePlayers ? 6 : 8),
+
+// ✅ Coins display (MOVED HERE - OUTSIDE position container)
+Container(
+  padding: EdgeInsets.symmetric(
+    horizontal: isThreePlayers ? 6 : 8,
+    vertical: isThreePlayers ? 4 : 5,
+  ),
+  decoration: BoxDecoration(
+    gradient: const LinearGradient(
+      colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+    ),
+    borderRadius: BorderRadius.circular(6),
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Text(
+        '🪙',
+        style: TextStyle(fontSize: isThreePlayers ? 14 : 16),
+      ),
+      SizedBox(width: isThreePlayers ? 3 : 4),
+      Text(
+        '${game.playerCoins[playerId]}',
+        style: TextStyle(
+          fontSize: isThreePlayers ? 11 : 13,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    ],
+  ),
+),
+SizedBox(height: isThreePlayers ? 6 : 8),
           
           // Good and Bad Habits buttons
           Row(

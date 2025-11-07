@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'board_widget.dart';
 import 'control_panel.dart';
-//import 'progress_dashboard.dart';
 import 'dart:math' as math;
 import '../services/sound_service.dart';
 import 'quiz_dialog.dart';
+import 'knowledge_byte_dialog.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -20,8 +20,178 @@ class _HomeShellState extends State<HomeShell> {
   bool _showStartScreen = true;
   bool _suppressWinOverlay = false;
 
+  // Show mode selection dialog
+  void _showModeSelection(BuildContext context, int numPlayers, bool withBot) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.purple.shade50,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('🎮', style: TextStyle(fontSize: 40)),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Select Game Mode',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose how you want to learn!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Quiz Mode Button
+                _buildModeButton(
+                  '🧠 Quiz Mode',
+                  'Answer questions to climb ladders and avoid snakes',
+                  const Color(0xFF667eea),
+                  Icons.quiz,
+                  () {
+                    Navigator.of(context).pop();
+                    _showNameEntry(context, numPlayers, withBot, GameMode.quiz);
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Knowledge Byte Mode Button
+                _buildModeButton(
+                  '📚 Knowledge Mode',
+                  'Learn health DOs and DON\'Ts while playing',
+                  const Color(0xFF4CAF50),
+                  Icons.school,
+                  () {
+                    Navigator.of(context).pop();
+                    _showNameEntry(context, numPlayers, withBot, GameMode.knowledge);
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Back'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildModeButton(
+    String title,
+    String description,
+    Color color,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              color,
+              color.withAlpha(217),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: color.withAlpha(76),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(51),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withAlpha(217),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Show a small dialog to collect player names before starting.
-  void _showNameEntry(BuildContext context, int numPlayers, bool withBot) {
+  void _showNameEntry(BuildContext context, int numPlayers, bool withBot, GameMode mode) {
     final game = Provider.of<GameService>(context, listen: false);
     final controllers = <TextEditingController>[];
     for (int i = 1; i <= numPlayers; i++) {
@@ -67,7 +237,6 @@ class _HomeShellState extends State<HomeShell> {
                       ),
                       ElevatedButton(
                         onPressed: () {
-                          // Save names and start game
                           for (int i = 0; i < controllers.length; i++) {
                             final name = controllers[i].text.trim();
                             if (name.isNotEmpty) {
@@ -75,7 +244,7 @@ class _HomeShellState extends State<HomeShell> {
                             }
                           }
                           setState(() => _showStartScreen = false);
-                          game.startGame(numPlayers, withBot);
+                          game.startGame(numPlayers, withBot, mode); // Pass mode here
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
@@ -133,91 +302,90 @@ class _HomeShellState extends State<HomeShell> {
                             ),
                             borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                           ),
-                          child: // Replace the header Row with this:
-Row(
-  children: [
-    Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: const Text('❤️', style: TextStyle(fontSize: 22)),
-    ),
-    const SizedBox(width: 12),
-    const Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Health Heroes',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-          ),
-          Text(
-            'Learn & Play',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    ),
-    // Sound toggle button
-    GestureDetector(
-      onTap: () {
-        setState(() {
-          SoundService().toggleSound();
-        });
-      },
-      child: Container(
-        width: 36,
-        height: 36,
-        margin: const EdgeInsets.only(right: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(51),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: Center(
-          child: Icon(
-            SoundService().soundEnabled ? Icons.volume_up : Icons.volume_off,
-            color: Colors.white,
-            size: 18,
-          ),
-        ),
-      ),
-    ),
-    GestureDetector(
-      onTap: () => _showLegend(context),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(51),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.help_outline,
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
-      ),
-    ),
-  ],
-)
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text('❤️', style: TextStyle(fontSize: 22)),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Health Heroes',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Learn & Play',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Sound toggle button
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    SoundService().toggleSound();
+                                  });
+                                },
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(51),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      SoundService().soundEnabled ? Icons.volume_up : Icons.volume_off,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => _showLegend(context),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(51),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.help_outline,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
 
                         // Scrollable content area
                         Expanded(
@@ -225,27 +393,26 @@ Row(
                             child: Column(
                               children: [
                                 // Board area
-                                 Padding(
-  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-  child: LayoutBuilder(
-    builder: (context, constraints) {
-      final size = constraints.maxWidth * 1.08; // increase board size slightly
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final size = constraints.maxWidth * 1.08;
 
-      return Center(
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: const BoardWidget(),
-        ),
-      );
-    },
-  ),
-),
+                                      return Center(
+                                        child: SizedBox(
+                                          width: size,
+                                          height: size,
+                                          child: const BoardWidget(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
 
                                 // Control Panel (now includes the player boxes below the dice)
-ControlPanel(onNotify: (m, i) => _showToast(context, m, i)),
-const SizedBox(height: 12),
-
+                                ControlPanel(onNotify: (m, i) => _showToast(context, m, i)),
+                                const SizedBox(height: 12),
                               ],
                             ),
                           ),
@@ -335,7 +502,7 @@ const SizedBox(height: 12),
                                     child: Column(
                                       children: [
                                         const Text(
-                                          'Select Game Mode',
+                                          'Select Players',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
@@ -349,7 +516,7 @@ const SizedBox(height: 12),
                                           'Play with a friend',
                                           const Color(0xFF4A90E2),
                                           Icons.people,
-                                          () => _showNameEntry(context, 2, false),
+                                          () => _showModeSelection(context, 2, false),
                                         ),
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
@@ -358,7 +525,7 @@ const SizedBox(height: 12),
                                           'More friends, more fun!',
                                           const Color(0xFF2ECC71),
                                           Icons.groups,
-                                          () => _showNameEntry(context, 3, false),
+                                          () => _showModeSelection(context, 3, false),
                                         ),
                                         const SizedBox(height: 12),
                                         _buildGameModeButton(
@@ -367,10 +534,7 @@ const SizedBox(height: 12),
                                           'Challenge the computer',
                                           const Color(0xFFE74C3C),
                                           Icons.smart_toy,
-                                          () {
-                                            setState(() => _showStartScreen = false);
-                                            game.startGame(2, true);
-                                          },
+                                          () => _showModeSelection(context, 2, true),
                                         ),
                                       ],
                                     ),
@@ -470,11 +634,11 @@ const SizedBox(height: 12),
                                         children: [
                                           _statRow('🏅 Winner', game.playerNames[game.getWinner()]!),
                                           const Divider(height: 20),
-                                          _statRow('❤️ Health Points', '${game.playerScores[game.getWinner()]}'),
+                                          _statRow('🪙 Total Coins', '${game.playerCoins[game.getWinner()]}'),
+                                          const Divider(height: 20),
+                                          _statRow('😊 Good Habits', '${game.playerGoodHabits[game.getWinner()]}'),
                                           const Divider(height: 20),
                                           _statRow('🎲 Total Moves', '${game.moveCount}'),
-                                          const Divider(height: 20),
-                                          _statRow('📚 Knowledge Gained', '${game.getTotalKnowledgeProgress()}%'),
                                         ],
                                       ),
                                     ),
@@ -772,11 +936,13 @@ const SizedBox(height: 12),
                   ),
                   const SizedBox(height: 20),
                   _legendItem('🎲', 'How to Play', 'Tap the dice to roll. Race to reach square 100 first!'),
-                  _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward and earn health points.'),
+                  _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward and earn coins.'),
                   _legendItem('🐍', 'Colorful Snakes', 'Poor health choices that set you back. Learn from them!'),
-                  _legendItem('❤️', 'Health Points', 'Earn points by landing on ladders and learning health tips.'),
-                  _legendItem('🎯', 'Dynamic Board', 'Each new game has different snake and ladder positions!'),
-                  _legendItem('🤖', 'AI Bot Mode', 'Play against the computer for a challenge!'),
+                  _legendItem('🧠', 'Quiz Mode', 'Answer questions to climb ladders or avoid snakes.'),
+                  _legendItem('📚', 'Knowledge Mode', 'Learn health DOs and DON\'Ts automatically.'),
+                  _legendItem('💡', 'Advice Squares', 'Land on special tiles for health advice and +5 coins!'),
+                  _legendItem('⚡', 'Action Challenges', 'Complete physical challenges for bonus steps!'),
+                  _legendItem('🪙', 'Coins', 'Earn coins through quizzes, challenges, and good health habits!'),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -852,238 +1018,388 @@ const SizedBox(height: 12),
     );
   }
 
- void _showToast(BuildContext context, String message, String icon) {
-  final game = Provider.of<GameService>(context, listen: false);
+  void _showToast(BuildContext context, String message, String icon) {
+    final game = Provider.of<GameService>(context, listen: false);
 
-  // Helper function to create callback wrapper
-  void Function(String, String) makeCallback() {
-    return (msg, ic) {
-      if (mounted) {
-        _showToast(context, msg, ic);
-      }
-    };
-  }
-
-  // 🆕 Handle Quiz trigger
-  if (message.startsWith('QUIZ::')) {
-    try {
-      final parts = message.split('::');
-      if (parts.length >= 4) {
-        final playerId = parts[1];
-        final position = int.parse(parts[2]);
-        final category = parts[3];
-        
-        final question = game.getRandomQuizQuestion(category);
-        
-        if (!mounted) return;
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) {
-            return QuizDialog(
-              player: playerId,
-              playerName: game.playerNames[playerId]!,
-              playerColor: game.playerColors[playerId]!,
-              position: position,
-              category: category,
-              question: question,
-              onAnswer: (bool correct) {
-                game.recordQuizResult(playerId, category, correct);
-                if (correct) {
-                  game.onQuizSuccess(position, playerId, makeCallback());
-                } else {
-                  game.onQuizFailed(playerId, makeCallback());
-                }
-              },
-            );
-          },
-        );
-        return;
-      }
-    } catch (e) {
-      // Fall back to default toast
+    // Helper function to create callback wrapper
+    void Function(String, String) makeCallback() {
+      return (msg, ic) {
+        if (mounted) {
+          _showToast(context, msg, ic);
+        }
+      };
     }
-  }
 
-  // 🆕 Handle Action Challenge trigger
-  if (message.startsWith('ACTION_CHALLENGE::')) {
-    try {
-      final parts = message.split('::');
-      if (parts.length >= 3) {
-        final playerId = parts[1];
-        final currentPos = game.playerPositions[playerId]!;
-        
-        final challenge = game.getRandomActionChallenge();
-        
-        if (!mounted) return;
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) {
-            return ActionChallengeDialog(
-              player: playerId,
-              playerName: game.playerNames[playerId]!,
-              playerColor: game.playerColors[playerId]!,
-              challenge: challenge,
-              onComplete: (bool completed) async {
-                if (completed) {
-                  game.completeActionChallenge(playerId);
-                  if (mounted) {
-                    _showToast(
-                      context,
-                      '${game.playerNames[playerId]} completed the challenge! +2 bonus steps!',
-                      '🎉',
-                    );
-                  }
-                  
-                  // Apply bonus steps
-                  const bonusSteps = 2;
-                  final newPos = (currentPos + bonusSteps).clamp(0, 100);
-                  
-                  if (newPos != currentPos && mounted) {
-                    for (int step = 1; step <= bonusSteps; step++) {
-                      final intermediatePos = currentPos + step;
-                      if (intermediatePos <= 100) {
-                        game.playerPositions[playerId] = intermediatePos;
-                      
-                        await Future.delayed(const Duration(milliseconds: 400));
-                      }
-                    }
-                  }
-                  
-                  // Check for special cells after bonus movement
-                  if (newPos < 100 && mounted) {
-                    await game.checkSpecialCell(newPos, playerId, makeCallback());
-                  } else if (mounted) {
-                    game.checkWinCondition(makeCallback());
-                  }
-                } else {
-                  if (mounted) {
-                    _showToast(
-                      context,
-                      'Challenge skipped. No bonus this time!',
-                      '😅',
-                    );
-                  }
-                  game.switchTurn(makeCallback());
-                }
-              },
-            );
-          },
-        );
-        return;
-      }
-    } catch (e) {
-      // Fall back to default toast
-    }
-  }
-
-  // Handle REWARD message
-  if (message.startsWith('REWARD::')) {
-    try {
-      final parts = message.split('::');
-      if (parts.length >= 3) {
-        if (parts.length >= 4 && parts[1].startsWith('player')) {
+    // Handle LADDER_QUIZ trigger
+    if (message.startsWith('LADDER_QUIZ::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 4) {
           final playerId = parts[1];
-          final category = parts[2];
-          final rewardText = parts.sublist(3).join('::');
-
-          game.addRewardForPlayer(playerId, category, rewardText);
-
+          final position = int.parse(parts[2]);
+          final category = parts[3];
+          
+          final question = game.getRandomQuizQuestion(category);
+          
           if (!mounted) return;
           showDialog<void>(
             context: context,
             barrierDismissible: false,
             builder: (dialogContext) {
-              return Dialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(icon, style: const TextStyle(fontSize: 28)),
-                      const SizedBox(height: 12),
-                      Text(
-                        '${game.playerNames[playerId]} earned a reward!',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF667eea),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        rewardText,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 14),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF667eea),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                        ),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                ),
+              return QuizDialog(
+                player: playerId,
+                playerName: game.playerNames[playerId]!,
+                playerColor: game.playerColors[playerId]!,
+                position: position,
+                category: category,
+                question: question,
+                isLadder: true, // It's a ladder
+                onAnswer: (bool correct) {
+                  game.recordQuizResult(playerId, category, correct);
+                  if (correct) {
+                    game.onLadderQuizSuccess(position, playerId, makeCallback());
+                  } else {
+                    game.onLadderQuizFailed(playerId, makeCallback());
+                  }
+                },
               );
             },
           );
           return;
         }
+      } catch (e) {
+        // Fall back to default toast
       }
-    } catch (_) {
-      // Fall back to snackbar below
     }
-  }
 
-  // default behavior: floating SnackBar
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF667eea).withAlpha(38),
-              borderRadius: BorderRadius.circular(8),
+    // Handle SNAKE_QUIZ trigger
+    if (message.startsWith('SNAKE_QUIZ::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 4) {
+          final playerId = parts[1];
+          final position = int.parse(parts[2]);
+          final category = parts[3];
+          
+          final question = game.getRandomQuizQuestion(category);
+          
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              return QuizDialog(
+                player: playerId,
+                playerName: game.playerNames[playerId]!,
+                playerColor: game.playerColors[playerId]!,
+                position: position,
+                category: category,
+                question: question,
+                isLadder: false, // It's a snake
+                onAnswer: (bool correct) {
+                  game.recordQuizResult(playerId, category, correct);
+                  if (correct) {
+                    game.onSnakeQuizSuccess(position, playerId, makeCallback());
+                  } else {
+                    game.onSnakeQuizFailed(position, playerId, makeCallback());
+                  }
+                },
+              );
+            },
+          );
+          return;
+        }
+      } catch (e) {
+        // Fall back to default toast
+      }
+    }
+
+    // Handle LADDER_KNOWLEDGE trigger
+    if (message.startsWith('LADDER_KNOWLEDGE::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 4) {
+          final playerId = parts[1];
+          final position = int.parse(parts[2]);
+          final category = parts[3];
+          
+          final knowledge = game.getKnowledgeByte(true, category);
+          
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              return KnowledgeByteDialog(
+                player: playerId,
+                playerName: game.playerNames[playerId]!,
+                playerColor: game.playerColors[playerId]!,
+                position: position,
+                isLadder: true,
+                knowledge: knowledge,
+                onContinue: () {
+                  game.onLadderKnowledge(position, playerId, makeCallback());
+                },
+              );
+            },
+          );
+          return;
+        }
+      } catch (e) {
+        // Fall back to default toast
+      }
+    }
+
+    // Handle SNAKE_KNOWLEDGE trigger
+    if (message.startsWith('SNAKE_KNOWLEDGE::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 4) {
+          final playerId = parts[1];
+          final position = int.parse(parts[2]);
+          final category = parts[3];
+          
+          final knowledge = game.getKnowledgeByte(false, category);
+          
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              return KnowledgeByteDialog(
+                player: playerId,
+                playerName: game.playerNames[playerId]!,
+                playerColor: game.playerColors[playerId]!,
+                position: position,
+                isLadder: false,
+                knowledge: knowledge,
+                onContinue: () {
+                  game.onSnakeKnowledge(position, playerId, makeCallback());
+                },
+              );
+            },
+          );
+          return;
+        }
+      } catch (e) {
+        // Fall back to default toast
+      }
+    }
+
+    // Handle ADVICE trigger
+    if (message.startsWith('ADVICE::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 3) {
+          final playerId = parts[1];
+          
+          final advice = game.getRandomHealthAdvice();
+          
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              return HealthAdviceDialog(
+                player: playerId,
+                playerName: game.playerNames[playerId]!,
+                playerColor: game.playerColors[playerId]!,
+                advice: advice,
+                onContinue: () {
+                  game.onAdviceRead(playerId);
+                  game.switchTurn(makeCallback());
+                },
+              );
+            },
+          );
+          return;
+        }
+      } catch (e) {
+        // Fall back to default toast
+      }
+    }
+
+    // Handle Action Challenge trigger
+    if (message.startsWith('ACTION_CHALLENGE::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 3) {
+          final playerId = parts[1];
+          final currentPos = game.playerPositions[playerId]!;
+          
+          final challenge = game.getRandomActionChallenge();
+          
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              return ActionChallengeDialog(
+                player: playerId,
+                playerName: game.playerNames[playerId]!,
+                playerColor: game.playerColors[playerId]!,
+                challenge: challenge,
+                onComplete: (bool completed) async {
+                  if (completed) {
+                    game.completeActionChallenge(playerId);
+                    if (mounted) {
+                      _showToast(
+                        context,
+                        '${game.playerNames[playerId]} completed the challenge! +2 bonus steps!',
+                        '🎉',
+                      );
+                    }
+                    
+                    // Apply bonus steps
+                    const bonusSteps = 2;
+                    final newPos = (currentPos + bonusSteps).clamp(0, 100);
+                    
+                    if (newPos != currentPos && mounted) {
+                      for (int step = 1; step <= bonusSteps; step++) {
+                        final intermediatePos = currentPos + step;
+                        if (intermediatePos <= 100) {
+                          game.playerPositions[playerId] = intermediatePos;
+                          // Force UI rebuild by calling setState
+                          if (mounted) {
+                            setState(() {});
+                          }
+                          await Future.delayed(const Duration(milliseconds: 400));
+                        }
+                      }
+                    }
+                    
+                    // Check for special cells after bonus movement
+                    if (newPos < 100 && mounted) {
+                      await game.checkSpecialCell(newPos, playerId, makeCallback());
+                    } else if (mounted) {
+                      game.checkWinCondition(makeCallback());
+                    }
+                  } else {
+                    if (mounted) {
+                      _showToast(
+                        context,
+                        'Challenge skipped. No bonus this time!',
+                        '😅',
+                      );
+                    }
+                    game.switchTurn(makeCallback());
+                  }
+                },
+              );
+            },
+          );
+          return;
+        }
+      } catch (e) {
+        // Fall back to default toast
+      }
+    }
+
+    // Handle REWARD message
+    if (message.startsWith('REWARD::')) {
+      try {
+        final parts = message.split('::');
+        if (parts.length >= 3) {
+          if (parts.length >= 4 && parts[1].startsWith('player')) {
+            final playerId = parts[1];
+            final category = parts[2];
+            final rewardText = parts.sublist(3).join('::');
+
+            game.addRewardForPlayer(playerId, category, rewardText);
+
+            if (!mounted) return;
+            showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(icon, style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 12),
+                        Text(
+                          '${game.playerNames[playerId]} earned a reward!',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF667eea),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          rewardText,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF667eea),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                          ),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+            return;
+          }
+        }
+      } catch (_) {
+        // Fall back to snackbar below
+      }
+    }
+
+    // default behavior: floating SnackBar
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF667eea).withAlpha(38),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(icon, style: const TextStyle(fontSize: 20)),
             ),
-            child: Text(icon, style: const TextStyle(fontSize: 20)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2C3E50),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        elevation: 8,
       ),
-      backgroundColor: Colors.white,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      duration: const Duration(seconds: 3),
-      margin: const EdgeInsets.all(16),
-      elevation: 8,
-    ),
-  );
-
-}
+    );
+  }
 }

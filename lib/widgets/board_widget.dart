@@ -136,6 +136,13 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
           ),
         ),
 
+        // Advice Square tiles overlay (NEW)
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _AdviceSquarePainter(game),
+          ),
+        ),
+
         // Occupied cells overlay
         Positioned.fill(
           child: CustomPaint(
@@ -489,7 +496,7 @@ class _StartFinishPainter extends CustomPainter {
   bool shouldRepaint(covariant _StartFinishPainter oldDelegate) => false;
 }
 
-// ⚡ NEW: Action Challenge Tiles Painter
+// Action Challenge Tiles Painter
 class _ActionChallengeTilesPainter extends CustomPainter {
   final GameService game;
   
@@ -560,6 +567,79 @@ class _ActionChallengeTilesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ActionChallengeTilesPainter oldDelegate) => true;
+}
+
+// NEW: Advice Square Painter
+class _AdviceSquarePainter extends CustomPainter {
+  final GameService game;
+  
+  _AdviceSquarePainter(this.game);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cellSize = size.width / 10;
+    
+    for (final cell in game.adviceSquares) {
+      final rc = _cellToRowCol(cell);
+      final rect = Rect.fromLTWH(
+        rc['col']! * cellSize + 2,
+        rc['row']! * cellSize + 2,
+        cellSize - 4,
+        cellSize - 4,
+      );
+
+      // Gradient background
+      const gradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+      );
+
+      final paint = Paint()
+        ..shader = gradient.createShader(rect)
+        ..style = PaintingStyle.fill;
+
+      final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.12));
+      canvas.drawRRect(rrect, paint);
+
+      // Border
+      final borderPaint = Paint()
+        ..color = const Color(0xFFF59E0B)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      canvas.drawRRect(rrect, borderPaint);
+
+      // Lightbulb icon
+      final iconPainter = TextPainter(
+        text: TextSpan(
+          text: '💡',
+          style: TextStyle(fontSize: cellSize * 0.4),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      iconPainter.layout();
+      iconPainter.paint(
+        canvas,
+        Offset(
+          rect.center.dx - iconPainter.width / 2,
+          rect.center.dy - iconPainter.height / 2,
+        ),
+      );
+    }
+  }
+
+  Map<String, int> _cellToRowCol(int cellNumber) {
+    final idx = cellNumber - 1;
+    final rowFromBottom = idx ~/ 10;
+    final row = 9 - rowFromBottom;
+    final offset = idx % 10;
+    final reversed = rowFromBottom % 2 == 1;
+    final col = reversed ? 9 - offset : offset;
+    return {'row': row, 'col': col};
+  }
+
+  @override
+  bool shouldRepaint(covariant _AdviceSquarePainter oldDelegate) => true;
 }
 
 // Occupied cells painter
