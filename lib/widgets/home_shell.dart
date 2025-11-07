@@ -2,12 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
-import 'board_widget.dart';
-import 'control_panel.dart';
-import 'dart:math' as math;
-import '../services/sound_service.dart';
-import 'quiz_dialog.dart';
-import 'knowledge_byte_dialog.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -16,998 +10,235 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
-  bool _showStartScreen = true;
-  bool _suppressWinOverlay = false;
+class _HomeShellState extends State<HomeShell> with TickerProviderStateMixin {
+  // New home page state
+  int _selectedPlayerCount = 2;
+  bool _playVsBot = false;
+  String _botDifficulty = 'Medium';
+  GameMode? _selectedMode;
+  
+  // Player customization
+  final Map<int, String> _playerNames = {
+    1: 'Player 1',
+    2: 'Player 2',
+    3: 'Player 3',
+  };
+  
+  final Map<int, String> _playerAvatars = {
+    1: '😊',
+    2: '🌟',
+    3: '🎮',
+  };
+  
+  late AnimationController _floatingController;
+  late Animation<double> _floatingAnimation;
 
-  // Show mode selection dialog
-  void _showModeSelection(BuildContext context, int numPlayers, bool withBot) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 450),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  Colors.purple.shade50,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text('🎮', style: TextStyle(fontSize: 40)),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Select Game Mode',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Choose how you want to learn!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Quiz Mode Button
-                _buildModeButton(
-                  '🧠 Quiz Mode',
-                  'Answer questions to climb ladders and avoid snakes',
-                  const Color(0xFF667eea),
-                  Icons.quiz,
-                  () {
-                    Navigator.of(context).pop();
-                    _showNameEntry(context, numPlayers, withBot, GameMode.quiz);
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // Knowledge Byte Mode Button
-                _buildModeButton(
-                  '📚 Knowledge Mode',
-                  'Learn health DOs and DON\'Ts while playing',
-                  const Color(0xFF4CAF50),
-                  Icons.school,
-                  () {
-                    Navigator.of(context).pop();
-                    _showNameEntry(context, numPlayers, withBot, GameMode.knowledge);
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Back'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildModeButton(
-    String title,
-    String description,
-    Color color,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              color,
-              color.withAlpha(217),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withAlpha(76),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(51),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withAlpha(217),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
-              size: 18,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Show a small dialog to collect player names before starting.
-  void _showNameEntry(BuildContext context, int numPlayers, bool withBot, GameMode mode) {
-    final game = Provider.of<GameService>(context, listen: false);
-    final controllers = <TextEditingController>[];
-    for (int i = 1; i <= numPlayers; i++) {
-      final defaultName = game.playerNames['player$i'] ?? '👤 Player $i';
-      controllers.add(TextEditingController(text: defaultName));
-    }
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Enter player names',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-                  for (int i = 0; i < controllers.length; i++) ...[
-                    TextField(
-                      controller: controllers[i],
-                      decoration: InputDecoration(
-                        labelText: 'Player ${i + 1} name',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Back'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          for (int i = 0; i < controllers.length; i++) {
-                            final name = controllers[i].text.trim();
-                            if (name.isNotEmpty) {
-                              game.playerNames['player${i + 1}'] = name;
-                            }
-                          }
-                          setState(() => _showStartScreen = false);
-                          game.startGame(numPlayers, withBot, mode); // Pass mode here
-                          Navigator.of(context).pop();
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF667eea)),
-                        child: const Text('Start'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  @override
+  void initState() {
+    super.initState();
+    _floatingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _floatingAnimation = Tween<double>(begin: -8, end: 8).animate(
+      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final game = Provider.of<GameService>(context);
-    final screenWidth = MediaQuery.of(context).size.width;
+  void dispose() {
+    _floatingController.dispose();
+    super.dispose();
+  }
 
+  void _startGame() {
+    if (_selectedMode == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a game mode'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final game = Provider.of<GameService>(context, listen: false);
+    
+    // Set player names
+    for (var entry in _playerNames.entries) {
+      if (entry.key <= _selectedPlayerCount) {
+        game.playerNames['player${entry.key}'] = entry.value;
+      }
+    }
+
+    game.startGame(_selectedPlayerCount, _playVsBot, _selectedMode!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+            colors: [
+              Color(0xFFA1C4FD),
+              Color(0xFFC2E9FB),
+              Color(0xFFE0F7FA),
+            ],
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: math.max(560, screenWidth)),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black38, blurRadius: 40, offset: Offset(0, 20)),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    // Main game content
-                    Column(
-                      children: [
-                        // Header
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            ),
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: const Text('❤️', style: TextStyle(fontSize: 22)),
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Health Heroes',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Learn & Play',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Sound toggle button
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    SoundService().toggleSound();
-                                  });
-                                },
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(51),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      SoundService().soundEnabled ? Icons.volume_up : Icons.volume_off,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _showLegend(context),
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(51),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.help_outline,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Scrollable content area
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                // Board area
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final size = constraints.maxWidth * 1.08;
-
-                                      return Center(
-                                        child: SizedBox(
-                                          width: size,
-                                          height: size,
-                                          child: const BoardWidget(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-
-                                // Control Panel (now includes the player boxes below the dice)
-                                ControlPanel(onNotify: (m, i) => _showToast(context, m, i)),
-                                const SizedBox(height: 12),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Start screen overlay
-                    if (_showStartScreen)
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.white,
-                                Colors.grey.shade50,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const SizedBox(height: 40),
-                                  Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                                      ),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF667eea).withAlpha(102),
-                                          blurRadius: 20,
-                                          spreadRadius: 5,
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Text('🏥', style: TextStyle(fontSize: 60)),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  const Text(
-                                    'Health Heroes',
-                                    style: TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF667eea).withAlpha(38),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: const Text(
-                                      'Learn health tips while playing!',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: Color(0xFF667eea),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 40),
-                                  Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withAlpha(25),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        const Text(
-                                          'Select Players',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        _buildGameModeButton(
-                                          context,
-                                          '👥 2 Players',
-                                          'Play with a friend',
-                                          const Color(0xFF4A90E2),
-                                          Icons.people,
-                                          () => _showModeSelection(context, 2, false),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        _buildGameModeButton(
-                                          context,
-                                          '👥👤 3 Players',
-                                          'More friends, more fun!',
-                                          const Color(0xFF2ECC71),
-                                          Icons.groups,
-                                          () => _showModeSelection(context, 3, false),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        _buildGameModeButton(
-                                          context,
-                                          '🤖 Play with AI Bot',
-                                          'Challenge the computer',
-                                          const Color(0xFFE74C3C),
-                                          Icons.smart_toy,
-                                          () => _showModeSelection(context, 2, true),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 40),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Win overlay
-                    if (!game.gameActive && !_showStartScreen && game.getWinner() != null && !_suppressWinOverlay)
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withAlpha(217),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Center(
-                            child: Container(
-                              margin: const EdgeInsets.all(24),
-                              padding: const EdgeInsets.all(28),
-                              constraints: BoxConstraints(
-                                maxWidth: screenWidth - 48,
-                                maxHeight: MediaQuery.of(context).size.height - 100,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(76),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                                        ),
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFFFFD700).withAlpha(102),
-                                            blurRadius: 20,
-                                            spreadRadius: 5,
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Text('🏆', style: TextStyle(fontSize: 60)),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    Text(
-                                      '${game.playerNames[game.getWinner()]} Wins!',
-                                      style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2C3E50),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      '🎉 Congratulations! 🎉',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Color(0xFF7F8C8D),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    Container(
-                                      padding: const EdgeInsets.all(18),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.grey.shade50,
-                                            Colors.grey.shade100,
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.grey.shade300,
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          _statRow('🏅 Winner', game.playerNames[game.getWinner()]!),
-                                          const Divider(height: 20),
-                                          _statRow('🪙 Total Coins', '${game.playerCoins[game.getWinner()]}'),
-                                          const Divider(height: 20),
-                                          _statRow('😊 Good Habits', '${game.playerGoodHabits[game.getWinner()]}'),
-                                          const Divider(height: 20),
-                                          _statRow('🎲 Total Moves', '${game.moveCount}'),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    // Responsive button layout
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        if (constraints.maxWidth < 400) {
-                                          // Stack buttons vertically on small screens
-                                          return Column(
-                                            children: [
-                                              SizedBox(
-                                                width: double.infinity,
-                                                child: ElevatedButton(
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      _suppressWinOverlay = true;
-                                                    });
-                                                  },
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.grey.shade300,
-                                                    foregroundColor: Colors.black87,
-                                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                  ),
-                                                  child: const Text('Close (Stay)'),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              SizedBox(
-                                                width: double.infinity,
-                                                child: ElevatedButton(
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      _suppressWinOverlay = false;
-                                                    });
-                                                    game.resetGame();
-                                                  },
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: const Color(0xFF667eea),
-                                                    foregroundColor: Colors.white,
-                                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                  ),
-                                                  child: const Text('Play Again'),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              SizedBox(
-                                                width: double.infinity,
-                                                child: ElevatedButton(
-                                                  onPressed: () {
-                                                    game.resetGame();
-                                                    setState(() {
-                                                      _showStartScreen = true;
-                                                      _suppressWinOverlay = false;
-                                                    });
-                                                  },
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: const Color(0xFF9E9E9E),
-                                                    foregroundColor: Colors.white,
-                                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                  ),
-                                                  child: const Text('Back to Home'),
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        } else {
-                                          // Show buttons horizontally on larger screens
-                                          return Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      _suppressWinOverlay = true;
-                                                    });
-                                                  },
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.grey.shade300,
-                                                    foregroundColor: Colors.black87,
-                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                  ),
-                                                  child: const Text('Close', style: TextStyle(fontSize: 13)),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      _suppressWinOverlay = false;
-                                                    });
-                                                    game.resetGame();
-                                                  },
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: const Color(0xFF667eea),
-                                                    foregroundColor: Colors.white,
-                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                  ),
-                                                  child: const Text('Play Again', style: TextStyle(fontSize: 13)),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () {
-                                                    game.resetGame();
-                                                    setState(() {
-                                                      _showStartScreen = true;
-                                                      _suppressWinOverlay = false;
-                                                    });
-                                                  },
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: const Color(0xFF9E9E9E),
-                                                    foregroundColor: Colors.white,
-                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                  ),
-                                                  child: const Text('Home', style: TextStyle(fontSize: 13)),
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGameModeButton(
-    BuildContext context,
-    String title,
-    String subtitle,
-    Color color,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              color,
-              color.withAlpha(217),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withAlpha(76),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(51),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withAlpha(217),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
-              size: 18,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF7F8C8D),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-            ),
-            textAlign: TextAlign.end,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showLegend(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 600),
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                AnimatedBuilder(
+                  animation: _floatingAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _floatingAnimation.value),
+                      child: child,
+                    );
+                  },
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF667eea).withValues(alpha: 0.4),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Text('🏥', style: TextStyle(fontSize: 56)),
                       ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.help_outline,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Game Guide',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _legendItem('🎲', 'How to Play', 'Tap the dice to roll. Race to reach square 100 first!'),
-                  _legendItem('🪜', 'Colorful Ladders', 'Good health choices that move you forward and earn coins.'),
-                  _legendItem('🐍', 'Colorful Snakes', 'Poor health choices that set you back. Learn from them!'),
-                  _legendItem('🧠', 'Quiz Mode', 'Answer questions to climb ladders or avoid snakes.'),
-                  _legendItem('📚', 'Knowledge Mode', 'Learn health DOs and DON\'Ts automatically.'),
-                  _legendItem('💡', 'Advice Squares', 'Land on special tiles for health advice and +5 coins!'),
-                  _legendItem('⚡', 'Action Challenges', 'Complete physical challenges for bonus steps!'),
-                  _legendItem('🪙', 'Coins', 'Earn coins through quizzes, challenges, and good health habits!'),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF667eea),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Health Quest',
+                        style: TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Color(0x40000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                          letterSpacing: 1,
+                        ),
                       ),
-                    ),
-                    child: const Text('Got it!'),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Learn & Play Your Way to Wellness',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Tip of the Day
+                _buildTipOfTheDay(),
+                
+                const SizedBox(height: 24),
+                
+                // Player Count Selector
+                _buildPlayerCountSelector(),
+                
+                const SizedBox(height: 24),
+                
+                // Player Slots
+                _buildPlayerSlots(),
+                
+                const SizedBox(height: 24),
+                
+                // Game Mode Selection
+                _buildGameModeSelection(),
+                
+                const SizedBox(height: 32),
+                
+                // Start Button
+                _buildStartButton(),
+                
+                const SizedBox(height: 24),
+                
+                // Footer
+                _buildFooter(),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _legendItem(String icon, String label, String desc) {
+  Widget _buildTipOfTheDay() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade200,
-          width: 1.5,
-        ),
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF667eea).withAlpha(38),
-              borderRadius: BorderRadius.circular(10),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(icon, style: const TextStyle(fontSize: 24)),
+            child: const Text('💡', style: TextStyle(fontSize: 24)),
           ),
-          const SizedBox(width: 14),
-          Expanded(
+          const SizedBox(width: 16),
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
-                  style: const TextStyle(
+                  'Tip of the Day',
+                  style: TextStyle(
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF2C3E50),
+                    color: Color(0xFFF59E0B),
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
-                  desc,
+                  'Stay hydrated while you play! 💧',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade700,
-                    height: 1.4,
+                    fontSize: 14,
+                    color: Color(0xFF2C3E50),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -1018,388 +249,1050 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  void _showToast(BuildContext context, String message, String icon) {
-    final game = Provider.of<GameService>(context, listen: false);
-
-    // Helper function to create callback wrapper
-    void Function(String, String) makeCallback() {
-      return (msg, ic) {
-        if (mounted) {
-          _showToast(context, msg, ic);
-        }
-      };
-    }
-
-    // Handle LADDER_QUIZ trigger
-    if (message.startsWith('LADDER_QUIZ::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final question = game.getRandomQuizQuestion(category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return QuizDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                category: category,
-                question: question,
-                isLadder: true, // It's a ladder
-                onAnswer: (bool correct) {
-                  game.recordQuizResult(playerId, category, correct);
-                  if (correct) {
-                    game.onLadderQuizSuccess(position, playerId, makeCallback());
-                  } else {
-                    game.onLadderQuizFailed(playerId, makeCallback());
-                  }
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to default toast
-      }
-    }
-
-    // Handle SNAKE_QUIZ trigger
-    if (message.startsWith('SNAKE_QUIZ::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final question = game.getRandomQuizQuestion(category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return QuizDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                category: category,
-                question: question,
-                isLadder: false, // It's a snake
-                onAnswer: (bool correct) {
-                  game.recordQuizResult(playerId, category, correct);
-                  if (correct) {
-                    game.onSnakeQuizSuccess(position, playerId, makeCallback());
-                  } else {
-                    game.onSnakeQuizFailed(position, playerId, makeCallback());
-                  }
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to default toast
-      }
-    }
-
-    // Handle LADDER_KNOWLEDGE trigger
-    if (message.startsWith('LADDER_KNOWLEDGE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final knowledge = game.getKnowledgeByte(true, category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return KnowledgeByteDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                isLadder: true,
-                knowledge: knowledge,
-                onContinue: () {
-                  game.onLadderKnowledge(position, playerId, makeCallback());
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to default toast
-      }
-    }
-
-    // Handle SNAKE_KNOWLEDGE trigger
-    if (message.startsWith('SNAKE_KNOWLEDGE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final knowledge = game.getKnowledgeByte(false, category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return KnowledgeByteDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                isLadder: false,
-                knowledge: knowledge,
-                onContinue: () {
-                  game.onSnakeKnowledge(position, playerId, makeCallback());
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to default toast
-      }
-    }
-
-    // Handle ADVICE trigger
-    if (message.startsWith('ADVICE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 3) {
-          final playerId = parts[1];
-          
-          final advice = game.getRandomHealthAdvice();
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return HealthAdviceDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                advice: advice,
-                onContinue: () {
-                  game.onAdviceRead(playerId);
-                  game.switchTurn(makeCallback());
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to default toast
-      }
-    }
-
-    // Handle Action Challenge trigger
-    if (message.startsWith('ACTION_CHALLENGE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 3) {
-          final playerId = parts[1];
-          final currentPos = game.playerPositions[playerId]!;
-          
-          final challenge = game.getRandomActionChallenge();
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return ActionChallengeDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                challenge: challenge,
-                onComplete: (bool completed) async {
-                  if (completed) {
-                    game.completeActionChallenge(playerId);
-                    if (mounted) {
-                      _showToast(
-                        context,
-                        '${game.playerNames[playerId]} completed the challenge! +2 bonus steps!',
-                        '🎉',
-                      );
-                    }
-                    
-                    // Apply bonus steps
-                    const bonusSteps = 2;
-                    final newPos = (currentPos + bonusSteps).clamp(0, 100);
-                    
-                    if (newPos != currentPos && mounted) {
-                      for (int step = 1; step <= bonusSteps; step++) {
-                        final intermediatePos = currentPos + step;
-                        if (intermediatePos <= 100) {
-                          game.playerPositions[playerId] = intermediatePos;
-                          // Force UI rebuild by calling setState
-                          if (mounted) {
-                            setState(() {});
-                          }
-                          await Future.delayed(const Duration(milliseconds: 400));
-                        }
-                      }
-                    }
-                    
-                    // Check for special cells after bonus movement
-                    if (newPos < 100 && mounted) {
-                      await game.checkSpecialCell(newPos, playerId, makeCallback());
-                    } else if (mounted) {
-                      game.checkWinCondition(makeCallback());
-                    }
-                  } else {
-                    if (mounted) {
-                      _showToast(
-                        context,
-                        'Challenge skipped. No bonus this time!',
-                        '😅',
-                      );
-                    }
-                    game.switchTurn(makeCallback());
-                  }
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to default toast
-      }
-    }
-
-    // Handle REWARD message
-    if (message.startsWith('REWARD::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 3) {
-          if (parts.length >= 4 && parts[1].startsWith('player')) {
-            final playerId = parts[1];
-            final category = parts[2];
-            final rewardText = parts.sublist(3).join('::');
-
-            game.addRewardForPlayer(playerId, category, rewardText);
-
-            if (!mounted) return;
-            showDialog<void>(
-              context: context,
-              barrierDismissible: false,
-              builder: (dialogContext) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(icon, style: const TextStyle(fontSize: 28)),
-                        const SizedBox(height: 12),
-                        Text(
-                          '${game.playerNames[playerId]} earned a reward!',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF667eea),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          rewardText,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 14),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF667eea),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                          ),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-            return;
-          }
-        }
-      } catch (_) {
-        // Fall back to snackbar below
-      }
-    }
-
-    // default behavior: floating SnackBar
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF667eea).withAlpha(38),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(icon, style: const TextStyle(fontSize: 20)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+  Widget _buildPlayerCountSelector() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Text('👥', style: TextStyle(fontSize: 24)),
+              SizedBox(width: 12),
+              Text(
+                'Select Players',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                   color: Color(0xFF2C3E50),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Player count buttons
+          Row(
+            children: [
+              Expanded(
+                child: _buildPlayerCountButton('2 Players', 2, Icons.people),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPlayerCountButton('3 Players', 3, Icons.groups),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Play vs Bot toggle
+          InkWell(
+            onTap: () {
+              setState(() {
+                _playVsBot = !_playVsBot;
+                if (_playVsBot) {
+                  _selectedPlayerCount = 2;
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: _playVsBot
+                    ? const LinearGradient(
+                        colors: [Color(0xFFE74C3C), Color(0xFFEF5350)],
+                      )
+                    : null,
+                color: _playVsBot ? null : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _playVsBot ? const Color(0xFFE74C3C) : Colors.grey.shade300,
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.smart_toy,
+                    color: _playVsBot ? Colors.white : Colors.grey.shade700,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Play vs Bot',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _playVsBot ? Colors.white : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                  if (_playVsBot)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _botDifficulty,
+                        dropdownColor: const Color(0xFFE74C3C),
+                        underline: const SizedBox(),
+                        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        items: ['Easy', 'Medium', 'Hard'].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _botDifficulty = newValue;
+                            });
+                          }
+                        },
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.grey.shade400,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerCountButton(String label, int count, IconData icon) {
+    final isSelected = _selectedPlayerCount == count && !_playVsBot;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedPlayerCount = count;
+          _playVsBot = false;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                )
+              : null,
+          color: isSelected ? null : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF667eea) : Colors.grey.shade300,
+            width: 2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF667eea).withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade700,
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.white,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-        margin: const EdgeInsets.all(16),
-        elevation: 8,
       ),
+    );
+  }
+
+  Widget _buildPlayerSlots() {
+    final displayCount = _playVsBot ? 2 : _selectedPlayerCount;
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Text('🎭', style: TextStyle(fontSize: 24)),
+              SizedBox(width: 12),
+              Text(
+                'Customize Players',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...List.generate(displayCount, (index) {
+            final playerNum = index + 1;
+            final isBot = _playVsBot && playerNum == 2;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildPlayerSlot(playerNum, isBot),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerSlot(int playerNum, bool isBot) {
+    final colors = [
+      const Color(0xFF4A90E2),
+      const Color(0xFFE74C3C),
+      const Color(0xFF2ECC71),
+    ];
+    final color = colors[playerNum - 1];
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: 0.1),
+            color.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
+      ),
+      child: Row(
+        children: [
+          // Avatar
+          GestureDetector(
+            onTap: isBot ? null : () => _showAvatarPicker(playerNum),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color, color.withValues(alpha: 0.8)],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  isBot ? '🤖' : _playerAvatars[playerNum]!,
+                  style: const TextStyle(fontSize: 28),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Name and stats
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isBot)
+                  Text(
+                    'AI Bot ($_botDifficulty)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  )
+                else
+                  GestureDetector(
+                    onTap: () => _editPlayerName(playerNum),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _playerNames[playerNum]!,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.edit,
+                          size: 16,
+                          color: color.withValues(alpha: 0.6),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🪙', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '0',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🏆', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '0',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Color indicator
+          Container(
+            width: 12,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [color, color.withValues(alpha: 0.5)],
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAvatarPicker(int playerNum) {
+    final avatars = ['😊', '🌟', '🎮', '🚀', '🎯', '💪', '🧠', '❤️', '🌈', '⚡'];
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.blue.shade50,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Choose Your Avatar',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 5,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                  ),
+                  itemCount: avatars.length,
+                  itemBuilder: (context, index) {
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _playerAvatars[playerNum] = avatars[index];
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _playerAvatars[playerNum] == avatars[index]
+                                ? const Color(0xFF667eea)
+                                : Colors.grey.shade300,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            avatars[index],
+                            style: const TextStyle(fontSize: 32),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _editPlayerName(int playerNum) {
+    final controller = TextEditingController(text: _playerNames[playerNum]);
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Edit Player Name',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: 'Player Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (controller.text.trim().isNotEmpty) {
+                          setState(() {
+                            _playerNames[playerNum] = controller.text.trim();
+                          });
+                        }
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF667eea),
+                      ),
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameModeSelection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Text('🎮', style: TextStyle(fontSize: 24)),
+              SizedBox(width: 12),
+              Text(
+                'Choose Game Mode',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Quiz Mode Card
+          InkWell(
+            onTap: () {
+              setState(() {
+                _selectedMode = GameMode.quiz;
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: _selectedMode == GameMode.quiz
+                    ? const LinearGradient(
+                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      )
+                    : null,
+                color: _selectedMode == GameMode.quiz ? null : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _selectedMode == GameMode.quiz
+                      ? const Color(0xFF667eea)
+                      : Colors.grey.shade300,
+                  width: 2,
+                ),
+                boxShadow: _selectedMode == GameMode.quiz
+                    ? const [
+                        BoxShadow(
+                          color: Color(0xFF667eea),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _selectedMode == GameMode.quiz
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFF667eea).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.quiz,
+                      color: _selectedMode == GameMode.quiz
+                          ? Colors.white
+                          : const Color(0xFF667eea),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🧠 Quiz Mode',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _selectedMode == GameMode.quiz
+                                ? Colors.white
+                                : const Color(0xFF2C3E50),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Answer health questions to climb ladders and avoid snakes',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: _selectedMode == GameMode.quiz
+                                ? Colors.white.withValues(alpha: 0.9)
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _selectedMode == GameMode.quiz
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: _selectedMode == GameMode.quiz
+                        ? Colors.white
+                        : Colors.grey.shade400,
+                    size: 28,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Knowledge Mode Card
+          InkWell(
+            onTap: () {
+              setState(() {
+                _selectedMode = GameMode.knowledge;
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: _selectedMode == GameMode.knowledge
+                    ? const LinearGradient(
+                        colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+                      )
+                    : null,
+                color: _selectedMode == GameMode.knowledge ? null : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _selectedMode == GameMode.knowledge
+                      ? const Color(0xFF4CAF50)
+                      : Colors.grey.shade300,
+                  width: 2,
+                ),
+                boxShadow: _selectedMode == GameMode.knowledge
+                    ? const [
+                        BoxShadow(
+                          color: Color(0xFF4CAF50),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _selectedMode == GameMode.knowledge
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.school,
+                      color: _selectedMode == GameMode.knowledge
+                          ? Colors.white
+                          : const Color(0xFF4CAF50),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '📚 Knowledge Mode',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _selectedMode == GameMode.knowledge
+                                ? Colors.white
+                                : const Color(0xFF2C3E50),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Learn health DOs and DON\'Ts while playing',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: _selectedMode == GameMode.knowledge
+                                ? Colors.white.withValues(alpha: 0.9)
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _selectedMode == GameMode.knowledge
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: _selectedMode == GameMode.knowledge
+                        ? Colors.white
+                        : Colors.grey.shade400,
+                    size: 28,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartButton() {
+    final displayCount = _playVsBot ? 2 : _selectedPlayerCount;
+    final buttonText = _playVsBot
+        ? 'Start Game — Player vs Bot'
+        : 'Start Game — $displayCount Players';
+    
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.95, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.elasticOut,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: child,
+        );
+      },
+      child: InkWell(
+        onTap: _startGame,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0xFFFFD700),
+                blurRadius: 20,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('🚀', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Text(
+                buttonText,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildFooterButton(
+          Icons.history,
+          'Game History',
+          () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Coming soon!')),
+            );
+          },
+        ),
+        _buildFooterButton(
+          Icons.help_outline,
+          'How to Play',
+          () => _showLegend(context),
+        ),
+        _buildFooterButton(
+          Icons.settings,
+          'Settings',
+          () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Coming soon!')),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooterButton(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: const Color(0xFF667eea), size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2C3E50),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLegend(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Text('❓', style: TextStyle(fontSize: 28)),
+            SizedBox(width: 12),
+            Text(
+              'How to Play',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2C3E50),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLegendItem(
+                '🎲',
+                'Roll the Dice',
+                'Tap the dice to roll and move forward',
+              ),
+              const SizedBox(height: 16),
+              _buildLegendItem(
+                '🪜',
+                'Ladders (Good Health)',
+                'Answer correctly to climb up!',
+              ),
+              const SizedBox(height: 16),
+              _buildLegendItem(
+                '🐍',
+                'Snakes (Bad Habits)',
+                'Wrong answers slide you down',
+              ),
+              const SizedBox(height: 16),
+              _buildLegendItem(
+                '🏆',
+                'Win Condition',
+                'First player to reach square 100 wins!',
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF667eea),
+                    width: 2,
+                  ),
+                ),
+                child: const Text(
+                  '💡 Tip: Learn health facts while having fun!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF667eea),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF667eea),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Got it!',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String emoji, String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0xFF667eea),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 24),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
