@@ -11,6 +11,10 @@ dependencies:
     sdk: flutter
   provider: ^6.0.5
   audioplayers: ^5.2.1
+  sqflite: ^2.3.0
+  path_provider: ^2.1.0
+  path: ^1.8.0
+  intl: ^0.20.0
 
 dev_dependencies:
   flutter_test:

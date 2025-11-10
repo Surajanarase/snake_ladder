@@ -4,10 +4,11 @@ import 'package:health_snake_ladder/main.dart';
 
 void main() {
   testWidgets('app builds and shows title', (WidgetTester tester) async {
-    await tester.pumpWidget(const HealthSnakeLadderApp());
+    // Use MyApp which is the actual class name in main.dart
+    await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
 
-    // Expect the header text (Health Heroes) to be present
-    expect(find.text('Health Heroes'), findsOneWidget);
+    // Expect the header text (Health Quest) to be present
+    expect(find.text('Health Quest'), findsOneWidget);
   });
 }

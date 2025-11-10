@@ -1,0 +1,324 @@
+// lib/database/database_helper.dart
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+//import 'package:path_provider/path_provider.dart';
+//import 'dart:io';
+
+class DatabaseHelper {
+  static final DatabaseHelper instance = DatabaseHelper._init();
+  static Database? _database;
+
+  DatabaseHelper._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('health_quest.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
+  }
+
+  Future _createDB(Database db, int version) async {
+    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const textType = 'TEXT NOT NULL';
+    const integerType = 'INTEGER NOT NULL';
+    const realType = 'REAL NOT NULL';
+
+    // User Profile Table
+    await db.execute('''
+      CREATE TABLE user_profile (
+        id $idType,
+        username $textType,
+        avatar_initials $textType,
+        total_coins $integerType,
+        games_won $integerType,
+        games_played $integerType,
+        quiz_accuracy $realType,
+        level $integerType,
+        created_at $textType,
+        updated_at $textType
+      )
+    ''');
+
+    // Game History Table
+    await db.execute('''
+      CREATE TABLE game_history (
+        id $idType,
+        game_date $textType,
+        game_mode $textType,
+        opponent_type $textType,
+        result $textType,
+        player_position INTEGER NOT NULL,
+        opponent_position INTEGER NOT NULL,
+        coins_earned $integerType,
+        good_habits $integerType,
+        bad_habits $integerType,
+        quiz_correct $integerType,
+        quiz_total $integerType,
+        duration_seconds $integerType
+      )
+    ''');
+
+    // Badges Table
+    await db.execute('''
+      CREATE TABLE badges (
+        id $idType,
+        badge_name $textType,
+        badge_icon $textType,
+        earned_date $textType,
+        description $textType
+      )
+    ''');
+
+    // Quiz Stats by Category Table
+    await db.execute('''
+      CREATE TABLE quiz_category_stats (
+        id $idType,
+        category $textType,
+        total_attempts $integerType,
+        correct_answers $integerType,
+        updated_at $textType
+      )
+    ''');
+
+    // Insert default user profile
+    await db.insert('user_profile', {
+      'username': 'Player',
+      'avatar_initials': 'P',
+      'total_coins': 0,
+      'games_won': 0,
+      'games_played': 0,
+      'quiz_accuracy': 0.0,
+      'level': 1,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    // Insert default quiz category stats
+    final categories = ['nutrition', 'exercise', 'sleep', 'mental'];
+    for (var category in categories) {
+      await db.insert('quiz_category_stats', {
+        'category': category,
+        'total_attempts': 0,
+        'correct_answers': 0,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    }
+  }
+
+  // User Profile Methods
+  Future<Map<String, dynamic>> getUserProfile() async {
+    final db = await instance.database;
+    final result = await db.query('user_profile', limit: 1);
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return {};
+  }
+
+  Future<int> updateUserProfile(Map<String, dynamic> profile) async {
+    final db = await instance.database;
+    profile['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'user_profile',
+      profile,
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+  }
+
+  Future<int> updateUsername(String username, String initials) async {
+    final db = await instance.database;
+    return await db.update(
+      'user_profile',
+      {
+        'username': username,
+        'avatar_initials': initials,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+  }
+
+  // Game History Methods
+  Future<int> insertGameHistory(Map<String, dynamic> game) async {
+    final db = await instance.database;
+    game['game_date'] = DateTime.now().toIso8601String();
+    return await db.insert('game_history', game);
+  }
+
+  Future<List<Map<String, dynamic>>> getGameHistory({int limit = 10}) async {
+    final db = await instance.database;
+    return await db.query(
+      'game_history',
+      orderBy: 'game_date DESC',
+      limit: limit,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllGameHistory() async {
+    final db = await instance.database;
+    return await db.query(
+      'game_history',
+      orderBy: 'game_date DESC',
+    );
+  }
+
+  // Badges Methods
+  Future<int> insertBadge(Map<String, dynamic> badge) async {
+    final db = await instance.database;
+    badge['earned_date'] = DateTime.now().toIso8601String();
+    return await db.insert('badges', badge);
+  }
+
+  Future<List<Map<String, dynamic>>> getBadges() async {
+    final db = await instance.database;
+    return await db.query('badges', orderBy: 'earned_date DESC');
+  }
+
+  Future<bool> hasBadge(String badgeName) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'badges',
+      where: 'badge_name = ?',
+      whereArgs: [badgeName],
+    );
+    return result.isNotEmpty;
+  }
+
+  // Quiz Category Stats Methods
+  Future<int> updateQuizStats(String category, bool correct) async {
+    final db = await instance.database;
+    final current = await db.query(
+      'quiz_category_stats',
+      where: 'category = ?',
+      whereArgs: [category],
+    );
+
+    if (current.isNotEmpty) {
+      final stats = current.first;
+      final totalAttempts = (stats['total_attempts'] as int) + 1;
+      final correctAnswers = (stats['correct_answers'] as int) + (correct ? 1 : 0);
+
+      return await db.update(
+        'quiz_category_stats',
+        {
+          'total_attempts': totalAttempts,
+          'correct_answers': correctAnswers,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'category = ?',
+        whereArgs: [category],
+      );
+    }
+    return 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getQuizStats() async {
+    final db = await instance.database;
+    return await db.query('quiz_category_stats');
+  }
+
+  // Update game result and user stats
+  Future<void> updateGameResult({
+    required String gameMode,
+    required String opponentType,
+    required bool won,
+    required int playerPosition,
+    required int opponentPosition,
+    required int coinsEarned,
+    required int goodHabits,
+    required int badHabits,
+    required int quizCorrect,
+    required int quizTotal,
+    required int durationSeconds,
+  }) async {
+    final db = await instance.database;
+
+    // Insert game history
+    await db.insert('game_history', {
+      'game_date': DateTime.now().toIso8601String(),
+      'game_mode': gameMode,
+      'opponent_type': opponentType,
+      'result': won ? 'won' : 'lost',
+      'player_position': playerPosition,
+      'opponent_position': opponentPosition,
+      'coins_earned': coinsEarned,
+      'good_habits': goodHabits,
+      'bad_habits': badHabits,
+      'quiz_correct': quizCorrect,
+      'quiz_total': quizTotal,
+      'duration_seconds': durationSeconds,
+    });
+
+    // Update user profile
+    final profile = await getUserProfile();
+    final totalCoins = (profile['total_coins'] as int) + coinsEarned;
+    final gamesWon = (profile['games_won'] as int) + (won ? 1 : 0);
+    final gamesPlayed = (profile['games_played'] as int) + 1;
+    
+    // Calculate new quiz accuracy
+    final allGames = await db.query('game_history');
+    int totalQuizCorrect = 0;
+    int totalQuizAttempts = 0;
+    for (var game in allGames) {
+      totalQuizCorrect += game['quiz_correct'] as int;
+      totalQuizAttempts += game['quiz_total'] as int;
+    }
+    final quizAccuracy = totalQuizAttempts > 0 
+        ? (totalQuizCorrect / totalQuizAttempts) * 100 
+        : 0.0;
+
+    // Calculate level (1 level per 5 games won)
+    final level = (gamesWon ~/ 5) + 1;
+
+    await db.update(
+      'user_profile',
+      {
+        'total_coins': totalCoins,
+        'games_won': gamesWon,
+        'games_played': gamesPlayed,
+        'quiz_accuracy': quizAccuracy,
+        'level': level,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+
+    // Check and award badges
+    await _checkAndAwardBadges(gamesWon, totalCoins, quizAccuracy);
+  }
+
+  Future<void> _checkAndAwardBadges(int gamesWon, int totalCoins, double quizAccuracy) async {
+    final badges = [
+      if (gamesWon >= 1 && !await hasBadge('First Victory'))
+        {'badge_name': 'First Victory', 'badge_icon': '🏆', 'description': 'Won your first game'},
+      if (gamesWon >= 10 && !await hasBadge('Champion'))
+        {'badge_name': 'Champion', 'badge_icon': '👑', 'description': 'Won 10 games'},
+      if (totalCoins >= 500 && !await hasBadge('Coin Collector'))
+        {'badge_name': 'Coin Collector', 'badge_icon': '💰', 'description': 'Collected 500 coins'},
+      if (quizAccuracy >= 90 && !await hasBadge('Quiz Master'))
+        {'badge_name': 'Quiz Master', 'badge_icon': '🧠', 'description': '90% quiz accuracy'},
+    ];
+
+    for (var badge in badges) {
+      await insertBadge(badge);
+    }
+  }
+
+  Future close() async {
+    final db = await instance.database;
+    db.close();
+  }
+}

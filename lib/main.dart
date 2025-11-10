@@ -2,30 +2,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/game_service.dart';
-import 'widgets/home_shell.dart';
+import 'screens/home_page.dart';
 
 void main() {
-  runApp(const HealthSnakeLadderApp());
+  runApp(const MyApp());
 }
 
-class HealthSnakeLadderApp extends StatelessWidget {
-  const HealthSnakeLadderApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<GameService>(
-      create: (_) => GameService(),
+    return ChangeNotifierProvider(
+      create: (context) => GameService(),
       child: MaterialApp(
-        title: 'Health Heroes',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF667eea),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-        ),
+        title: 'Health Quest',
         debugShowCheckedModeBanner: false,
-        home: const HomeShell(),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF667eea)),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+        ),
+        home: const HomePage(),
       ),
     );
   }
