@@ -28,6 +28,51 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
     });
   }
 
+  Future<void> _clearHistory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear History?'),
+        content: const Text(
+          'Are you sure you want to delete all game history? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE74C3C),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Delete all game history
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('game_history');
+      
+      // Reload history
+      await _loadHistory();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Game history cleared successfully'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,6 +80,14 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
         title: const Text('Game History'),
         backgroundColor: const Color(0xFF667eea),
         foregroundColor: Colors.white,
+        actions: [
+          if (_history.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep),
+              onPressed: _clearHistory,
+              tooltip: 'Clear History',
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -46,7 +99,7 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _history.length,
                     itemBuilder: (context, index) {
-                      return _buildHistoryCard(_history[index]);
+                      return _buildCompactHistoryCard(_history[index]);
                     },
                   ),
                 ),
@@ -85,18 +138,16 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
     );
   }
 
-  Widget _buildHistoryCard(Map<String, dynamic> game) {
+  Widget _buildCompactHistoryCard(Map<String, dynamic> game) {
     final dateTime = DateTime.parse(game['game_date']);
     final formattedDate = DateFormat('MMM dd, yyyy • hh:mm a').format(dateTime);
     final won = game['result'] == 'won';
-    final duration = Duration(seconds: game['duration_seconds'] as int);
-    final durationStr = '${duration.inMinutes}m ${duration.inSeconds % 60}s';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: won ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
           width: 2,
@@ -104,28 +155,22 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: won 
-                  ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
-                  : const Color(0xFFE74C3C).withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
-              ),
-            ),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row: Result, Mode, Date
+            Row(
               children: [
+                // Result Icon
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: won ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
                     shape: BoxShape.circle,
@@ -133,42 +178,34 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                   child: Icon(
                     won ? Icons.emoji_events : Icons.close,
                     color: Colors.white,
-                    size: 24,
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        won ? 'Victory! 🎉' : 'Try Again 💪',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: won ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
-                        ),
-                      ),
-                      Text(
-                        formattedDate,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 8),
+                
+                // Result Text
+                Text(
+                  won ? 'Victory! 🎉' : 'Try Again 💪',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: won ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
                   ),
                 ),
+                
+                const Spacer(),
+                
+                // Game Mode Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFF667eea).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     game['game_mode'] == 'quiz' ? '🧠 Quiz' : '📚 Knowledge',
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF667eea),
                     ),
@@ -176,158 +213,158 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                 ),
               ],
             ),
-          ),
-
-          // Stats
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+            
+            const SizedBox(height: 8),
+            
+            // Date
+            Text(
+              formattedDate,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            
+            const SizedBox(height: 10),
+            
+            // Stats Row
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatChip(
-                        'Position',
-                        '${game['player_position']}/100',
-                        Icons.flag,
-                        const Color(0xFF667eea),
-                      ),
+                // Position (only if lost)
+                if (!won)
+                  Expanded(
+                    child: _buildStatChip(
+                      'Position',
+                      '${game['player_position']}/100',
+                      Icons.flag,
+                      const Color(0xFF667eea),
+                      isCompact: true,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatChip(
-                        'Coins',
-                        '+${game['coins_earned']}',
-                        Icons.monetization_on,
-                        const Color(0xFFF59E0B),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatChip(
-                        'Good Habits',
-                        '${game['good_habits']}',
-                        Icons.sentiment_satisfied_alt,
-                        const Color(0xFF4CAF50),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatChip(
-                        'Bad Habits',
-                        '${game['bad_habits']}',
-                        Icons.sentiment_dissatisfied,
-                        const Color(0xFFE74C3C),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatChip(
-                        'Quiz Score',
-                        '${game['quiz_correct']}/${game['quiz_total']}',
-                        Icons.quiz,
-                        const Color(0xFF9C27B0),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatChip(
-                        'Duration',
-                        durationStr,
-                        Icons.timer,
-                        const Color(0xFF2196F3),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        game['opponent_type'] == 'bot' 
-                            ? Icons.smart_toy 
-                            : Icons.person,
-                        size: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'vs ${game['opponent_type'] == 'bot' ? 'Bot' : 'Player 2'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '(${game['opponent_position']}/100)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                if (!won) const SizedBox(width: 6),
+                
+                // Coins
+                Expanded(
+                  child: _buildStatChip(
+                    'Coins',
+                    '+${game['coins_earned']}',
+                    Icons.monetization_on,
+                    const Color(0xFFF59E0B),
+                    isCompact: true,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                
+                // Good Habits
+                Expanded(
+                  child: _buildStatChip(
+                    'Good',
+                    '${game['good_habits']}',
+                    Icons.sentiment_satisfied_alt,
+                    const Color(0xFF4CAF50),
+                    isCompact: true,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                
+                // Bad Habits
+                Expanded(
+                  child: _buildStatChip(
+                    'Bad',
+                    '${game['bad_habits']}',
+                    Icons.sentiment_dissatisfied,
+                    const Color(0xFFE74C3C),
+                    isCompact: true,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                
+                // Quiz Score
+                Expanded(
+                  child: _buildStatChip(
+                    'Quiz',
+                    '${game['quiz_correct']}/${game['quiz_total']}',
+                    Icons.quiz,
+                    const Color(0xFF9C27B0),
+                    isCompact: true,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            
+            const SizedBox(height: 8),
+            
+            // Opponent Info
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    game['opponent_type'] == 'bot' 
+                        ? Icons.smart_toy 
+                        : Icons.person,
+                    size: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'vs ${game['opponent_type'] == 'bot' ? 'Bot' : 'Player 2'} (${game['opponent_position']}/100)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatChip(String label, String value, IconData icon, Color color) {
+  Widget _buildStatChip(
+    String label, 
+    String value, 
+    IconData icon, 
+    Color color, 
+    {bool isCompact = false}
+  ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isCompact ? 6 : 12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          Icon(icon, size: isCompact ? 14 : 18, color: color),
+          SizedBox(height: isCompact ? 2 : 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isCompact ? 11 : 14,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
+          if (!isCompact)
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
         ],
       ),
     );
