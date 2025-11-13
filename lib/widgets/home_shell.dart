@@ -30,7 +30,6 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   bool _suppressWinOverlay = false;
   late DateTime _gameStartTime;
-  //Map<String, int> _initialQuizStats = {}; // ✅ Add this line - declare the field
 
   @override
   void initState() {
@@ -39,29 +38,47 @@ class _HomeShellState extends State<HomeShell> {
     
     // Start game after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // ✅ Remove unused 'game' variable from here
       _showNameEntry(context, widget.numPlayers, widget.withBot, widget.mode);
     });
   }
 
   // Show a dialog to collect player names before starting
-  void _showNameEntry(BuildContext context, int numPlayers, bool withBot, GameMode mode) {
+  void _showNameEntry(BuildContext context, int numPlayers, bool withBot, GameMode mode) async {
     final game = Provider.of<GameService>(context, listen: false);
+    
+    // Load Player 1's profile from database
+    final profile = await DatabaseHelper.instance.getUserProfile();
+    final player1Name = profile['username'] ?? 'Player 1';
+    final player1Initials = profile['avatar_initials'] ?? 'P1';
+    
+    // Set Player 1 name from profile
+    game.playerNames['player1'] = '👤 $player1Name';
+    
     final controllers = <TextEditingController>[];
     
-    for (int i = 1; i <= numPlayers; i++) {
+    // Only create controllers for Player 2 (and Player 3 if applicable)
+    // Skip bot player
+    for (int i = 2; i <= numPlayers; i++) {
       if (withBot && i == numPlayers) {
         // Don't create controller for bot
         continue;
       }
-      final defaultName = game.playerNames['player$i'] ?? 'Player $i';
+      final defaultName = 'Player $i';
       controllers.add(TextEditingController(text: defaultName));
     }
 
+    if (!mounted) return;
+    
+    // Capture context before showDialog
+    final dialogBuildContext = context;
+    
+    // Check if context is still mounted before showing dialog
+    if (!dialogBuildContext.mounted) return;
+    
     showDialog<void>(
-      context: context,
+      context: dialogBuildContext,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: SingleChildScrollView(
@@ -78,74 +95,147 @@ class _HomeShellState extends State<HomeShell> {
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  
+                  // Player 1 (Authorized User) - Read-only display
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF667eea), width: 2),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              player1Initials,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF667eea),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Player 1 (You)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                player1Name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.verified_user,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Other Players
                   for (int i = 0; i < controllers.length; i++) ...[
                     TextField(
                       controller: controllers[i],
                       decoration: InputDecoration(
-                        labelText: 'Player ${i + 1} name',
+                        labelText: 'Player ${i + 2} name',
                         border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.person_outline),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                   ],
+                  
                   if (withBot) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade400),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.smart_toy, color: Colors.grey),
+                          Icon(Icons.smart_toy, color: Colors.grey.shade700),
                           const SizedBox(width: 8),
                           Text(
-                            'Player 2: AI Bot',
+                            'Player $numPlayers: AI Bot',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                   ],
-                  const SizedBox(height: 12),
+                  
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).pop(); // Go back to home page
+                          Navigator.of(dialogContext).pop();
+                          if (dialogBuildContext.mounted) {
+                            Navigator.of(dialogBuildContext).pop(); // Go back to home page
+                          }
                         },
                         child: const Text('Cancel'),
                       ),
                       ElevatedButton(
                         onPressed: () {
-                          // Set player names
+                          // Set player names (Player 1 already set from profile)
                           for (int i = 0; i < controllers.length; i++) {
                             final name = controllers[i].text.trim();
                             if (name.isNotEmpty) {
-                              game.playerNames['player${i + 1}'] = name;
+                              game.playerNames['player${i + 2}'] = '👤 $name';
                             }
                           }
-                          
-                          // Store initial quiz stats
-                         // _storeInitialQuizStats(game);
                           
                           // Start the game
                           game.startGame(numPlayers, withBot, mode);
                           _gameStartTime = DateTime.now();
                           
-                          Navigator.of(context).pop();
+                          Navigator.of(dialogContext).pop();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF667eea),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
-                        child: const Text('Start'),
+                        child: const Text('Start Game'),
                       ),
                     ],
                   ),
@@ -157,14 +247,6 @@ class _HomeShellState extends State<HomeShell> {
       },
     );
   }
-
-  //void _storeInitialQuizStats(GameService game) {
-    // ✅ Now this will work because _initialQuizStats is declared
-    //_initialQuizStats = {
-     // 'player1_correct': 0,
-     // 'player1_total': 0,
-   // };
- // }
 
   @override
   Widget build(BuildContext context) {
