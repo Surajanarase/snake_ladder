@@ -36,31 +36,24 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     _gameStartTime = DateTime.now();
     
-    // Start game after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showNameEntry(context, widget.numPlayers, widget.withBot, widget.mode);
     });
   }
 
-  // Show a dialog to collect player names before starting
   void _showNameEntry(BuildContext context, int numPlayers, bool withBot, GameMode mode) async {
     final game = Provider.of<GameService>(context, listen: false);
     
-    // Load Player 1's profile from database
     final profile = await DatabaseHelper.instance.getUserProfile();
     final player1Name = profile['username'] ?? 'Player 1';
     final player1Initials = profile['avatar_initials'] ?? 'P1';
     
-    // Set Player 1 name from profile
     game.playerNames['player1'] = '👤 $player1Name';
     
     final controllers = <TextEditingController>[];
     
-    // Only create controllers for Player 2 (and Player 3 if applicable)
-    // Skip bot player
     for (int i = 2; i <= numPlayers; i++) {
       if (withBot && i == numPlayers) {
-        // Don't create controller for bot
         continue;
       }
       final defaultName = 'Player $i';
@@ -69,10 +62,8 @@ class _HomeShellState extends State<HomeShell> {
 
     if (!mounted) return;
     
-    // Capture context before showDialog
     final dialogBuildContext = context;
     
-    // Check if context is still mounted before showing dialog
     if (!dialogBuildContext.mounted) return;
     
     showDialog<void>(
@@ -97,7 +88,6 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Player 1 (Authorized User) - Read-only display
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -162,7 +152,6 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Other Players
                   for (int i = 0; i < controllers.length; i++) ...[
                     TextField(
                       controller: controllers[i],
@@ -209,14 +198,13 @@ class _HomeShellState extends State<HomeShell> {
                         onPressed: () {
                           Navigator.of(dialogContext).pop();
                           if (dialogBuildContext.mounted) {
-                            Navigator.of(dialogBuildContext).pop(); // Go back to home page
+                            Navigator.of(dialogBuildContext).pop();
                           }
                         },
                         child: const Text('Cancel'),
                       ),
                       ElevatedButton(
                         onPressed: () {
-                          // Set player names (Player 1 already set from profile)
                           for (int i = 0; i < controllers.length; i++) {
                             final name = controllers[i].text.trim();
                             if (name.isNotEmpty) {
@@ -224,7 +212,6 @@ class _HomeShellState extends State<HomeShell> {
                             }
                           }
                           
-                          // Start the game
                           game.startGame(numPlayers, withBot, mode);
                           _gameStartTime = DateTime.now();
                           
@@ -281,10 +268,8 @@ class _HomeShellState extends State<HomeShell> {
                 ),
                 child: Stack(
                   children: [
-                    // Main game content
                     Column(
                       children: [
-                        // Header
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: const BoxDecoration(
@@ -331,7 +316,6 @@ class _HomeShellState extends State<HomeShell> {
                                   ],
                                 ),
                               ),
-                              // Sound toggle button
                               GestureDetector(
                                 onTap: () {
                                   setState(() {
@@ -381,12 +365,10 @@ class _HomeShellState extends State<HomeShell> {
                           ),
                         ),
 
-                        // Scrollable content area
                         Expanded(
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // Board area
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 6,
@@ -406,7 +388,6 @@ class _HomeShellState extends State<HomeShell> {
                                   ),
                                 ),
 
-                                // Control Panel
                                 ControlPanel(
                                   onNotify: (m, i) => _showToast(context, m, i),
                                 ),
@@ -418,7 +399,6 @@ class _HomeShellState extends State<HomeShell> {
                       ],
                     ),
 
-                    // Win overlay
                     if (!game.gameActive && game.getWinner() != null && !_suppressWinOverlay)
                       Positioned.fill(
                         child: Container(
@@ -517,11 +497,9 @@ class _HomeShellState extends State<HomeShell> {
                                       ),
                                     ),
                                     const SizedBox(height: 24),
-                                    // Responsive button layout
                                     LayoutBuilder(
                                       builder: (context, constraints) {
                                         if (constraints.maxWidth < 400) {
-                                          // Stack buttons vertically
                                           return Column(
                                             children: [
                                               SizedBox(
@@ -589,7 +567,6 @@ class _HomeShellState extends State<HomeShell> {
                                             ],
                                           );
                                         } else {
-                                          // Show buttons horizontally
                                           return Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
@@ -689,7 +666,6 @@ class _HomeShellState extends State<HomeShell> {
 
     final duration = DateTime.now().difference(_gameStartTime);
     
-    // Calculate quiz stats for player1
     int quizCorrect = 0;
     int quizTotal = 0;
     final stats = game.playerQuizStats['player1'];
@@ -714,7 +690,6 @@ class _HomeShellState extends State<HomeShell> {
       durationSeconds: duration.inSeconds,
     );
 
-    // Update quiz stats in database
     if (game.currentMode == GameMode.quiz && stats != null) {
       for (var entry in stats.entries) {
         final category = entry.key;
@@ -743,8 +718,8 @@ class _HomeShellState extends State<HomeShell> {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to home
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE74C3C),
@@ -830,7 +805,7 @@ class _HomeShellState extends State<HomeShell> {
                   _legendItem('🧠', 'Quiz Mode', 'Answer questions to climb ladders or avoid snakes.'),
                   _legendItem('📚', 'Knowledge Mode', 'Learn health DOs and DON\'Ts automatically.'),
                   _legendItem('💡', 'Advice Squares', 'Land on special tiles for health advice and +5 coins!'),
-                  _legendItem('⚡', 'Action Challenges', 'Complete physical challenges for bonus steps!'),
+                  _legendItem('⚡', 'Action Challenges', 'Complete physical challenges for bonus steps! (Not available with bot)'),
                   _legendItem('🪙', 'Coins', 'Earn coins through quizzes, challenges, and good health habits!'),
                   const SizedBox(height: 20),
                   ElevatedButton(
@@ -918,7 +893,7 @@ class _HomeShellState extends State<HomeShell> {
       };
     }
 
-    // Handle LADDER_QUIZ trigger
+    // Handle LADDER_QUIZ trigger (only for human players)
     if (message.startsWith('LADDER_QUIZ::')) {
       try {
         final parts = message.split('::');
@@ -960,7 +935,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // Handle SNAKE_QUIZ trigger
+    // Handle SNAKE_QUIZ trigger (only for human players)
     if (message.startsWith('SNAKE_QUIZ::')) {
       try {
         final parts = message.split('::');
@@ -1002,7 +977,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // Handle LADDER_KNOWLEDGE trigger
+    // Handle LADDER_KNOWLEDGE trigger (only for human players)
     if (message.startsWith('LADDER_KNOWLEDGE::')) {
       try {
         final parts = message.split('::');
@@ -1038,7 +1013,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // Handle SNAKE_KNOWLEDGE trigger
+    // Handle SNAKE_KNOWLEDGE trigger (only for human players)
     if (message.startsWith('SNAKE_KNOWLEDGE::')) {
       try {
         final parts = message.split('::');
@@ -1074,7 +1049,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // Handle ADVICE trigger
+    // Handle ADVICE trigger (only for human players)
     if (message.startsWith('ADVICE::')) {
       try {
         final parts = message.split('::');
@@ -1107,7 +1082,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // Handle Action Challenge trigger
+    // Handle Action Challenge trigger (NOT shown when playing with bot)
     if (message.startsWith('ACTION_CHALLENGE::')) {
       try {
         final parts = message.split('::');
@@ -1138,7 +1113,6 @@ class _HomeShellState extends State<HomeShell> {
                       );
                     }
                     
-                    // Apply bonus steps
                     const bonusSteps = 2;
                     final newPos = (currentPos + bonusSteps).clamp(0, 100);
                     
@@ -1155,7 +1129,6 @@ class _HomeShellState extends State<HomeShell> {
                       }
                     }
                     
-                    // Check for special cells after bonus movement
                     if (newPos < 100 && mounted) {
                       await game.checkSpecialCell(newPos, playerId, makeCallback());
                     } else if (mounted) {
@@ -1252,7 +1225,7 @@ class _HomeShellState extends State<HomeShell> {
       }
     }
 
-    // default behavior: floating SnackBar
+    // Default behavior: floating SnackBar
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -1291,7 +1264,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 }
 
-// Health Advice Dialog (used in ADVICE trigger)
+// Health Advice Dialog
 class HealthAdviceDialog extends StatefulWidget {
   final String player;
   final String playerName;
@@ -1535,7 +1508,7 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
   }
 }
 
-// Action Challenge Dialog (used in ACTION_CHALLENGE trigger)
+// Action Challenge Dialog
 class ActionChallengeDialog extends StatefulWidget {
   final String player;
   final String playerName;

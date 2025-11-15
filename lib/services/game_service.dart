@@ -13,7 +13,7 @@ class GameService extends ChangeNotifier {
   String currentPlayer = 'player1';
   int numberOfPlayers = 2;
   bool hasBot = false;
-  GameMode currentMode = GameMode.quiz; // New: Track game mode
+  GameMode currentMode = GameMode.quiz;
   
   Map<String, int> playerPositions = {
     'player1': 0,
@@ -27,7 +27,7 @@ class GameService extends ChangeNotifier {
     'player3': 0,
   };
   
-  Map<String, int> playerCoins = { // New: Coin system
+  Map<String, int> playerCoins = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
@@ -45,13 +45,13 @@ class GameService extends ChangeNotifier {
     'player3': 0,
   };
   
-  Map<String, int> playerLaddersHit = { // New: Track ladder hits
+  Map<String, int> playerLaddersHit = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
   };
   
-  Map<String, int> playerSnakesHit = { // New: Track snake hits
+  Map<String, int> playerSnakesHit = {
     'player1': 0,
     'player2': 0,
     'player3': 0,
@@ -82,7 +82,7 @@ class GameService extends ChangeNotifier {
   };
 
   final Set<int> actionChallengeTiles = {8, 23, 35, 47, 62, 78, 89};
-  final Set<int> adviceSquares = {15, 30, 45, 60, 75, 90}; // New: Advice tiles
+  final Set<int> adviceSquares = {15, 30, 45, 60, 75, 90};
   
   Map<String, Color> playerColors = {
     'player1': const Color(0xFF4A90E2),
@@ -149,7 +149,6 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // NEW: Quiz Questions Database
   final Map<String, List<QuizQuestion>> quizDatabase = {
     'nutrition': [
       QuizQuestion(
@@ -257,7 +256,6 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // NEW: Knowledge Bytes Database (Dos and Don'ts)
   final Map<String, List<KnowledgeByte>> knowledgeDatabase = {
     'nutrition_dos': [
       KnowledgeByte(
@@ -340,7 +338,7 @@ class GameService extends ChangeNotifier {
         reason: "Regular sleep patterns improve mental clarity and physical recovery",
         tips: [
           "🛏️ Go to bed at the same time daily",
-          "📵 Avoid screens 1 hour before bed",
+          "🔵 Avoid screens 1 hour before bed",
           "🌙 Keep your bedroom cool and dark"
         ],
         category: 'mental',
@@ -361,7 +359,6 @@ class GameService extends ChangeNotifier {
     ],
   };
 
-  // NEW: Health Advice Database
   final List<HealthAdvice> healthAdviceList = [
     HealthAdvice(
       title: "Small Steps, Big Changes",
@@ -401,7 +398,6 @@ class GameService extends ChangeNotifier {
     ),
   ];
 
-  // NEW: Action Challenge Database
   final List<ActionChallenge> actionChallenges = [
     ActionChallenge(
       title: 'Push-Up Power! 💪',
@@ -519,14 +515,12 @@ class GameService extends ChangeNotifier {
     return questions[_random.nextInt(questions.length)];
   }
 
-  // NEW: Get knowledge byte (Do or Don't)
   KnowledgeByte getKnowledgeByte(bool isLadder, String category) {
     final key = isLadder ? '${category}_dos' : '${category}_donts';
     final bytes = knowledgeDatabase[key] ?? knowledgeDatabase['nutrition_dos']!;
     return bytes[_random.nextInt(bytes.length)];
   }
 
-  // NEW: Get random health advice
   HealthAdvice getRandomHealthAdvice() {
     return healthAdviceList[_random.nextInt(healthAdviceList.length)];
   }
@@ -552,7 +546,6 @@ class GameService extends ChangeNotifier {
     return actionChallengeTiles.contains(position);
   }
 
-  // NEW: Check if position is an advice square
   bool isAdviceSquare(int position) {
     return adviceSquares.contains(position);
   }
@@ -626,7 +619,6 @@ class GameService extends ChangeNotifier {
     return _rowColOf(end)['row']! > _rowColOf(start)['row']!;
   }
 
-  
   int _healthCategoryIndex = 0;
   static const List<String> _fourCategories = ['nutrition', 'exercise', 'sleep', 'mental'];
 
@@ -938,31 +930,45 @@ class GameService extends ChangeNotifier {
   }
 
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
-    // Check for Action Challenge first
-    if (isActionChallengeTile(position)) {
+    final isBot = isCurrentPlayerBot();
+    
+    // FIXED: Skip action challenges when playing with bot (for both player1 and bot)
+    if (isActionChallengeTile(position) && !hasBot) {
       onNotify('ACTION_CHALLENGE::$player::$position', '⚡');
       return;
     }
 
-    // NEW: Check for Advice Square
+    // FIXED: Bot auto-handles advice squares without dialog
     if (isAdviceSquare(position)) {
-      onNotify('ADVICE::$player::$position', '💡');
-      return;
+      if (isBot) {
+        // Bot silently gets coins
+        playerCoins[player] = (playerCoins[player] ?? 0) + 5;
+        notifyListeners();
+        switchTurn(onNotify);
+        return;
+      } else {
+        onNotify('ADVICE::$player::$position', '💡');
+        return;
+      }
     }
 
     if (snakes.containsKey(position)) {
       final snake = snakes[position]!;
+      final String categoryKey = (snake['category'] as String?) ?? 'nutrition';
 
-      // QUIZ MODE: Show quiz to avoid snake
+      // FIXED: Bot auto-handles snakes
+      if (isBot) {
+        await _botHandleSnake(position, player, categoryKey, onNotify);
+        return;
+      }
+
+      // Human player - show quiz/knowledge
       if (currentMode == GameMode.quiz) {
-        final String categoryKey = (snake['category'] as String?) ?? 'nutrition';
         onNotify('SNAKE_QUIZ::$player::$position::$categoryKey', '🐍');
         return;
       }
 
-      // KNOWLEDGE MODE: Show don't and apply penalty
       if (currentMode == GameMode.knowledge) {
-        final String categoryKey = (snake['category'] as String?) ?? 'nutrition';
         onNotify('SNAKE_KNOWLEDGE::$player::$position::$categoryKey', '🐍');
         return;
       }
@@ -971,19 +977,97 @@ class GameService extends ChangeNotifier {
       final ladder = ladders[position]!;
       final String categoryKey = ladder['category'] as String;
 
-      // QUIZ MODE: Show quiz to climb ladder
+      // FIXED: Bot auto-handles ladders
+      if (isBot) {
+        await _botHandleLadder(position, player, categoryKey, onNotify);
+        return;
+      }
+
+      // Human player - show quiz/knowledge
       if (currentMode == GameMode.quiz) {
         onNotify('LADDER_QUIZ::$player::$position::$categoryKey', '🪜');
         return;
       }
 
-      // KNOWLEDGE MODE: Show do and climb
       if (currentMode == GameMode.knowledge) {
         onNotify('LADDER_KNOWLEDGE::$player::$position::$categoryKey', '🪜');
         return;
       }
 
     } else {
+      checkWinCondition(onNotify);
+    }
+  }
+
+  // NEW: Bot automatically handles ladders
+  Future<void> _botHandleLadder(int position, String player, String category, Function(String, String) onNotify) async {
+    final ladder = ladders[position]!;
+    
+    // Random success (70% chance for bot)
+    final success = _random.nextInt(100) < 70;
+    
+    if (success) {
+      playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+      playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
+      playerCoins[player] = (playerCoins[player] ?? 0) + 20;
+
+      animatingLadder = position;
+      lastAnimationTime = DateTime.now();
+      notifyListeners();
+
+      onNotify('🤖 Bot climbed the ladder!', '✅');
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      playerPositions[player] = ladder['end'];
+      animatingLadder = null;
+      notifyListeners();
+    } else {
+      playerCoins[player] = (playerCoins[player] ?? 0) - 10;
+      if (playerCoins[player]! < 0) playerCoins[player] = 0;
+      
+      onNotify('🤖 Bot missed the ladder', '❌');
+    }
+
+    checkWinCondition(onNotify);
+  }
+
+  // NEW: Bot automatically handles snakes
+  Future<void> _botHandleSnake(int position, String player, String category, Function(String, String) onNotify) async {
+    final snake = snakes[position]!;
+    
+    // Random success (50% chance for bot to avoid)
+    final avoided = _random.nextInt(100) < 50;
+    
+    if (avoided) {
+      playerCoins[player] = (playerCoins[player] ?? 0) + 30;
+      onNotify('🤖 Bot avoided the snake!', '✅');
+      switchTurn(onNotify);
+    } else {
+      playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+      playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
+      playerCoins[player] = (playerCoins[player] ?? 0) - 15;
+      if (playerCoins[player]! < 0) playerCoins[player] = 0;
+
+      final String badCat = (snake['category'] as String?) ?? 'mental';
+      final String badText = '${snake['icon']} ${snake['message']}';
+      final list = playerBadEvents[player]![badCat]!;
+      if (!list.contains(badText)) {
+        list.insert(0, badText);
+      }
+
+      animatingSnake = position;
+      lastAnimationTime = DateTime.now();
+      notifyListeners();
+
+      onNotify('🤖 Bot hit the snake!', '❌');
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      playerPositions[player] = snake['end'];
+      animatingSnake = null;
+      notifyListeners();
+
       checkWinCondition(onNotify);
     }
   }
@@ -1242,7 +1326,6 @@ class ActionChallenge {
   });
 }
 
-// NEW: Knowledge Byte Model
 class KnowledgeByte {
   final String title;
   final String text;
@@ -1259,7 +1342,6 @@ class KnowledgeByte {
   });
 }
 
-// NEW: Health Advice Model
 class HealthAdvice {
   final String title;
   final String text;
