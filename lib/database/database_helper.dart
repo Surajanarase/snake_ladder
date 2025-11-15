@@ -1,8 +1,6 @@
 // lib/database/database_helper.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-//import 'package:path_provider/path_provider.dart';
-//import 'dart:io';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -22,9 +20,18 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Increased version for migration
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add gender and age columns to existing user_profile table
+      await db.execute('ALTER TABLE user_profile ADD COLUMN gender TEXT DEFAULT "Not specified"');
+      await db.execute('ALTER TABLE user_profile ADD COLUMN age INTEGER DEFAULT 0');
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -39,6 +46,8 @@ class DatabaseHelper {
         id $idType,
         username $textType,
         avatar_initials $textType,
+        gender TEXT DEFAULT "Not specified",
+        age INTEGER DEFAULT 0,
         total_coins $integerType,
         games_won $integerType,
         games_played $integerType,
@@ -94,6 +103,8 @@ class DatabaseHelper {
     await db.insert('user_profile', {
       'username': 'Player',
       'avatar_initials': 'P',
+      'gender': 'Not specified',
+      'age': 0,
       'total_coins': 0,
       'games_won': 0,
       'games_played': 0,
@@ -143,6 +154,22 @@ class DatabaseHelper {
       {
         'username': username,
         'avatar_initials': initials,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+  }
+
+  Future<int> updateUserDetails(String username, String initials, String gender, int age) async {
+    final db = await instance.database;
+    return await db.update(
+      'user_profile',
+      {
+        'username': username,
+        'avatar_initials': initials,
+        'gender': gender,
+        'age': age,
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',

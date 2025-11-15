@@ -11,8 +11,16 @@ class UserProfilePage extends StatefulWidget {
 
 class _UserProfilePageState extends State<UserProfilePage> {
   final _usernameController = TextEditingController();
+  final _ageController = TextEditingController();
   Map<String, dynamic> _profile = {};
   bool _isLoading = true;
+  String _selectedGender = 'Not specified';
+  
+  final List<String> _genderOptions = [
+    'Not specified',
+    'Male',
+    'Female',
+  ];
 
   @override
   void initState() {
@@ -25,24 +33,54 @@ class _UserProfilePageState extends State<UserProfilePage> {
     setState(() {
       _profile = profile;
       _usernameController.text = profile['username'] ?? 'Player';
+      _selectedGender = profile['gender'] ?? 'Not specified';
+      _ageController.text = (profile['age'] ?? 0).toString();
       _isLoading = false;
     });
   }
 
-  Future<void> _updateUsername() async {
+  Future<void> _updateProfile() async {
     final username = _usernameController.text.trim();
-    if (username.isEmpty) return;
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username cannot be empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate age
+    final age = int.tryParse(_ageController.text.trim()) ?? 0;
+    if (age < 0 || age > 150) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid age (0-150)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final initials = username.length >= 2 
         ? username.substring(0, 2).toUpperCase()
         : username.substring(0, 1).toUpperCase();
 
-    await DatabaseHelper.instance.updateUsername(username, initials);
+    await DatabaseHelper.instance.updateUserDetails(
+      username, 
+      initials, 
+      _selectedGender,
+      age,
+    );
     await _loadProfile();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully!')),
+        const SnackBar(
+          content: Text('Profile updated successfully!'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
       );
     }
   }
@@ -54,6 +92,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         appBar: AppBar(
           title: const Text('User Profile'),
           backgroundColor: const Color(0xFF667eea),
+          foregroundColor: Colors.white,
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -99,7 +138,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
             const SizedBox(height: 30),
 
-            // Username Editor
+            // Profile Editor Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -117,18 +156,30 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Username',
+                    'Profile Information',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF333333),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
+
+                  // Username Field
+                  const Text(
+                    'Username',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: _usernameController,
                     decoration: InputDecoration(
                       hintText: 'Enter your username',
+                      prefixIcon: const Icon(Icons.person),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -138,25 +189,116 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
+
+                  // Gender Dropdown
+                  const Text(
+                    'Gender',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedGender,
+                        isExpanded: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        borderRadius: BorderRadius.circular(12),
+                        icon: const Icon(Icons.arrow_drop_down),
+                        items: _genderOptions.map((String gender) {
+                          return DropdownMenuItem<String>(
+                            value: gender,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  gender == 'Male' ? Icons.male :
+                                  gender == 'Female' ? Icons.female :
+                                  gender == 'Other' ? Icons.transgender :
+                                  Icons.help_outline,
+                                  size: 20,
+                                  color: const Color(0xFF667eea),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(gender),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedGender = newValue;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Age Field
+                  const Text(
+                    'Age',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _ageController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your age',
+                      prefixIcon: const Icon(Icons.cake),
+                      suffixText: 'years',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Update Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _updateUsername,
+                      onPressed: _updateProfile,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF667eea),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 2,
                       ),
-                      child: const Text(
-                        'Update Username',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.save, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Update Profile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -173,7 +315,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color:Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -275,6 +417,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 }

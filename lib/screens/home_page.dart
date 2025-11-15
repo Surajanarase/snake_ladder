@@ -530,22 +530,22 @@ class _HomePageState extends State<HomePage> {
           onTap: _showPlayerOptions,
           borderRadius: BorderRadius.circular(20),
           child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
+            padding: EdgeInsets.symmetric(vertical: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   '🎮',
-                  style: TextStyle(fontSize: 28),
+                  style: TextStyle(fontSize: 24),
                 ),
-                SizedBox(width: 12),
+                SizedBox(width: 10),
                 Text(
                   'PLAY NEW GAME',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -561,7 +561,7 @@ class _HomePageState extends State<HomePage> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF667eea), width: 2),
         boxShadow: [
           BoxShadow(
@@ -580,7 +580,7 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (context) => const GameHistoryPage()),
             );
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Row(
