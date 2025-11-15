@@ -81,7 +81,8 @@ class GameService extends ChangeNotifier {
     'player3': 0,
   };
 
-  final Set<int> actionChallengeTiles = {8, 23, 35, 47, 62, 78, 89};
+  // REMOVED: Action challenge tiles are no longer part of the game
+  // final Set<int> actionChallengeTiles = {8, 23, 35, 47, 62, 78, 89};
   final Set<int> adviceSquares = {15, 30, 45, 60, 75, 90};
   
   Map<String, Color> playerColors = {
@@ -534,6 +535,8 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // REMOVED: Action challenges are no longer part of the game
+  /*
   void completeActionChallenge(String player) {
     playerActionChallengesCompleted[player] = (playerActionChallengesCompleted[player] ?? 0) + 1;
     playerBonusSteps[player] = (playerBonusSteps[player] ?? 0) + 2;
@@ -545,6 +548,7 @@ class GameService extends ChangeNotifier {
   bool isActionChallengeTile(int position) {
     return actionChallengeTiles.contains(position);
   }
+  */
 
   bool isAdviceSquare(int position) {
     return adviceSquares.contains(position);
@@ -639,7 +643,8 @@ class GameService extends ChangeNotifier {
     final usedPositions = <int>{};
     final startAnchors = <int>[];
 
-    usedPositions.addAll(actionChallengeTiles);
+    // REMOVED: Action challenge tiles are no longer reserved
+    // usedPositions.addAll(actionChallengeTiles);
     usedPositions.addAll(adviceSquares);
 
     const double minStartSpacing = 3.5;
@@ -932,12 +937,9 @@ class GameService extends ChangeNotifier {
   Future<void> checkSpecialCell(int position, String player, Function(String, String) onNotify) async {
     final isBot = isCurrentPlayerBot();
     
-    // FIXED: Skip action challenges when playing with bot (for both player1 and bot)
-    if (isActionChallengeTile(position) && !hasBot) {
-      onNotify('ACTION_CHALLENGE::$player::$position', '⚡');
-      return;
-    }
-
+    // FIXED: Skip action challenges completely (removed from game)
+    // Action challenges are no longer part of the game
+    
     // FIXED: Bot auto-handles advice squares without dialog
     if (isAdviceSquare(position)) {
       if (isBot) {
