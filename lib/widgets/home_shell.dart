@@ -1000,8 +1000,8 @@ class _HomeShellState extends State<HomeShell> {
                 isLadder: true,
                 knowledge: knowledge,
                 onContinue: () {
-                  game.onLadderKnowledge(position, playerId, makeCallback());
-                },
+  game.onLadderKnowledge(position, playerId, knowledge, makeCallback());
+},
               );
             },
           );
@@ -1036,8 +1036,8 @@ class _HomeShellState extends State<HomeShell> {
                 isLadder: false,
                 knowledge: knowledge,
                 onContinue: () {
-                  game.onSnakeKnowledge(position, playerId, makeCallback());
-                },
+  game.onSnakeKnowledge(position, playerId, knowledge, makeCallback());
+},
               );
             },
           );

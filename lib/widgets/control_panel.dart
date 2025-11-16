@@ -293,7 +293,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
 
           const SizedBox(height: 16),
 
-          // NEW REDESIGNED PLAYER BOXES
+          // Player cards (ONLY View Stats button, no duplicate stats)
           if (game.numberOfPlayers == 2)
             Row(
               children: [
@@ -328,7 +328,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
-  // ✨ NEW MODERN PLAYER CARD DESIGN
+  // Player card with stats display
   Widget _buildModernPlayerCard(GameService game, String playerId, {required bool isActive}) {
     final isThreePlayers = game.numberOfPlayers == 3;
     final color = game.playerColors[playerId]!;
@@ -411,7 +411,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header: Avatar + Name
+                    // Header: Avatar + Name (NO play button indicator)
                     Row(
                       children: [
                         // Avatar Circle
@@ -480,27 +480,12 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                             ],
                           ),
                         ),
-                        
-                        // Active Indicator
-                        if (isActive)
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(200),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.play_arrow,
-                              size: isThreePlayers ? 12 : 14,
-                              color: color,
-                            ),
-                          ),
                       ],
                     ),
                     
                     SizedBox(height: isThreePlayers ? 8 : 10),
                     
-                    // Stats Grid
+                    // Quick Stats Display
                     Container(
                       padding: EdgeInsets.all(isThreePlayers ? 6 : 8),
                       decoration: BoxDecoration(
@@ -515,41 +500,11 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                         ),
                       ),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Coins
-                          Expanded(
-                            child: _buildStatBadge(
-                              '🪙',
-                              '$coins',
-                              isActive,
-                              color,
-                              isCompact: isThreePlayers,
-                            ),
-                          ),
-                          SizedBox(width: isThreePlayers ? 4 : 6),
-                          
-                          // Good Habits
-                          Expanded(
-                            child: _buildStatBadge(
-                              '😊',
-                              '$goodHabits',
-                              isActive,
-                              const Color(0xFF4CAF50),
-                              isCompact: isThreePlayers,
-                            ),
-                          ),
-                          SizedBox(width: isThreePlayers ? 4 : 6),
-                          
-                          // Bad Habits
-                          Expanded(
-                            child: _buildStatBadge(
-                              '😞',
-                              '$badHabits',
-                              isActive,
-                              const Color(0xFFE74C3C),
-                              isCompact: isThreePlayers,
-                            ),
-                          ),
+                          _buildQuickStat('🪙', '$coins', isActive, color, isCompact: isThreePlayers),
+                          _buildQuickStat('😊', '$goodHabits', isActive, const Color(0xFF4CAF50), isCompact: isThreePlayers),
+                          _buildQuickStat('😞', '$badHabits', isActive, const Color(0xFFE74C3C), isCompact: isThreePlayers),
                         ],
                       ),
                     ),
@@ -604,43 +559,22 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
-  Widget _buildStatBadge(String icon, String value, bool isActive, Color color, {bool isCompact = false}) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 4 : 6,
-        vertical: isCompact ? 6 : 8,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isActive
-              ? [Colors.white, Colors.white.withAlpha(230)]
-              : [color.withAlpha(40), color.withAlpha(25)],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isActive ? color.withAlpha(50) : color.withAlpha(80),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            icon,
-            style: TextStyle(fontSize: isCompact ? 14 : 16),
+  // Simple stat display
+  Widget _buildQuickStat(String icon, String value, bool isActive, Color color, {bool isCompact = false}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(icon, style: TextStyle(fontSize: isCompact ? 14 : 16)),
+        SizedBox(height: isCompact ? 2 : 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isCompact ? 11 : 13,
+            fontWeight: FontWeight.bold,
+            color: isActive ? color : color.withAlpha(220),
           ),
-          SizedBox(height: isCompact ? 2 : 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isCompact ? 11 : 13,
-              fontWeight: FontWeight.bold,
-              color: isActive ? color : color.withAlpha(220),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

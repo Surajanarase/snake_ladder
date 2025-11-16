@@ -172,6 +172,92 @@ _buildStatRow('🐍', 'Snakes Hit', '${game.playerSnakesHit[playerId]}', const C
               ),
               const SizedBox(height: 20),
 
+              // Good Habits Section
+const SizedBox(height: 20),
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: [
+        const Color(0xFF4CAF50).withAlpha(25),
+        const Color(0xFF66BB6A).withAlpha(25),
+      ],
+    ),
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(color: const Color(0xFF4CAF50).withAlpha(76)),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Row(
+        children: [
+          Text('😊', style: TextStyle(fontSize: 24)),
+          SizedBox(width: 8),
+          Text(
+            'Good Habits Earned',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF4CAF50),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      _buildHabitsSection('🎯 Nutrition', game.getPlayerGoodHabits(playerId, 'nutrition'), const Color(0xFF4CAF50)),
+      const SizedBox(height: 12),
+      _buildHabitsSection('💪 Exercise', game.getPlayerGoodHabits(playerId, 'exercise'), const Color(0xFF2196F3)),
+      const SizedBox(height: 12),
+      _buildHabitsSection('😴 Sleep', game.getPlayerGoodHabits(playerId, 'sleep'), const Color(0xFF9C27B0)),
+      const SizedBox(height: 12),
+      _buildHabitsSection('🧘 Mindfulness', game.getPlayerGoodHabits(playerId, 'mental'), const Color(0xFFFF9800)),
+    ],
+  ),
+),
+
+// Bad Habits Section
+const SizedBox(height: 20),
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: [
+        const Color(0xFFE74C3C).withAlpha(25),
+        const Color(0xFFEF5350).withAlpha(25),
+      ],
+    ),
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(color: const Color(0xFFE74C3C).withAlpha(76)),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Row(
+        children: [
+          Text('😞', style: TextStyle(fontSize: 24)),
+          SizedBox(width: 8),
+          Text(
+            'Bad Habits to Avoid',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFE74C3C),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      _buildHabitsSection('🎯 Nutrition', game.getPlayerBadHabits(playerId, 'nutrition'), const Color(0xFFE74C3C)),
+      const SizedBox(height: 12),
+      _buildHabitsSection('💪 Exercise', game.getPlayerBadHabits(playerId, 'exercise'), const Color(0xFFE74C3C)),
+      const SizedBox(height: 12),
+      _buildHabitsSection('😴 Sleep', game.getPlayerBadHabits(playerId, 'sleep'), const Color(0xFFE74C3C)),
+      const SizedBox(height: 12),
+      _buildHabitsSection('🧘 Mindfulness', game.getPlayerBadHabits(playerId, 'mental'), const Color(0xFFE74C3C)),
+    ],
+  ),
+),
+
               // Close Button
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -341,6 +427,59 @@ _buildStatRow('🐍', 'Snakes Hit', '${game.playerSnakesHit[playerId]}', const C
       ),
     );
   }
+  Widget _buildHabitsSection(String categoryLabel, List<String> habits, Color color) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withAlpha(76)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          categoryLabel,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (habits.isEmpty)
+          Text(
+            'No habits yet',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+            ),
+          )
+        else
+          ...habits.map((habit) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.check_circle, size: 14, color: color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    habit,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+      ],
+    ),
+  );
+}
 }
 
 
