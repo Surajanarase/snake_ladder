@@ -58,9 +58,9 @@ class GameService extends ChangeNotifier {
   };
 
   Map<String, Map<String, List<String>>> playerBadEvents = {
-    'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
-    'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
-    'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+    'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+    'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+    'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
   };
 
   // NEW: Track specific good and bad habits per player per category
@@ -1859,7 +1859,7 @@ List<String> getPlayerBadHabits(String player, String category) {
 
   final List<Map<String, dynamic>> snakeTemplates = [
     {'message': "Skipped breakfast! Energy levels drop.", 'icon': '🍳', 'category': 'nutrition'},
-    {'message': "Forgot to wash hands! Germs spread.", 'icon': '🦠', 'category': 'hygiene'},
+    {'message': "Forgot to wash hands! Germs spread.", 'icon': '🦠', 'category': 'nutrition'},
     {'message': "Too much junk food! Health declining.", 'icon': '🍔', 'category': 'nutrition'},
     {'message': "Dehydrated! Remember to drink water.", 'icon': '💧', 'category': 'nutrition'},
     {'message': "Poor posture! Back pain develops.", 'icon': '🪑', 'category': 'exercise'},
@@ -2192,9 +2192,9 @@ playerBadHabitsList = {
     playerSnakesHit = {'player1': 0, 'player2': 0, 'player3': 0};
 
     playerBadEvents = {
-      'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
-      'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
-      'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+      'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+      'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+      'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
     };
 
     moveCount = 0;
@@ -2244,9 +2244,9 @@ playerBadHabitsList = {
     playerSnakesHit = {'player1': 0, 'player2': 0, 'player3': 0};
 
     playerBadEvents = {
-      'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
-      'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
-      'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': [], 'hygiene': []},
+      'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+      'player2': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
+      'player3': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
     };
 
     moveCount = 0;
@@ -2446,7 +2446,7 @@ playerBadHabitsList = {
   final goodHabit = getRandomGoodHabit(category);
   addGoodHabit(player, category, goodHabit);
   
-  playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+  //playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
   playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
   playerCoins[player] = (playerCoins[player] ?? 0) + 20;
 
@@ -2488,7 +2488,7 @@ playerBadHabitsList = {
     final badHabit = getRandomBadHabit(category);
     addBadHabit(player, category, badHabit);
     
-    playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+   // playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
     playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
     playerCoins[player] = (playerCoins[player] ?? 0) - 15;
     if (playerCoins[player]! < 0) playerCoins[player] = 0;
@@ -2520,7 +2520,7 @@ playerBadHabitsList = {
     // ADD GOOD HABIT from knowledge byte
     addGoodHabit(player, knowledge.category, knowledge.habitName);
     
-    playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+    //playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
     playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
     playerCoins[player] = (playerCoins[player] ?? 0) + 25;
 
@@ -2542,7 +2542,7 @@ playerBadHabitsList = {
     // ADD BAD HABIT from knowledge byte
     addBadHabit(player, knowledge.category, knowledge.habitName);
     
-    playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+    //playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
     playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
     playerCoins[player] = (playerCoins[player] ?? 0) - 15;
     if (playerCoins[player]! < 0) playerCoins[player] = 0;
