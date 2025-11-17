@@ -1,9 +1,9 @@
-// lib/widgets/board_widget.dart
+// lib/widgets/board_widget.dart - ENHANCED VERSION
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'dart:math' as math;
-import 'dart:math' show cos, sin;
+import 'dart:math' show cos, sin, pi;
 
 class BoardWidget extends StatefulWidget {
   const BoardWidget({super.key});
@@ -14,6 +14,7 @@ class BoardWidget extends StatefulWidget {
 
 class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late AnimationController _shimmerController;
 
   @override
   void initState() {
@@ -22,11 +23,17 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat();
+    
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _shimmerController.dispose();
     super.dispose();
   }
 
@@ -49,22 +56,46 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
             width: boardSize,
             height: boardSize,
             decoration: BoxDecoration(
-              color: const Color(0xFF8B6F47),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF8B6F47), Color(0xFF6B5437)],
+              ),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                )
+                  color: Colors.black.withAlpha(76),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
+                  spreadRadius: -5,
+                ),
+                BoxShadow(
+                  color: Colors.black.withAlpha(38),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                ),
               ],
             ),
             padding: const EdgeInsets.all(12),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5DC),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFFFAF0),
+                    Color(0xFFF5F5DC),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF654321), width: 2),
+                border: Border.all(color: const Color(0xFF654321), width: 2.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(6),
               child: _buildBoardContents(boardSize, game),
@@ -78,7 +109,7 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
   Widget _buildBoardContents(double boardSize, GameService game) {
     return Stack(
       children: [
-        // Base grid
+        // Base grid with subtle gradient
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -95,26 +126,51 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
             final actualCol = isRowReversed ? 9 - col : col;
             final cellNumber = rowFromBottom * 10 + actualCol + 1;
 
-            const Color lightCell = Color(0xFFFFFFFF);
-            const Color altCell = Color(0xFFF8F8F8);
             final bool isAlt = (row + col) % 2 == 0;
-            final Color bg = isAlt ? altCell : lightCell;
-
+            
+            final cellDecoration = isAlt 
+                ? const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFFFFFFF), Color(0xFFFFFDFA)],
+                    ),
+                    border: Border(
+                      top: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                      left: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                      right: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                      bottom: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                    ),
+                  )
+                : const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFFFFAF5), Color(0xFFF8F8F8)],
+                    ),
+                    border: Border(
+                      top: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                      left: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                      right: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                      bottom: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+                    ),
+                  );
+            
             return Container(
-              decoration: BoxDecoration(
-                color: bg,
-                border: Border.all(
-                  color: const Color(0xFFDDDDDD),
-                  width: 0.5,
-                ),
-              ),
+              decoration: cellDecoration,
               child: Center(
                 child: Text(
                   '$cellNumber',
                   style: TextStyle(
                     fontSize: (boardSize / 300) * 12,
-                    color: const Color(0xFF333333),
-                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF444444),
+                    fontWeight: FontWeight.w700,
+                    shadows: [
+                      Shadow(
+                        color: Colors.white.withAlpha(127),
+                        offset: const Offset(0, 0.5),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -129,12 +185,15 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
           ),
         ),
 
-       
-
-        // Advice Square tiles overlay (NEW)
+        // Advice Square tiles overlay
         Positioned.fill(
-          child: CustomPaint(
-            painter: _AdviceSquarePainter(game),
+          child: AnimatedBuilder(
+            animation: _shimmerController,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _AdviceSquarePainter(game, _shimmerController.value),
+              );
+            },
           ),
         ),
 
@@ -145,13 +204,13 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
           ),
         ),
 
-        // Snakes & Ladders
+        // Snakes & Ladders with animations
         Positioned.fill(
           child: AnimatedBuilder(
             animation: _animationController,
             builder: (context, child) {
               return CustomPaint(
-                painter: _BoardConnectionsPainter(
+                painter: _EnhancedBoardConnectionsPainter(
                   game,
                   boardSize,
                   _animationController.value,
@@ -243,19 +302,28 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    color.withAlpha(229),
+                    color.withAlpha(240),
                     color,
+                    Color.lerp(color, Colors.black, 0.2)!,
                   ],
-                  center: Alignment.topLeft,
-                  radius: 1.0,
+                  stops: const [0.0, 0.7, 1.0],
+                  center: const Alignment(-0.3, -0.3),
                 ),
-                border: Border.all(color: Colors.white, width: 2.5),
+                border: Border.all(
+                  color: Colors.white,
+                  width: 3,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withAlpha(127),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 3),
+                    color: color.withAlpha(140),
+                    blurRadius: 12,
+                    spreadRadius: 3,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withAlpha(51),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -264,12 +332,13 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
                 playerIndex == 3 ? '🤖' : 'P$playerIndex',
                 style: TextStyle(
                   fontSize: tokenSize * 0.4,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                   color: Colors.white,
                   shadows: const [
                     Shadow(
-                      color: Color(0x4D000000),
-                      blurRadius: 2,
+                      color: Color(0x80000000),
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
                     ),
                   ],
                 ),
@@ -292,7 +361,7 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
   }
 }
 
-// START and FINISH blocks painter
+// Enhanced START and FINISH blocks painter
 class _StartFinishPainter extends CustomPainter {
   final double boardSize;
   _StartFinishPainter(this.boardSize);
@@ -313,33 +382,50 @@ class _StartFinishPainter extends CustomPainter {
       cellSize - 4,
     );
 
+    // Gradient background
     const gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+      colors: [Color(0xFF4CAF50), Color(0xFF66BB6A), Color(0xFF388E3C)],
+      stops: [0.0, 0.5, 1.0],
     );
 
     final paint = Paint()
       ..shader = gradient.createShader(rect)
       ..style = PaintingStyle.fill;
 
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.15));
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.18));
+    
+    // Shadow
+    canvas.drawRRect(
+      rrect.shift(const Offset(0, 2)),
+      Paint()..color = Colors.black.withAlpha(38)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    
     canvas.drawRRect(rrect, paint);
 
+    // Border with shine effect
     final borderPaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 2.0
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
     canvas.drawRRect(rrect, borderPaint);
 
-    final dotPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..style = PaintingStyle.fill;
-    
-    final dotRadius = cellSize * 0.08;
-    canvas.drawCircle(Offset(rect.left + dotRadius * 1.5, rect.top + dotRadius * 1.5), dotRadius, dotPaint);
-    canvas.drawCircle(Offset(rect.right - dotRadius * 1.5, rect.top + dotRadius * 1.5), dotRadius, dotPaint);
+    // Inner glow
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withAlpha(76),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: rect.topLeft + Offset(cellSize * 0.3, cellSize * 0.3), radius: cellSize * 0.4));
+    canvas.drawRRect(rrect, glowPaint);
 
+    // Decorative stars
+    _drawStar(canvas, Offset(rect.left + cellSize * 0.2, rect.top + cellSize * 0.2), cellSize * 0.08, Colors.white.withAlpha(178));
+    _drawStar(canvas, Offset(rect.right - cellSize * 0.2, rect.top + cellSize * 0.2), cellSize * 0.08, Colors.white.withAlpha(178));
+
+    // Text
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'START',
@@ -347,9 +433,10 @@ class _StartFinishPainter extends CustomPainter {
           color: Colors.white,
           fontSize: cellSize * 0.22,
           fontWeight: FontWeight.w900,
-          letterSpacing: 0.5,
+          letterSpacing: 1,
           shadows: const [
-            Shadow(color: Color(0x80000000), blurRadius: 3, offset: Offset(0, 1)),
+            Shadow(color: Color(0xCC000000), blurRadius: 4, offset: Offset(0, 2)),
+            Shadow(color: Color(0x80000000), blurRadius: 2, offset: Offset(0, 1)),
           ],
         ),
       ),
@@ -360,14 +447,15 @@ class _StartFinishPainter extends CustomPainter {
       canvas,
       Offset(
         rect.center.dx - textPainter.width / 2,
-        rect.center.dy - textPainter.height / 2 + cellSize * 0.05,
+        rect.center.dy - textPainter.height / 2 + cellSize * 0.08,
       ),
     );
 
+    // Icon
     final iconPainter = TextPainter(
       text: TextSpan(
         text: '🚩',
-        style: TextStyle(fontSize: cellSize * 0.28),
+        style: TextStyle(fontSize: cellSize * 0.32),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -390,32 +478,51 @@ class _StartFinishPainter extends CustomPainter {
       cellSize - 4,
     );
 
+    // Animated gradient
     const gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+      colors: [Color(0xFFFFD700), Color(0xFFFFA500), Color(0xFFFF8C00)],
+      stops: [0.0, 0.5, 1.0],
     );
 
     final paint = Paint()
       ..shader = gradient.createShader(rect)
       ..style = PaintingStyle.fill;
 
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.15));
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.18));
+    
+    // Shadow
+    canvas.drawRRect(
+      rrect.shift(const Offset(0, 2)),
+      Paint()..color = Colors.black.withAlpha(51)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    
     canvas.drawRRect(rrect, paint);
 
+    // Border
     final borderPaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 2.5
+      ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
     canvas.drawRRect(rrect, borderPaint);
 
-    final starPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8)
-      ..style = PaintingStyle.fill;
-    
-    _drawStar(canvas, Offset(rect.left + cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.08, starPaint);
-    _drawStar(canvas, Offset(rect.right - cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.08, starPaint);
+    // Inner glow
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withAlpha(102),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: rect.topLeft + Offset(cellSize * 0.3, cellSize * 0.3), radius: cellSize * 0.5));
+    canvas.drawRRect(rrect, glowPaint);
 
+    // Decorative stars
+    _drawStar(canvas, Offset(rect.left + cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.1, Colors.white.withAlpha(204));
+    _drawStar(canvas, Offset(rect.right - cellSize * 0.15, rect.top + cellSize * 0.15), cellSize * 0.1, Colors.white.withAlpha(204));
+    _drawStar(canvas, Offset(rect.center.dx, rect.bottom - cellSize * 0.15), cellSize * 0.08, Colors.white.withAlpha(153));
+
+    // Text
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'FINISH',
@@ -423,9 +530,10 @@ class _StartFinishPainter extends CustomPainter {
           color: Colors.white,
           fontSize: cellSize * 0.20,
           fontWeight: FontWeight.w900,
-          letterSpacing: 0.3,
+          letterSpacing: 0.8,
           shadows: const [
-            Shadow(color: Color(0x80000000), blurRadius: 3, offset: Offset(0, 1)),
+            Shadow(color: Color(0xCC000000), blurRadius: 4, offset: Offset(0, 2)),
+            Shadow(color: Color(0x80000000), blurRadius: 2, offset: Offset(0, 1)),
           ],
         ),
       ),
@@ -436,14 +544,15 @@ class _StartFinishPainter extends CustomPainter {
       canvas,
       Offset(
         rect.center.dx - textPainter.width / 2,
-        rect.center.dy - textPainter.height / 2 + cellSize * 0.08,
+        rect.center.dy - textPainter.height / 2 + cellSize * 0.10,
       ),
     );
 
+    // Icon
     final iconPainter = TextPainter(
       text: TextSpan(
         text: '🏆',
-        style: TextStyle(fontSize: cellSize * 0.32),
+        style: TextStyle(fontSize: cellSize * 0.36),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -457,15 +566,15 @@ class _StartFinishPainter extends CustomPainter {
     );
   }
 
-  void _drawStar(Canvas canvas, Offset center, double size, Paint paint) {
+  void _drawStar(Canvas canvas, Offset center, double size, Color color) {
     final path = Path();
     const numberOfPoints = 5;
-    const angle = (3.14159 * 2) / numberOfPoints;
+    const angle = (pi * 2) / numberOfPoints;
     
     for (int i = 0; i < numberOfPoints * 2; i++) {
       final radius = i.isEven ? size : size * 0.5;
-      final x = center.dx + radius * cos(i * angle - 3.14159 / 2);
-      final y = center.dy + radius * sin(i * angle - 3.14159 / 2);
+      final x = center.dx + radius * cos(i * angle - pi / 2);
+      final y = center.dy + radius * sin(i * angle - pi / 2);
       
       if (i == 0) {
         path.moveTo(x, y);
@@ -474,7 +583,14 @@ class _StartFinishPainter extends CustomPainter {
       }
     }
     path.close();
-    canvas.drawPath(path, paint);
+    
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1),
+    );
   }
 
   Map<String, int> _cellToRowCol(int cellNumber) {
@@ -491,13 +607,12 @@ class _StartFinishPainter extends CustomPainter {
   bool shouldRepaint(covariant _StartFinishPainter oldDelegate) => false;
 }
 
-// Action Challenge Tiles Painter
-
-// NEW: Advice Square Painter
+// Enhanced Advice Square Painter with shimmer
 class _AdviceSquarePainter extends CustomPainter {
   final GameService game;
+  final double shimmerValue;
   
-  _AdviceSquarePainter(this.game);
+  _AdviceSquarePainter(this.game, this.shimmerValue);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -512,32 +627,52 @@ class _AdviceSquarePainter extends CustomPainter {
         cellSize - 4,
       );
 
-      // Gradient background
-      const gradient = LinearGradient(
+      // Animated gradient background
+      final gradient = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+        colors: [
+          Color.lerp(const Color(0xFFFBBF24), const Color(0xFFFFD700), shimmerValue)!,
+          const Color(0xFFF59E0B),
+        ],
       );
 
       final paint = Paint()
         ..shader = gradient.createShader(rect)
         ..style = PaintingStyle.fill;
 
-      final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.12));
+      final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cellSize * 0.14));
+      
+      // Shadow
+      canvas.drawRRect(
+        rrect.shift(const Offset(0, 1.5)),
+        Paint()..color = Colors.black.withAlpha(38)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+      
       canvas.drawRRect(rrect, paint);
 
-      // Border
+      // Border with pulse effect
       final borderPaint = Paint()
-        ..color = const Color(0xFFF59E0B)
-        ..strokeWidth = 2.0
+        ..color = Color.lerp(const Color(0xFFF59E0B), Colors.white, shimmerValue * 0.5)!
+        ..strokeWidth = 2.5
         ..style = PaintingStyle.stroke;
       canvas.drawRRect(rrect, borderPaint);
 
-      // Lightbulb icon
+      // Inner glow
+      final glowPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withAlpha((shimmerValue * 100).round() + 50),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: rect.topLeft + Offset(cellSize * 0.3, cellSize * 0.3), radius: cellSize * 0.4));
+      canvas.drawRRect(rrect, glowPaint);
+
+      // Icon
       final iconPainter = TextPainter(
         text: TextSpan(
           text: '💡',
-          style: TextStyle(fontSize: cellSize * 0.4),
+          style: TextStyle(fontSize: cellSize * 0.45),
         ),
         textDirection: TextDirection.ltr,
       );
@@ -563,10 +698,11 @@ class _AdviceSquarePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AdviceSquarePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _AdviceSquarePainter oldDelegate) => 
+    oldDelegate.shimmerValue != shimmerValue;
 }
 
-// Occupied cells painter
+// Occupied cells painter (unchanged)
 class _OccupiedCellsPainter extends CustomPainter {
   final GameService game;
   _OccupiedCellsPainter(this.game);
@@ -590,7 +726,7 @@ class _OccupiedCellsPainter extends CustomPainter {
         cell - inset * 2,
         cell - inset * 2,
       );
-      return RRect.fromRectAndRadius(rect, const Radius.circular(2.5));
+      return RRect.fromRectAndRadius(rect, const Radius.circular(3));
     }
 
     for (final entry in game.playerPositions.entries) {
@@ -602,7 +738,7 @@ class _OccupiedCellsPainter extends CustomPainter {
       final Color? base = game.playerColors[entry.key];
       if (base == null) continue;
 
-      final Color fill = base.withValues(alpha: 0.55);
+      final Color fill = base.withAlpha(70);
 
       final paint = Paint()
         ..color = fill
@@ -615,13 +751,13 @@ class _OccupiedCellsPainter extends CustomPainter {
   bool shouldRepaint(covariant _OccupiedCellsPainter oldDelegate) => true;
 }
 
-// Board connections painter (snakes & ladders)
-class _BoardConnectionsPainter extends CustomPainter {
+// ENHANCED Board connections painter (snakes & ladders)
+class _EnhancedBoardConnectionsPainter extends CustomPainter {
   final GameService game;
   final double boardSize;
   final double animationValue;
 
-  _BoardConnectionsPainter(this.game, this.boardSize, this.animationValue);
+  _EnhancedBoardConnectionsPainter(this.game, this.boardSize, this.animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -637,18 +773,20 @@ class _BoardConnectionsPainter extends CustomPainter {
       return Offset(col * cellSize + cellSize / 2, row * cellSize + cellSize / 2);
     }
 
+    // Draw ladders first
     for (final e in game.ladders.entries) {
       final start = centerOf(e.key);
       final int endCell = _endCellOf(e.value);
       final end = centerOf(endCell);
-      _drawColorfulLadder(canvas, start, end, cellSize, e.key);
+      _drawEnhancedLadder(canvas, start, end, cellSize, e.key);
     }
 
+    // Draw snakes on top
     for (final e in game.snakes.entries) {
       final head = centerOf(e.key);
       final int endCell = _endCellOf(e.value);
       final tail = centerOf(endCell);
-      _drawColorfulSnake(canvas, head, tail, cellSize, e.key);
+      _drawEnhancedSnake(canvas, head, tail, cellSize, e.key, e.value);
     }
   }
 
@@ -658,20 +796,21 @@ class _BoardConnectionsPainter extends CustomPainter {
     throw StateError('Invalid snake/ladder value: $v');
   }
 
-  void _drawColorfulLadder(Canvas canvas, Offset start, Offset end, double cellSize, int startPos) {
-    final colors = [
-      const Color(0xFFFF6B6B),
-      const Color(0xFF4ECDC4),
-      const Color(0xFFFFE66D),
-      const Color(0xFF95E1D3),
-      const Color(0xFFFF9FF3),
-      const Color(0xFFFECA57),
-      const Color(0xFF48DBFB),
-      const Color(0xFF00D2D3),
+  void _drawEnhancedLadder(Canvas canvas, Offset start, Offset end, double cellSize, int startPos) {
+    // More vibrant ladder colors
+    const colorPalettes = [
+      [Color(0xFFFF6B9D), Color(0xFFC44569)], // Hot pink
+      [Color(0xFF4ECDC4), Color(0xFF44A08D)], // Turquoise
+      [Color(0xFFFFE66D), Color(0xFFF9CA24)], // Bright yellow
+      [Color(0xFF95E1D3), Color(0xFF38ADA9)], // Mint green
+      [Color(0xFFFF9FF3), Color(0xFFDA22FF)], // Vibrant magenta
+      [Color(0xFFFECA57), Color(0xFFEE5A6F)], // Peach coral
+      [Color(0xFF48DBFB), Color(0xFF0ABDE3)], // Sky blue
+      [Color(0xFF00D2D3), Color(0xFF01A3A4)], // Cyan
     ];
 
-    final colorIndex = startPos % colors.length;
-    final ladderColor = colors[colorIndex];
+    final colorIndex = startPos % colorPalettes.length;
+    final colors = colorPalettes[colorIndex];
 
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
@@ -680,59 +819,140 @@ class _BoardConnectionsPainter extends CustomPainter {
 
     final ux = dx / len;
     final uy = dy / len;
-    final railWidth = cellSize * 0.10;
+    final railWidth = cellSize * 0.11;
     final perp = Offset(-uy, ux) * railWidth;
 
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15)
-      ..strokeWidth = cellSize * 0.12
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(start + perp + const Offset(2, 2), end + perp + const Offset(2, 2), shadowPaint);
-    canvas.drawLine(start - perp + const Offset(2, 2), end - perp + const Offset(2, 2), shadowPaint);
+    // Enhanced shadow
+    final shadowPath = Path()
+      ..moveTo(start.dx + perp.dx + 2, start.dy + perp.dy + 2)
+      ..lineTo(end.dx + perp.dx + 2, end.dy + perp.dy + 2)
+      ..lineTo(end.dx - perp.dx + 2, end.dy - perp.dy + 2)
+      ..lineTo(start.dx - perp.dx + 2, start.dy - perp.dy + 2)
+      ..close();
+    
+    canvas.drawPath(
+      shadowPath,
+      Paint()
+        ..color = Colors.black.withAlpha(38)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
 
-    final railPaint = Paint()
-      ..color = ladderColor
-      ..strokeWidth = cellSize * 0.10
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(start + perp, end + perp, railPaint);
-    canvas.drawLine(start - perp, end - perp, railPaint);
+    // Gradient for rails
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [colors[0], colors[1]],
+    ).createShader(Rect.fromPoints(start, end));
 
-    final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
-    final rungPaint = Paint()
-      ..color = ladderColor.withValues(alpha: 0.9)
-      ..strokeWidth = cellSize * 0.08
+    // Left rail with enhanced styling
+    final leftRailPaint = Paint()
+      ..shader = gradient
+      ..strokeWidth = cellSize * 0.11
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
+    canvas.drawLine(start + perp, end + perp, leftRailPaint);
+
+    // Right rail
+    final rightRailPaint = Paint()
+      ..shader = gradient
+      ..strokeWidth = cellSize * 0.11
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
+    canvas.drawLine(start - perp, end - perp, rightRailPaint);
+
+    // Add white highlight on rails
+    final highlightPaint = Paint()
+      ..color = Colors.white.withAlpha(102)
+      ..strokeWidth = cellSize * 0.04
       ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      start + perp - Offset(uy * railWidth * 0.3, -ux * railWidth * 0.3),
+      end + perp - Offset(uy * railWidth * 0.3, -ux * railWidth * 0.3),
+      highlightPaint,
+    );
 
+    // Rungs with gradient and alternating colors
+    final rungCount = math.max(3, (len / (cellSize * 0.7)).round());
     for (int i = 0; i <= rungCount; i++) {
       final t = i / rungCount;
       final center = Offset(start.dx + dx * t, start.dy + dy * t);
-      canvas.drawLine(center - perp * 0.95, center + perp * 0.95, rungPaint);
+      
+      final rungColor = i % 2 == 0 ? colors[0] : colors[1];
+      final rungPaint = Paint()
+        ..color = rungColor
+        ..strokeWidth = cellSize * 0.09
+        ..strokeCap = StrokeCap.round;
+      
+      canvas.drawLine(center - perp * 0.92, center + perp * 0.92, rungPaint);
+      
+      // Rung highlight
+      final rungHighlight = Paint()
+        ..color = Colors.white.withAlpha(76)
+        ..strokeWidth = cellSize * 0.03
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        center - perp * 0.92 + Offset(0, -cellSize * 0.02),
+        center + perp * 0.92 + Offset(0, -cellSize * 0.02),
+        rungHighlight,
+      );
+    }
+
+    // Decorative stars at top with glow
+    final starPositions = [
+      Offset(end.dx, end.dy - cellSize * 0.25),
+      Offset(end.dx - cellSize * 0.15, end.dy - cellSize * 0.18),
+      Offset(end.dx + cellSize * 0.15, end.dy - cellSize * 0.18),
+    ];
+    
+    for (var pos in starPositions) {
+      // Glow
+      canvas.drawCircle(
+        pos,
+        cellSize * 0.08,
+        Paint()
+          ..color = const Color(0xFFFFD700).withAlpha(76)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+      // Star
+      canvas.drawCircle(
+        pos,
+        cellSize * 0.06,
+        Paint()..color = const Color(0xFFFFD700),
+      );
+      canvas.drawCircle(
+        pos,
+        cellSize * 0.03,
+        Paint()..color = Colors.white,
+      );
     }
   }
 
-  void _drawColorfulSnake(Canvas canvas, Offset head, Offset tail, double cellSize, int startPos) {
-    final snakeColors = [
-      const Color(0xFF6BCB77),
-      const Color(0xFFFFC93C),
-      const Color(0xFFFF6B9D),
-      const Color(0xFF9B72AA),
-      const Color(0xFFFF8364),
-      const Color(0xFF00D9FF),
-      const Color(0xFFB4E197),
-      const Color(0xFFFFB5DA),
+  void _drawEnhancedSnake(Canvas canvas, Offset head, Offset tail, double cellSize, int startPos, Map<String, dynamic> snakeData) {
+    // Vibrant snake colors
+    const snakeColorPalettes = [
+      [Color(0xFF2ECC71), Color(0xFF27AE60)], // Emerald
+      [Color(0xFFE74C3C), Color(0xFFC0392B)], // Ruby red
+      [Color(0xFF9B59B6), Color(0xFF8E44AD)], // Amethyst
+      [Color(0xFFF39C12), Color(0xFFE67E22)], // Orange
+      [Color(0xFF3498DB), Color(0xFF2980B9)], // Blue
+      [Color(0xFFE91E63), Color(0xFFC2185B)], // Pink
+      [Color(0xFF00BCD4), Color(0xFF0097A7)], // Cyan
+      [Color(0xFFFF5722), Color(0xFFE64A19)], // Deep orange
     ];
 
-    final colorIndex = startPos % snakeColors.length;
-    final snakeColor = snakeColors[colorIndex];
-    final darkSnakeColor = Color.lerp(snakeColor, Colors.black, 0.3)!;
+    final colorIndex = snakeData['colorIndex'] as int;
+    final colors = snakeColorPalettes[colorIndex % snakeColorPalettes.length];
+    final darkColor = Color.lerp(colors[1], Colors.black, 0.3)!;
 
     final distance = (head - tail).distance;
     if (distance == 0) return;
 
-    final segments = math.max(20, (distance / (cellSize * 0.3)).round());
+    // Create curved path with wave pattern
+    final segments = math.max(25, (distance / (cellSize * 0.25)).round());
     final List<Offset> points = [];
+    
     for (int i = 0; i <= segments; i++) {
       final t = i / segments;
       final x = head.dx + (tail.dx - head.dx) * t;
@@ -740,69 +960,203 @@ class _BoardConnectionsPainter extends CustomPainter {
 
       final perpX = -(tail.dy - head.dy) / distance;
       final perpY = (tail.dx - head.dx) / distance;
-      final wave = math.sin(t * math.pi * 2.5) * (cellSize * 0.20);
+      final wave = math.sin(t * math.pi * 3) * (cellSize * 0.22);
 
       points.add(Offset(x + perpX * wave, y + perpY * wave));
     }
 
+    // Draw shadow path
+    final shadowPath = Path()..moveTo(points[0].dx + 2, points[0].dy + 2);
+    for (int i = 1; i < points.length; i++) {
+      shadowPath.lineTo(points[i].dx + 2, points[i].dy + 2);
+    }
+    canvas.drawPath(
+      shadowPath,
+      Paint()
+        ..color = Colors.black.withAlpha(51)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = cellSize * 0.22
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+
+    // Main body path
     final path = Path()..moveTo(points[0].dx, points[0].dy);
     for (int i = 1; i < points.length; i++) {
       path.lineTo(points[i].dx, points[i].dy);
     }
 
-    final shadowPath = Path()..moveTo(points[0].dx + 2, points[0].dy + 2);
+    // Gradient for body
+    final bodyGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [colors[0], colors[1]],
+    ).createShader(Rect.fromPoints(head, tail));
+
+    // Outer dark outline
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = darkColor
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = cellSize * 0.22,
+    );
+
+    // Main body with gradient
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = bodyGradient
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = cellSize * 0.19,
+    );
+
+    // Highlight line on top
+    final highlightPath = Path()..moveTo(points[0].dx, points[0].dy - cellSize * 0.04);
     for (int i = 1; i < points.length; i++) {
-      shadowPath.lineTo(points[i].dx + 2, points[i].dy + 2);
+      highlightPath.lineTo(points[i].dx, points[i].dy - cellSize * 0.04);
     }
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.2)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = cellSize * 0.20;
-    canvas.drawPath(shadowPath, shadowPaint);
+    canvas.drawPath(
+      highlightPath,
+      Paint()
+        ..color = Colors.white.withAlpha(89)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = cellSize * 0.05,
+    );
 
-    final bodyPaint = Paint()
-      ..color = snakeColor
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = cellSize * 0.18;
-    final outlinePaint = Paint()
-      ..color = darkSnakeColor
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = cellSize * 0.20;
+    // Pattern spots along body
+    for (int i = 0; i < segments; i += 3) {
+      if (i >= points.length) break;
+      final point = points[i];
+      
+      // Spot with gradient
+      final spotGradient = RadialGradient(
+        colors: [
+          Colors.white.withAlpha(102),
+          darkColor.withAlpha(127),
+        ],
+      ).createShader(Rect.fromCircle(center: point, radius: cellSize * 0.06));
+      
+      canvas.drawCircle(
+        point,
+        cellSize * 0.06,
+        Paint()..shader = spotGradient,
+      );
+    }
 
-    canvas.drawPath(path, outlinePaint);
-    canvas.drawPath(path, bodyPaint);
+    // Enhanced head
+    final headSize = cellSize * 0.20;
+    
+    // Head glow
+    canvas.drawCircle(
+      head,
+      headSize + 3,
+      Paint()
+        ..color = colors[0].withAlpha(76)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    
+    // Head gradient
+    final headGradient = RadialGradient(
+      colors: [colors[0], colors[1]],
+      center: const Alignment(-0.3, -0.3),
+    ).createShader(Rect.fromCircle(center: head, radius: headSize));
+    
+    canvas.drawCircle(head, headSize, Paint()..shader = headGradient);
+    
+    // Head outline
+    canvas.drawCircle(
+      head,
+      headSize,
+      Paint()
+        ..color = darkColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cellSize * 0.04,
+    );
 
-    final headSize = cellSize * 0.18;
-    canvas.drawCircle(head + const Offset(2, 2), headSize, Paint()..color = Colors.black.withValues(alpha: 0.25));
-    canvas.drawCircle(head, headSize, Paint()..color = snakeColor);
-    canvas.drawCircle(head, headSize, Paint()
-      ..color = darkSnakeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = cellSize * 0.03);
+    // Eyes with more detail
+    final eyeSize = cellSize * 0.05;
+    final eyeOffsetX = headSize * 0.35;
+    final eyeOffsetY = -headSize * 0.35;
+    
+    // Left eye
+    canvas.drawCircle(
+      head + Offset(-eyeOffsetX, eyeOffsetY),
+      eyeSize,
+      Paint()..color = Colors.white,
+    );
+    canvas.drawCircle(
+      head + Offset(-eyeOffsetX, eyeOffsetY),
+      eyeSize * 0.6,
+      Paint()..color = Colors.black,
+    );
+    canvas.drawCircle(
+      head + Offset(-eyeOffsetX - eyeSize * 0.2, eyeOffsetY - eyeSize * 0.2),
+      eyeSize * 0.25,
+      Paint()..color = Colors.white,
+    );
+    
+    // Right eye
+    canvas.drawCircle(
+      head + Offset(eyeOffsetX, eyeOffsetY),
+      eyeSize,
+      Paint()..color = Colors.white,
+    );
+    canvas.drawCircle(
+      head + Offset(eyeOffsetX, eyeOffsetY),
+      eyeSize * 0.6,
+      Paint()..color = Colors.black,
+    );
+    canvas.drawCircle(
+      head + Offset(eyeOffsetX - eyeSize * 0.2, eyeOffsetY - eyeSize * 0.2),
+      eyeSize * 0.25,
+      Paint()..color = Colors.white,
+    );
 
-    final eyeSize = cellSize * 0.04;
-    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
-    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), eyeSize, Paint()..color = Colors.white);
-    final pupilSize = eyeSize * 0.55;
-    canvas.drawCircle(head + Offset(-headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
-    canvas.drawCircle(head + Offset(headSize * 0.35, -headSize * 0.35), pupilSize, Paint()..color = Colors.black);
-
-    final tonguePath = Path();
-    tonguePath.moveTo(head.dx, head.dy + headSize * 0.5);
-    tonguePath.lineTo(head.dx - headSize * 0.25, head.dy + headSize * 0.9);
-    tonguePath.moveTo(head.dx, head.dy + headSize * 0.5);
-    tonguePath.lineTo(head.dx + headSize * 0.25, head.dy + headSize * 0.9);
-    canvas.drawPath(tonguePath, Paint()
+    // Forked tongue
+    final tongueLength = headSize * 0.8;
+    final tonguePaint = Paint()
       ..color = const Color(0xFFE74C3C)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = cellSize * 0.02
-      ..strokeCap = StrokeCap.round);
+      ..strokeWidth = cellSize * 0.025
+      ..strokeCap = StrokeCap.round;
+    
+    canvas.drawLine(
+      head + Offset(0, headSize * 0.6),
+      head + Offset(-tongueLength * 0.4, headSize + tongueLength * 0.6),
+      tonguePaint,
+    );
+    canvas.drawLine(
+      head + Offset(0, headSize * 0.6),
+      head + Offset(tongueLength * 0.4, headSize + tongueLength * 0.6),
+      tonguePaint,
+    );
 
-    final tailSize = cellSize * 0.10;
-    canvas.drawCircle(tail, tailSize, Paint()..color = darkSnakeColor);
+    // Enhanced tail
+    final tailSize = cellSize * 0.12;
+    
+    // Tail glow
+    canvas.drawCircle(
+      tail,
+      tailSize + 2,
+      Paint()
+        ..color = colors[1].withAlpha(51)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    
+    canvas.drawCircle(tail, tailSize, Paint()..color = colors[1]);
+    canvas.drawCircle(
+      tail,
+      tailSize,
+      Paint()
+        ..color = darkColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = cellSize * 0.03,
+    );
+    canvas.drawCircle(tail, tailSize * 0.5, Paint()..color = darkColor.withAlpha(127));
   }
 
   @override
