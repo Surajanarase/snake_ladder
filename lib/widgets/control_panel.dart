@@ -487,41 +487,66 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                   
                   SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
                   
-                  // View Stats Button
+                  // View Stats Button - REFINED UI
                   GestureDetector(
                     onTap: () => _showPlayerStats(context, game, playerId),
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 8 : (isThreePlayers ? 9 : 11),
-                        vertical: isSmallScreen ? 4 : (isThreePlayers ? 5 : 7),
+                        horizontal: isSmallScreen ? 10 : (isThreePlayers ? 12 : 14),
+                        vertical: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
                       ),
                       decoration: BoxDecoration(
-                        color: isActive 
-                            ? Colors.white.withAlpha(200)
-                            : color.withAlpha(50),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isActive 
+                              ? [
+                                  Colors.white,
+                                  Colors.white.withAlpha(240),
+                                ]
+                              : [
+                                  color.withAlpha(230),
+                                  color.withAlpha(200),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isActive 
-                              ? Colors.white
-                              : color.withAlpha(100),
+                              ? color.withAlpha(150)
+                              : Colors.white.withAlpha(200),
+                          width: 1.5,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isActive ? color : Colors.black).withAlpha(40),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.bar_chart_rounded,
-                            size: isSmallScreen ? 11 : (isThreePlayers ? 12 : 14),
-                            color: isActive ? color : color.withAlpha(200),
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 4 : 5),
+                            decoration: BoxDecoration(
+                              color: (isActive ? color : Colors.white).withAlpha(100),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.analytics_rounded,
+                              size: isSmallScreen ? 12 : (isThreePlayers ? 13 : 15),
+                              color: isActive ? color : Colors.white,
+                            ),
                           ),
-                          SizedBox(width: isSmallScreen ? 4 : 5),
+                          SizedBox(width: isSmallScreen ? 6 : 8),
                           Text(
                             'View Stats',
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 8.5 : (isThreePlayers ? 9.5 : 10.5),
-                              fontWeight: FontWeight.bold,
-                              color: isActive ? color : color.withAlpha(200),
-                              letterSpacing: 0.3,
+                              fontSize: isSmallScreen ? 9.5 : (isThreePlayers ? 10.5 : 11.5),
+                              fontWeight: FontWeight.w700,
+                              color: isActive ? color : Colors.white,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
@@ -650,7 +675,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                         const SizedBox(height: 16),
                         _buildVerticalCategorySection(game, playerId, 'sleep', '😴 Sleep', isGoodHabits),
                         const SizedBox(height: 16),
-                        _buildVerticalCategorySection(game, playerId, 'mental', '🧘 Mental', isGoodHabits),
+                        _buildVerticalCategorySection(game, playerId, 'mindfulness', '🧘 Mindfulness', isGoodHabits),
                       ],
                     ),
                   ),

@@ -330,7 +330,7 @@ class _HomeShellState extends State<HomeShell> {
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
                                         Text(
-                                          'Health Heroes',
+                                          'Health Quest',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: isSmallScreen ? 18 : 22,

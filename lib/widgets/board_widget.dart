@@ -197,6 +197,13 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
           ),
         ),
 
+        // Player position borders overlay - NEW
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _PlayerBordersPainter(game),
+          ),
+        ),
+
         // Occupied cells overlay
         Positioned.fill(
           child: CustomPaint(
@@ -359,6 +366,57 @@ class _BoardWidgetState extends State<BoardWidget> with TickerProviderStateMixin
     final col = reversed ? 9 - offset : offset;
     return {'row': row, 'col': col};
   }
+}
+
+// NEW: Player borders painter
+class _PlayerBordersPainter extends CustomPainter {
+  final GameService game;
+  _PlayerBordersPainter(this.game);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cellSize = size.width / 10;
+
+    for (var entry in game.playerPositions.entries) {
+      final playerIndex = int.tryParse(entry.key.replaceAll('player', '')) ?? 0;
+      final pos = entry.value;
+      
+      if (playerIndex < 1 || playerIndex > game.numberOfPlayers) continue;
+      if (pos <= 0 || pos > 100) continue;
+
+      final Color? playerColor = game.playerColors[entry.key];
+      if (playerColor == null) continue;
+
+      final rc = _cellToRowCol(pos);
+      final rect = Rect.fromLTWH(
+        rc['col']! * cellSize + 1,
+        rc['row']! * cellSize + 1,
+        cellSize - 2,
+        cellSize - 2,
+      );
+
+      // Draw colored border for the player's current position
+      final borderPaint = Paint()
+        ..color = playerColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.0;
+
+      canvas.drawRect(rect, borderPaint);
+    }
+  }
+
+  Map<String, int> _cellToRowCol(int cellNumber) {
+    final idx = cellNumber - 1;
+    final rowFromBottom = idx ~/ 10;
+    final row = 9 - rowFromBottom;
+    final offset = idx % 10;
+    final reversed = rowFromBottom % 2 == 1;
+    final col = reversed ? 9 - offset : offset;
+    return {'row': row, 'col': col};
+  }
+
+  @override
+  bool shouldRepaint(covariant _PlayerBordersPainter oldDelegate) => true;
 }
 
 // Enhanced START and FINISH blocks painter
