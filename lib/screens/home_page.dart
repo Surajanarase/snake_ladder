@@ -38,6 +38,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    final isTablet = size.width >= 600;
+    
     return Scaffold(
       backgroundColor: const Color(0xFF667eea),
       drawer: _buildDrawer(),
@@ -57,16 +61,16 @@ class _HomePageState extends State<HomePage> {
                 : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 12 : 16)),
                       child: Column(
                         children: [
-                          _buildHeader(),
-                          const SizedBox(height: 30),
-                          _buildStatsCard(),
-                          const SizedBox(height: 20),
-                          _buildPlayButton(),
-                          const SizedBox(height: 15),
-                          _buildHistoryButton(),
+                          _buildHeader(isTablet, isSmallScreen),
+                          SizedBox(height: isTablet ? 40 : (isSmallScreen ? 20 : 30)),
+                          _buildStatsCard(isTablet, isSmallScreen),
+                          SizedBox(height: isTablet ? 24 : (isSmallScreen ? 12 : 16)),
+                          _buildPlayButton(isTablet, isSmallScreen),
+                          SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+                          _buildHistoryButton(isTablet, isSmallScreen),
                         ],
                       ),
                     ),
@@ -148,22 +152,25 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isTablet, bool isSmallScreen) {
+    final titleSize = isTablet ? 32.0 : (isSmallScreen ? 22.0 : 26.0);
+    final subtitleSize = isTablet ? 16.0 : (isSmallScreen ? 11.0 : 13.0);
+    
     return Row(
       children: [
         Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+            icon: Icon(Icons.menu, color: Colors.white, size: isSmallScreen ? 24 : 28),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        const Expanded(
+        Expanded(
           child: Column(
             children: [
               Text(
                 'Health Quest',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: titleSize,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -171,14 +178,15 @@ class _HomePageState extends State<HomePage> {
               Text(
                 'Learn & Play Your Way to Wellness',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: subtitleSize,
                   color: Colors.white70,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
-        const SizedBox(width: 48),
+        SizedBox(width: isSmallScreen ? 40 : 48),
       ],
     );
   }
@@ -186,7 +194,6 @@ class _HomePageState extends State<HomePage> {
   void _startGame(int numPlayers, bool withBot, GameMode mode) {
     final game = Provider.of<GameService>(context, listen: false);
     
-    // Start the game with the service
     game.startGame(numPlayers, withBot, mode);
     
     Navigator.push(
@@ -201,12 +208,16 @@ class _HomePageState extends State<HomePage> {
     ).then((_) => _loadData());
   }
 
-  Widget _buildStatsCard() {
+  Widget _buildStatsCard(bool isTablet, bool isSmallScreen) {
+    final avatarSize = isTablet ? 80.0 : (isSmallScreen ? 55.0 : 65.0);
+    final nameSize = isTablet ? 24.0 : (isSmallScreen ? 18.0 : 20.0);
+    final badgeSize = isTablet ? 80.0 : (isSmallScreen ? 60.0 : 70.0);
+    
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isTablet ? 28 : (isSmallScreen ? 16 : 20)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isTablet ? 28 : 20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -221,8 +232,8 @@ class _HomePageState extends State<HomePage> {
           Row(
             children: [
               Container(
-                width: 70,
-                height: 70,
+                width: avatarSize,
+                height: avatarSize,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF667eea), Color(0xFF764ba2)],
@@ -239,33 +250,33 @@ class _HomePageState extends State<HomePage> {
                 child: Center(
                   child: Text(
                     _profile['avatar_initials'] ?? 'P',
-                    style: const TextStyle(
-                      fontSize: 28,
+                    style: TextStyle(
+                      fontSize: avatarSize * 0.4,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isSmallScreen ? 10 : 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _profile['username'] ?? 'Player',
-                      style: const TextStyle(
-                        fontSize: 22,
+                      style: TextStyle(
+                        fontSize: nameSize,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D3436),
+                        color: const Color(0xFF2D3436),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: isSmallScreen ? 2 : 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 8 : 10,
+                        vertical: isSmallScreen ? 3 : 4,
                       ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -275,8 +286,8 @@ class _HomePageState extends State<HomePage> {
                       ),
                       child: Text(
                         'Level ${_profile['level'] ?? 1} • Health Champion',
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 10 : 11,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -288,9 +299,8 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           
-          const SizedBox(height: 24),
+          SizedBox(height: isTablet ? 28 : (isSmallScreen ? 16 : 20)),
           
-          // Divider
           Container(
             height: 1,
             decoration: BoxDecoration(
@@ -304,9 +314,9 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           
-          const SizedBox(height: 24),
+          SizedBox(height: isTablet ? 28 : (isSmallScreen ? 16 : 20)),
 
-          // Stats Grid with proper spacing
+          // Stats Grid
           Row(
             children: [
               Expanded(
@@ -315,32 +325,37 @@ class _HomePageState extends State<HomePage> {
                   'Coins',
                   const Color(0xFFFFA726),
                   '🪙',
+                  isTablet,
+                  isSmallScreen,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isSmallScreen ? 6 : 10),
               Expanded(
                 child: _buildStatItem(
                   '${_profile['games_won'] ?? 0}',
-                  'Games Won',
+                  'Won',
                   const Color(0xFF667eea),
                   '🏆',
+                  isTablet,
+                  isSmallScreen,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isSmallScreen ? 6 : 10),
               Expanded(
                 child: _buildStatItem(
                   '${(_profile['quiz_accuracy'] ?? 0.0).toStringAsFixed(0)}%',
-                  'Quiz Score',
+                  'Score',
                   const Color(0xFF26C281),
                   '🎯',
+                  isTablet,
+                  isSmallScreen,
                 ),
               ),
             ],
           ),
           
-          const SizedBox(height: 24),
+          SizedBox(height: isTablet ? 28 : (isSmallScreen ? 16 : 20)),
 
-          // Divider
           Container(
             height: 1,
             decoration: BoxDecoration(
@@ -354,7 +369,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           
-          const SizedBox(height: 20),
+          SizedBox(height: isTablet ? 24 : (isSmallScreen ? 14 : 18)),
 
           // Badges Section
           Column(
@@ -363,19 +378,19 @@ class _HomePageState extends State<HomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     '🏅 Recent Badges',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: isTablet ? 18 : (isSmallScreen ? 13 : 15),
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3436),
+                      color: const Color(0xFF2D3436),
                     ),
                   ),
                   if (_badges.isNotEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 6 : 8,
+                        vertical: isSmallScreen ? 2 : 3,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF667eea).withValues(alpha: 0.1),
@@ -383,30 +398,30 @@ class _HomePageState extends State<HomePage> {
                       ),
                       child: Text(
                         '${_badges.length} earned',
-                        style: const TextStyle(
-                          fontSize: 11,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 9 : 10,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF667eea),
+                          color: const Color(0xFF667eea),
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
               SizedBox(
-                height: 70,
+                height: badgeSize,
                 child: _badges.isEmpty
                     ? Center(
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(isSmallScreen ? 10 : 14),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'No badges earned yet. Start playing to collect!',
+                            'No badges yet. Start playing!',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: isSmallScreen ? 11 : 12,
                               color: Colors.grey.shade600,
                               fontStyle: FontStyle.italic,
                             ),
@@ -419,15 +434,15 @@ class _HomePageState extends State<HomePage> {
                         itemCount: _badges.length > 6 ? 6 : _badges.length,
                         itemBuilder: (context, index) {
                           return Container(
-                            width: 70,
-                            margin: const EdgeInsets.only(right: 12),
+                            width: badgeSize,
+                            margin: EdgeInsets.only(right: isSmallScreen ? 8 : 10),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
                               ),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
                                   color: const Color(0xFFf5576c).withValues(alpha: 0.3),
@@ -439,7 +454,7 @@ class _HomePageState extends State<HomePage> {
                             child: Center(
                               child: Text(
                                 _badges[index]['badge_icon'] ?? '🏆',
-                                style: const TextStyle(fontSize: 32),
+                                style: TextStyle(fontSize: badgeSize * 0.45),
                               ),
                             ),
                           );
@@ -453,9 +468,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildStatItem(String value, String label, Color color, String emoji) {
+  Widget _buildStatItem(String value, String label, Color color, String emoji, bool isTablet, bool isSmallScreen) {
+    final emojiSize = isTablet ? 26.0 : (isSmallScreen ? 18.0 : 22.0);
+    final valueSize = isTablet ? 24.0 : (isSmallScreen ? 16.0 : 20.0);
+    final labelSize = isTablet ? 12.0 : (isSmallScreen ? 9.0 : 10.5);
+    
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: EdgeInsets.symmetric(
+        vertical: isTablet ? 18 : (isSmallScreen ? 10 : 14),
+        horizontal: isTablet ? 10 : (isSmallScreen ? 4 : 6),
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -465,7 +487,7 @@ class _HomePageState extends State<HomePage> {
             color.withValues(alpha: 0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 14),
         border: Border.all(
           color: color.withValues(alpha: 0.2),
           width: 1.5,
@@ -476,26 +498,26 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(
             emoji,
-            style: const TextStyle(fontSize: 24),
+            style: TextStyle(fontSize: emojiSize),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 4 : 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: valueSize,
                 fontWeight: FontWeight.bold,
                 color: color,
                 height: 1.0,
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: isSmallScreen ? 2 : 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: labelSize,
               fontWeight: FontWeight.w600,
               color: color.withValues(alpha: 0.8),
             ),
@@ -508,14 +530,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPlayButton() {
+  Widget _buildPlayButton(bool isTablet, bool isSmallScreen) {
+    final fontSize = isTablet ? 18.0 : (isSmallScreen ? 14.0 : 15.5);
+    final padding = isTablet ? 18.0 : (isSmallScreen ? 12.0 : 14.0);
+    
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 24 : 18),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFf5576c).withValues(alpha: 0.4),
@@ -528,22 +553,22 @@ class _HomePageState extends State<HomePage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _showPlayerOptions,
-          borderRadius: BorderRadius.circular(20),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+          borderRadius: BorderRadius.circular(isTablet ? 24 : 18),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: padding),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   '🎮',
-                  style: TextStyle(fontSize: 24),
+                  style: TextStyle(fontSize: isSmallScreen ? 20 : 24),
                 ),
-                SizedBox(width: 10),
+                SizedBox(width: isSmallScreen ? 6 : 10),
                 Text(
                   'PLAY NEW GAME',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: fontSize,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
                   ),
@@ -556,12 +581,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHistoryButton() {
+  Widget _buildHistoryButton(bool isTablet, bool isSmallScreen) {
+    final fontSize = isTablet ? 18.0 : (isSmallScreen ? 14.0 : 15.5);
+    final padding = isTablet ? 18.0 : (isSmallScreen ? 12.0 : 14.0);
+    
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 24 : 18),
         border: Border.all(color: const Color(0xFF667eea), width: 2),
         boxShadow: [
           BoxShadow(
@@ -580,19 +608,19 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (context) => const GameHistoryPage()),
             );
           },
-          borderRadius: BorderRadius.circular(20),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+          borderRadius: BorderRadius.circular(isTablet ? 24 : 18),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: padding),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.history, color: Color(0xFF667eea), size: 24),
-                SizedBox(width: 10),
+                Icon(Icons.history, color: const Color(0xFF667eea), size: isSmallScreen ? 20 : 24),
+                SizedBox(width: isSmallScreen ? 6 : 10),
                 Text(
                   'View Game History',
                   style: TextStyle(
-                    color: Color(0xFF667eea),
-                    fontSize: 16,
+                    color: const Color(0xFF667eea),
+                    fontSize: fontSize,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
                   ),
@@ -606,6 +634,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showPlayerOptions() {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -615,7 +646,7 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
-        padding: const EdgeInsets.all(30),
+        padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -627,16 +658,16 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
+            SizedBox(height: isSmallScreen ? 16 : 22),
+            Text(
               'Choose Game Type',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: isSmallScreen ? 20 : 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3436),
+                color: const Color(0xFF2D3436),
               ),
             ),
-            const SizedBox(height: 30),
+            SizedBox(height: isSmallScreen ? 20 : 26),
             _buildOptionButton(
               icon: '👥',
               title: '2 Players',
@@ -645,8 +676,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 _showModeSelection(2, false);
               },
+              isSmallScreen: isSmallScreen,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 10 : 14),
             _buildOptionButton(
               icon: '🤖',
               title: 'Play with Bot',
@@ -655,8 +687,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 _showModeSelection(2, true);
               },
+              isSmallScreen: isSmallScreen,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 10 : 14),
           ],
         ),
       ),
@@ -668,6 +701,7 @@ class _HomePageState extends State<HomePage> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    required bool isSmallScreen,
   }) {
     return Container(
       width: double.infinity,
@@ -680,7 +714,7 @@ class _HomePageState extends State<HomePage> {
             const Color(0xFF764ba2).withValues(alpha: 0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: const Color(0xFF667eea).withValues(alpha: 0.2),
           width: 1.5,
@@ -690,42 +724,42 @@ class _HomePageState extends State<HomePage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
             child: Row(
               children: [
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: isSmallScreen ? 48 : 54,
+                  height: isSmallScreen ? 48 : 54,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF667eea), Color(0xFF764ba2)],
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Text(icon, style: const TextStyle(fontSize: 28)),
+                    child: Text(icon, style: TextStyle(fontSize: isSmallScreen ? 24 : 26)),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isSmallScreen ? 12 : 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 16 : 17,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3436),
+                          color: const Color(0xFF2D3436),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: isSmallScreen ? 12 : 13,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -735,7 +769,7 @@ class _HomePageState extends State<HomePage> {
                 Icon(
                   Icons.arrow_forward_ios,
                   color: const Color(0xFF667eea).withValues(alpha: 0.6),
-                  size: 18,
+                  size: isSmallScreen ? 16 : 18,
                 ),
               ],
             ),
@@ -746,6 +780,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showModeSelection(int numPlayers, bool withBot) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -755,7 +792,7 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
-        padding: const EdgeInsets.all(30),
+        padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -767,16 +804,16 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
+            SizedBox(height: isSmallScreen ? 16 : 22),
+            Text(
               'Select Game Mode',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: isSmallScreen ? 20 : 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3436),
+                color: const Color(0xFF2D3436),
               ),
             ),
-            const SizedBox(height: 30),
+            SizedBox(height: isSmallScreen ? 20 : 26),
             _buildModeCard(
               icon: '🧠',
               title: 'Quiz Mode',
@@ -785,8 +822,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 _startGame(numPlayers, withBot, GameMode.quiz);
               },
+              isSmallScreen: isSmallScreen,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 10 : 14),
             _buildModeCard(
               icon: '📚',
               title: 'Knowledge Byte Mode',
@@ -795,8 +833,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 _startGame(numPlayers, withBot, GameMode.knowledge);
               },
+              isSmallScreen: isSmallScreen,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 10 : 14),
           ],
         ),
       ),
@@ -808,6 +847,7 @@ class _HomePageState extends State<HomePage> {
     required String title,
     required String description,
     required VoidCallback onTap,
+    required bool isSmallScreen,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -819,7 +859,7 @@ class _HomePageState extends State<HomePage> {
             Colors.grey.shade50,
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: Colors.grey.shade200,
           width: 1.5,
@@ -829,50 +869,50 @@ class _HomePageState extends State<HomePage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           child: Padding(
-            padding: const EdgeInsets.all(22),
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 50,
-                      height: 50,
+                      width: isSmallScreen ? 44 : 48,
+                      height: isSmallScreen ? 44 : 48,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
-                        child: Text(icon, style: const TextStyle(fontSize: 26)),
+                        child: Text(icon, style: TextStyle(fontSize: isSmallScreen ? 22 : 24)),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(
-                          fontSize: 19,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 16 : 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3436),
+                          color: const Color(0xFF2D3436),
                         ),
                       ),
                     ),
                     Icon(
                       Icons.arrow_forward_ios,
                       color: Colors.grey.shade400,
-                      size: 18,
+                      size: isSmallScreen ? 16 : 18,
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: isSmallScreen ? 8 : 10),
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: isSmallScreen ? 12 : 13,
                     color: Colors.grey.shade700,
                     height: 1.5,
                   ),

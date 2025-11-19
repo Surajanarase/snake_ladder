@@ -20,262 +20,213 @@ class PlayerStatsDialog extends StatelessWidget {
     final score = game.playerScores[playerId]!;
     final goodHabits = game.playerGoodHabits[playerId] ?? 0;
     final badHabits = game.playerBadHabits[playerId] ?? 0;
-    final actionChallenges = game.playerActionChallengesCompleted[playerId] ?? 0;
-    final bonusSteps = game.playerBonusSteps[playerId] ?? 0;
+
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    final isTablet = size.width >= 600;
+    
+    final maxWidth = isTablet ? 550.0 : (isSmallScreen ? size.width * 0.92 : 480.0);
+    final maxHeight = isTablet ? 780.0 : (isSmallScreen ? size.height * 0.88 : 720.0);
+    final padding = isTablet ? 24.0 : (isSmallScreen ? 14.0 : 18.0);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isTablet ? 32 : 24)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white,
-              playerColor.withAlpha(25),
+              const Color(0xFFF8F9FA),
+              Colors.grey.shade50,
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(isTablet ? 32 : 24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(30),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
+          ],
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(isTablet ? 32 : 24),
+          child: Stack(
             children: [
-              // Player Avatar
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [playerColor, playerColor.withAlpha(204)],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: playerColor.withAlpha(102),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Text('📊', style: TextStyle(fontSize: 48)),
-              ),
-              const SizedBox(height: 16),
-
-              // Player Name
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: playerColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    playerName,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: playerColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Performance Statistics',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF7F8C8D),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Overall Stats Grid
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  children: [
-                    _buildStatRow('🎯', 'Current Position', '$position', playerColor),
-                    const Divider(height: 20),
-                    _buildStatRow('⭐', 'Total Score', '$score pts', playerColor),
-                    const Divider(height: 20),
-                    _buildStatRow('😊', 'Good Habits', '$goodHabits', const Color(0xFF4CAF50)),
-                    const Divider(height: 20),
-                    _buildStatRow('😞', 'Bad Habits', '$badHabits', const Color(0xFFE74C3C)),
-                    const Divider(height: 20),
-                    _buildStatRow('⚡', 'Action Challenges', '$actionChallenges', const Color(0xFFFFD700)),
-                    const Divider(height: 20),
-                    _buildStatRow('🎁', 'Bonus Steps Earned', '$bonusSteps', const Color(0xFF2196F3)),
-                    const Divider(height: 20),
-_buildStatRow('🪙', 'Total Coins', '${game.playerCoins[playerId]}', const Color(0xFFF59E0B)),
-const Divider(height: 20),
-_buildStatRow('🪜', 'Ladders Climbed', '${game.playerLaddersHit[playerId]}', const Color(0xFF4CAF50)),
-const Divider(height: 20),
-_buildStatRow('🐍', 'Snakes Hit', '${game.playerSnakesHit[playerId]}', const Color(0xFFE74C3C)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Quiz Performance
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF667eea).withAlpha(25),
-                      const Color(0xFF764ba2).withAlpha(25),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF667eea).withAlpha(76)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Text('🧠', style: TextStyle(fontSize: 24)),
-                        SizedBox(width: 8),
-                        Text(
-                          'Quiz Performance',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF667eea),
-                          ),
-                        ),
+              // Ambient glow effect
+              Positioned(
+                top: -100,
+                right: -100,
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        playerColor.withAlpha(25),
+                        Colors.transparent,
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildQuizStats('🎯 Nutrition', game.playerQuizStats[playerId]?['nutrition']),
-                    const SizedBox(height: 12),
-                    _buildQuizStats('💪 Exercise', game.playerQuizStats[playerId]?['exercise']),
-                    const SizedBox(height: 12),
-                    _buildQuizStats('😴 Sleep', game.playerQuizStats[playerId]?['sleep']),
-                    const SizedBox(height: 12),
-                    _buildQuizStats('🧘 Mindfulness', game.playerQuizStats[playerId]?['mental']),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              SingleChildScrollView(
+                padding: EdgeInsets.all(padding),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    _buildHeader(playerName, playerColor, isTablet, isSmallScreen),
+                    SizedBox(height: isTablet ? 20 : (isSmallScreen ? 12 : 16)),
 
-              // Good Habits Section
-const SizedBox(height: 20),
-Container(
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      colors: [
-        const Color(0xFF4CAF50).withAlpha(25),
-        const Color(0xFF66BB6A).withAlpha(25),
-      ],
-    ),
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: const Color(0xFF4CAF50).withAlpha(76)),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Row(
-        children: [
-          Text('😊', style: TextStyle(fontSize: 24)),
-          SizedBox(width: 8),
-          Text(
-            'Good Habits Earned',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF4CAF50),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      _buildHabitsSection('🎯 Nutrition', game.getPlayerGoodHabits(playerId, 'nutrition'), const Color(0xFF4CAF50)),
-      const SizedBox(height: 12),
-      _buildHabitsSection('💪 Exercise', game.getPlayerGoodHabits(playerId, 'exercise'), const Color(0xFF2196F3)),
-      const SizedBox(height: 12),
-      _buildHabitsSection('😴 Sleep', game.getPlayerGoodHabits(playerId, 'sleep'), const Color(0xFF9C27B0)),
-      const SizedBox(height: 12),
-      _buildHabitsSection('🧘 Mindfulness', game.getPlayerGoodHabits(playerId, 'mental'), const Color(0xFFFF9800)),
-    ],
-  ),
-),
+                    // Game Progress Section
+                    _buildPremiumSection(
+                      title: 'Game Progress',
+                      icon: Icons.trending_up_rounded,
+                      iconColor: playerColor,
+                      isTablet: isTablet,
+                      isSmallScreen: isSmallScreen,
+                      child: Column(
+                        children: [
+                          // Top Stats Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactStatChip(
+                                  icon: Icons.location_on_rounded,
+                                  label: 'Position',
+                                  value: '#$position',
+                                  color: playerColor,
+                                  isSmallScreen: isSmallScreen,
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 6 : 8),
+                              Expanded(
+                                child: _buildCompactStatChip(
+                                  icon: Icons.stars_rounded,
+                                  label: 'Score',
+                                  value: '$score',
+                                  color: const Color(0xFFFFB800),
+                                  isSmallScreen: isSmallScreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
+                          // Middle Stats Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactStatChip(
+                                  icon: Icons.favorite_rounded,
+                                  label: 'Good',
+                                  value: '$goodHabits',
+                                  color: const Color(0xFF4CAF50),
+                                  isSmallScreen: isSmallScreen,
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 6 : 8),
+                              Expanded(
+                                child: _buildCompactStatChip(
+                                  icon: Icons.warning_rounded,
+                                  label: 'Bad',
+                                  value: '$badHabits',
+                                  color: const Color(0xFFEF5350),
+                                  isSmallScreen: isSmallScreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isSmallScreen ? 8 : 10),
+                          // Game Actions Row
+                          _buildGameActionRow(
+                            icon: '🪙',
+                            label: 'Coins',
+                            value: '${game.playerCoins[playerId]}',
+                            color: const Color(0xFFF59E0B),
+                            isSmallScreen: isSmallScreen,
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 7),
+                          _buildGameActionRow(
+                            icon: '🪜',
+                            label: 'Ladders',
+                            value: '${game.playerLaddersHit[playerId]}',
+                            color: const Color(0xFF4CAF50),
+                            isSmallScreen: isSmallScreen,
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 7),
+                          _buildGameActionRow(
+                            icon: '🐍',
+                            label: 'Snakes',
+                            value: '${game.playerSnakesHit[playerId]}',
+                            color: const Color(0xFFE74C3C),
+                            isSmallScreen: isSmallScreen,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
 
-// Bad Habits Section
-const SizedBox(height: 20),
-Container(
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      colors: [
-        const Color(0xFFE74C3C).withAlpha(25),
-        const Color(0xFFEF5350).withAlpha(25),
-      ],
-    ),
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: const Color(0xFFE74C3C).withAlpha(76)),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Row(
-        children: [
-          Text('😞', style: TextStyle(fontSize: 24)),
-          SizedBox(width: 8),
-          Text(
-            'Bad Habits to Avoid',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFE74C3C),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      _buildHabitsSection('🎯 Nutrition', game.getPlayerBadHabits(playerId, 'nutrition'), const Color(0xFFE74C3C)),
-      const SizedBox(height: 12),
-      _buildHabitsSection('💪 Exercise', game.getPlayerBadHabits(playerId, 'exercise'), const Color(0xFFE74C3C)),
-      const SizedBox(height: 12),
-      _buildHabitsSection('😴 Sleep', game.getPlayerBadHabits(playerId, 'sleep'), const Color(0xFFE74C3C)),
-      const SizedBox(height: 12),
-      _buildHabitsSection('🧘 Mindfulness', game.getPlayerBadHabits(playerId, 'mental'), const Color(0xFFE74C3C)),
-    ],
-  ),
-),
+                    // Quiz Performance
+                    _buildPremiumSection(
+                      title: 'Quiz Performance',
+                      icon: Icons.psychology_rounded,
+                      iconColor: const Color(0xFF667eea),
+                      isTablet: isTablet,
+                      isSmallScreen: isSmallScreen,
+                      child: Column(
+                        children: [
+                          _buildQuizStats('🎯 Nutrition', game.playerQuizStats[playerId]?['nutrition'], isSmallScreen),
+                          SizedBox(height: isSmallScreen ? 6 : 7),
+                          _buildQuizStats('💪 Exercise', game.playerQuizStats[playerId]?['exercise'], isSmallScreen),
+                          SizedBox(height: isSmallScreen ? 6 : 7),
+                          _buildQuizStats('😴 Sleep', game.playerQuizStats[playerId]?['sleep'], isSmallScreen),
+                          SizedBox(height: isSmallScreen ? 6 : 7),
+                          _buildQuizStats('🧘 Mindfulness', game.playerQuizStats[playerId]?['mental'], isSmallScreen),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
 
-              // Close Button
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: playerColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                    // Good Habits Section
+                    _buildPremiumSection(
+                      title: 'Good Habits Earned',
+                      icon: Icons.check_circle_rounded,
+                      iconColor: const Color(0xFF4CAF50),
+                      isTablet: isTablet,
+                      isSmallScreen: isSmallScreen,
+                      child: _buildHabitsGrid([
+                        {'label': '🎯 Nutrition', 'habits': game.getPlayerGoodHabits(playerId, 'nutrition'), 'color': const Color(0xFF4CAF50)},
+                        {'label': '💪 Exercise', 'habits': game.getPlayerGoodHabits(playerId, 'exercise'), 'color': const Color(0xFF2196F3)},
+                        {'label': '😴 Sleep', 'habits': game.getPlayerGoodHabits(playerId, 'sleep'), 'color': const Color(0xFF9C27B0)},
+                        {'label': '🧘 Mindfulness', 'habits': game.getPlayerGoodHabits(playerId, 'mental'), 'color': const Color(0xFFFF9800)},
+                      ], isSmallScreen),
+                    ),
+                    SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+
+                    // Bad Habits Section
+                    _buildPremiumSection(
+                      title: 'Bad Habits to Avoid',
+                      icon: Icons.block_rounded,
+                      iconColor: const Color(0xFFEF5350),
+                      isTablet: isTablet,
+                      isSmallScreen: isSmallScreen,
+                      child: _buildHabitsGrid([
+                        {'label': '🎯 Nutrition', 'habits': game.getPlayerBadHabits(playerId, 'nutrition'), 'color': const Color(0xFFEF5350)},
+                        {'label': '💪 Exercise', 'habits': game.getPlayerBadHabits(playerId, 'exercise'), 'color': const Color(0xFFEF5350)},
+                        {'label': '😴 Sleep', 'habits': game.getPlayerBadHabits(playerId, 'sleep'), 'color': const Color(0xFFEF5350)},
+                        {'label': '🧘 Mindfulness', 'habits': game.getPlayerBadHabits(playerId, 'mental'), 'color': const Color(0xFFEF5350)},
+                      ], isSmallScreen),
+                    ),
+                    SizedBox(height: isTablet ? 20 : (isSmallScreen ? 14 : 16)),
+
+                    // Close Button
+                    _buildCloseButton(playerColor, isTablet, isSmallScreen, context),
+                  ],
                 ),
               ),
             ],
@@ -285,65 +236,349 @@ Container(
     );
   }
 
-  Widget _buildStatRow(String icon, String label, String value, Color color) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withAlpha(25),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(icon, style: const TextStyle(fontSize: 20)),
+  Widget _buildHeader(String playerName, Color playerColor, bool isTablet, bool isSmallScreen) {
+    final iconSize = isTablet ? 32.0 : (isSmallScreen ? 24.0 : 28.0);
+    final nameSize = isTablet ? 21.0 : (isSmallScreen ? 16.0 : 18.0);
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            playerColor,
+            playerColor.withAlpha(230),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2C3E50),
+        borderRadius: BorderRadius.circular(isTablet ? 22 : 18),
+        boxShadow: [
+          BoxShadow(
+            color: playerColor.withAlpha(100),
+            blurRadius: isTablet ? 32 : 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Decorative overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(isTablet ? 22 : 18),
+                gradient: RadialGradient(
+                  center: Alignment.topRight,
+                  radius: 1.5,
+                  colors: [
+                    Colors.white.withAlpha(30),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
+          // Content
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 14 : 18,
+              vertical: isSmallScreen ? 12 : 14,
+            ),
+            child: Row(
+              children: [
+                // Icon badge
+                Container(
+                  width: isSmallScreen ? 42 : 48,
+                  height: isSmallScreen ? 42 : 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withAlpha(80),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.insights_rounded,
+                    size: iconSize,
+                    color: playerColor,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        playerName,
+                        style: TextStyle(
+                          fontSize: nameSize,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                          height: 1.2,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black26,
+                              offset: Offset(0, 1),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: isSmallScreen ? 2 : 3),
+                      Row(
+                        children: [
+                          Container(
+                            width: isSmallScreen ? 3 : 4,
+                            height: isSmallScreen ? 3 : 4,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: isSmallScreen ? 5 : 6),
+                          Text(
+                            'Statistics Dashboard',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 9 : 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildQuizStats(String categoryLabel, QuizStats? stats) {
+  Widget _buildCompactStatChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool isSmallScreen,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 8 : 10,
+        vertical: isSmallScreen ? 7 : 9,
+      ),
+      decoration: BoxDecoration(
+        color: color.withAlpha(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        border: Border.all(color: color.withAlpha(40), width: 1.5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: isSmallScreen ? 15 : 17),
+          SizedBox(width: isSmallScreen ? 4 : 5),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 15,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 8 : 9,
+                    fontWeight: FontWeight.w600,
+                    color: color.withAlpha(180),
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameActionRow({
+    required String icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool isSmallScreen,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 10 : 12,
+        vertical: isSmallScreen ? 8 : 9,
+      ),
+      decoration: BoxDecoration(
+        color: color.withAlpha(8),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 9 : 10),
+        border: Border.all(color: color.withAlpha(35), width: 1),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: TextStyle(fontSize: isSmallScreen ? 18 : 20)),
+          SizedBox(width: isSmallScreen ? 8 : 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 8 : 9,
+              vertical: isSmallScreen ? 3 : 4,
+            ),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(isSmallScreen ? 7 : 8),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumSection({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required Widget child,
+    required bool isTablet,
+    required bool isSmallScreen,
+  }) {
+    final titleSize = isTablet ? 15.0 : (isSmallScreen ? 12.0 : 13.5);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(6),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : 14,
+              vertical: isSmallScreen ? 10 : 11,
+            ),
+            decoration: BoxDecoration(
+              color: iconColor.withAlpha(12),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isTablet ? 20 : 16),
+                topRight: Radius.circular(isTablet ? 20 : 16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 5 : 6),
+                  decoration: BoxDecoration(
+                    color: iconColor.withAlpha(25),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 7 : 8),
+                  ),
+                  child: Icon(icon, color: iconColor, size: isSmallScreen ? 14 : 15),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.w700,
+                      color: iconColor,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuizStats(String categoryLabel, QuizStats? stats, bool isSmallScreen) {
     if (stats == null || stats.totalAttempts == 0) {
       return Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 10 : 12,
+          vertical: isSmallScreen ? 8 : 9,
+        ),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 9 : 10),
+          border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               categoryLabel,
-              style: const TextStyle(
-                fontSize: 13,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF7F8C8D),
+                color: Colors.grey.shade600,
               ),
             ),
-            const Text(
-              'No quizzes yet',
+            Text(
+              'Not attempted',
               style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF95A5A6),
+                fontSize: isSmallScreen ? 9 : 10,
+                color: Colors.grey.shade500,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -360,11 +595,16 @@ Container(
             : const Color(0xFFE74C3C);
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isSmallScreen ? 10 : 11),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(76)),
+        gradient: LinearGradient(
+          colors: [
+            color.withAlpha(10),
+            color.withAlpha(5),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 9 : 10),
+        border: Border.all(color: color.withAlpha(45)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,51 +612,88 @@ Container(
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                categoryLabel,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2C3E50),
+              Expanded(
+                child: Text(
+                  categoryLabel,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 11 : 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade800,
+                  ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withAlpha(76)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 8 : 9,
+                  vertical: isSmallScreen ? 3 : 4,
                 ),
-                child: Text(
-                  '${accuracy.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 7 : 8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withAlpha(35),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white, size: isSmallScreen ? 10 : 11),
+                    SizedBox(width: isSmallScreen ? 3 : 4),
+                    Text(
+                      '${accuracy.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isSmallScreen ? 6 : 7),
+          Stack(
+            children: [
+              Container(
+                height: isSmallScreen ? 5 : 6,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: accuracy / 100,
+                child: Container(
+                  height: isSmallScreen ? 5 : 6,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withAlpha(200)],
+                    ),
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withAlpha(50),
+                        blurRadius: 3,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 5 : 6),
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: accuracy / 100,
-                    minHeight: 6,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
               Text(
-                '${stats.correctAnswers}/${stats.totalAttempts}',
+                '${stats.correctAnswers}/${stats.totalAttempts} correct',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: isSmallScreen ? 9 : 10,
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
@@ -427,59 +704,204 @@ Container(
       ),
     );
   }
-  Widget _buildHabitsSection(String categoryLabel, List<String> habits, Color color) {
-  return Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: color.withAlpha(76)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          categoryLabel,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: color,
+
+  Widget _buildHabitsGrid(List<Map<String, dynamic>> categories, bool isSmallScreen) {
+    return Column(
+      children: categories.asMap().entries.map((entry) {
+        final isLast = entry.key == categories.length - 1;
+        return Padding(
+          padding: EdgeInsets.only(bottom: isLast ? 0 : (isSmallScreen ? 6 : 7)),
+          child: _buildHabitCard(
+            entry.value['label'] as String,
+            entry.value['habits'] as List<String>,
+            entry.value['color'] as Color,
+            isSmallScreen,
           ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildHabitCard(String categoryLabel, List<String> habits, Color color, bool isSmallScreen) {
+    return Container(
+      constraints: BoxConstraints(minHeight: isSmallScreen ? 65 : 72),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withAlpha(8),
+            color.withAlpha(4),
+          ],
         ),
-        const SizedBox(height: 8),
-        if (habits.isEmpty)
-          Text(
-            'No habits yet',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontStyle: FontStyle.italic,
-            ),
-          )
-        else
-          ...habits.map((habit) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        border: Border.all(color: color.withAlpha(40), width: 1.5),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isSmallScreen ? 9 : 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Icon(Icons.check_circle, size: 14, color: color),
-                const SizedBox(width: 6),
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 4 : 5),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(25),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 5 : 6),
+                  ),
+                  child: Icon(
+                    Icons.circle,
+                    size: isSmallScreen ? 6 : 7,
+                    color: color,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 6 : 7),
                 Expanded(
                   child: Text(
-                    habit,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF2C3E50),
+                    categoryLabel,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 11 : 12,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                      letterSpacing: 0.2,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (habits.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : 7,
+                      vertical: isSmallScreen ? 2 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(25),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 7 : 8),
+                    ),
+                    child: Text(
+                      '${habits.length}',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 9 : 10,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: isSmallScreen ? 6 : 7),
+            if (habits.isEmpty)
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 5),
+                  child: Text(
+                    'No habits recorded yet',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 9 : 10,
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...habits.take(2).map((habit) => Padding(
+                    padding: EdgeInsets.only(bottom: isSmallScreen ? 4 : 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: isSmallScreen ? 11 : 12,
+                          color: color,
+                        ),
+                        SizedBox(width: isSmallScreen ? 5 : 6),
+                        Expanded(
+                          child: Text(
+                            habit,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 9 : 10,
+                              color: Colors.grey.shade800,
+                              height: 1.3,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+                  if (habits.length > 2)
+                    Padding(
+                      padding: EdgeInsets.only(top: isSmallScreen ? 2 : 3),
+                      child: Text(
+                        '+ ${habits.length - 2} more habits',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 8 : 9,
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCloseButton(Color playerColor, bool isTablet, bool isSmallScreen, BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [playerColor, playerColor.withAlpha(230)],
+        ),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 14),
+        boxShadow: [
+          BoxShadow(
+            color: playerColor.withAlpha(50),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.of(context).pop(),
+          borderRadius: BorderRadius.circular(isTablet ? 16 : 14),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 16 : 18,
+                ),
+                SizedBox(width: isSmallScreen ? 5 : 6),
+                Text(
+                  'Close',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
             ),
-          )).toList(),
-      ],
-    ),
-  );
+          ),
+        ),
+      ),
+    );
+  }
 }
-}
-
-

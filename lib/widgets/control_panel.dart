@@ -1,9 +1,8 @@
-// lib/widgets/control_panel.dart
+// lib/widgets/control_panel.dart - UPDATED VERSION
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
-import 'dart:async';
-import 'player_stats_dialog.dart'; 
+import 'player_stats_dialog.dart';
 
 typedef NotifyCallback = void Function(String message, String icon);
 
@@ -119,8 +118,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<GameService>(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final diceSize = (screenWidth * 0.16).clamp(80.0, 110.0);
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 400;
+    final isVerySmallScreen = size.width < 360;
+    final diceSize = isVerySmallScreen ? 70.0 : (isSmallScreen ? 80.0 : (size.width * 0.16).clamp(80.0, 110.0));
 
     if (game.isCurrentPlayerBot() && game.gameActive && !game.isRolling && _displayedRoll == null) {
       Future.microtask(() => _handleBotTurn(game));
@@ -132,7 +133,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
         : (game.playerColors[displayPlayer] ?? game.playerColors[game.currentPlayer]!);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 10 : 14,
+        vertical: isSmallScreen ? 8 : 12,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -189,8 +193,8 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                               end: Alignment.bottomRight,
                               colors: [Colors.white, Color(0xFFFAFAFA)],
                             ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: diceColor, width: 3.5),
+                            borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+                            border: Border.all(color: diceColor, width: isSmallScreen ? 2.5 : 3.5),
                             boxShadow: [
                               const BoxShadow(
                                 color: Color(0x1A000000),
@@ -247,10 +251,10 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const SizedBox(width: 12),
+                              SizedBox(width: isSmallScreen ? 8 : 12),
                               Container(
-                                width: 56,
-                                height: 56,
+                                width: isSmallScreen ? 48 : 56,
+                                height: isSmallScreen ? 48 : 56,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.topLeft,
@@ -258,7 +262,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                                     colors: [diceColor.withAlpha(230), diceColor],
                                   ),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 3),
+                                  border: Border.all(color: Colors.white, width: isSmallScreen ? 2.5 : 3),
                                   boxShadow: [
                                     BoxShadow(
                                       color: diceColor.withAlpha(127),
@@ -271,12 +275,12 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                                 child: Center(
                                   child: Text(
                                     '$_displayedRoll',
-                                    style: const TextStyle(
-                                      fontSize: 28,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 24 : 28,
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       height: 1.0,
-                                      shadows: [Shadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2))],
+                                      shadows: const [Shadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2))],
                                     ),
                                   ),
                                 ),
@@ -291,25 +295,25 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 12 : 16),
 
-          // Player cards (ONLY View Stats button, no duplicate stats)
+          // Player cards
           if (game.numberOfPlayers == 2)
             Row(
               children: [
-                Expanded(child: _buildModernPlayerCard(game, 'player1', isActive: game.currentPlayer == 'player1')),
-                const SizedBox(width: 10),
-                Expanded(child: _buildModernPlayerCard(game, 'player2', isActive: game.currentPlayer == 'player2')),
+                Expanded(child: _buildRefinedPlayerCard(game, 'player1', isActive: game.currentPlayer == 'player1', isSmallScreen: isSmallScreen)),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Expanded(child: _buildRefinedPlayerCard(game, 'player2', isActive: game.currentPlayer == 'player2', isSmallScreen: isSmallScreen)),
               ],
             )
           else
             Row(
               children: [
-                Expanded(child: _buildModernPlayerCard(game, 'player1', isActive: game.currentPlayer == 'player1')),
-                const SizedBox(width: 8),
-                Expanded(child: _buildModernPlayerCard(game, 'player2', isActive: game.currentPlayer == 'player2')),
-                const SizedBox(width: 8),
-                Expanded(child: _buildModernPlayerCard(game, 'player3', isActive: game.currentPlayer == 'player3')),
+                Expanded(child: _buildRefinedPlayerCard(game, 'player1', isActive: game.currentPlayer == 'player1', isSmallScreen: isSmallScreen, isThreePlayers: true)),
+                SizedBox(width: isSmallScreen ? 6 : 8),
+                Expanded(child: _buildRefinedPlayerCard(game, 'player2', isActive: game.currentPlayer == 'player2', isSmallScreen: isSmallScreen, isThreePlayers: true)),
+                SizedBox(width: isSmallScreen ? 6 : 8),
+                Expanded(child: _buildRefinedPlayerCard(game, 'player3', isActive: game.currentPlayer == 'player3', isSmallScreen: isSmallScreen, isThreePlayers: true)),
               ],
             ),
         ],
@@ -328,9 +332,11 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
-  // Player card with stats display
-  Widget _buildModernPlayerCard(GameService game, String playerId, {required bool isActive}) {
-    final isThreePlayers = game.numberOfPlayers == 3;
+  Widget _buildRefinedPlayerCard(GameService game, String playerId, {
+    required bool isActive,
+    required bool isSmallScreen,
+    bool isThreePlayers = false,
+  }) {
     final color = game.playerColors[playerId]!;
     final name = game.playerNames[playerId]!;
     final position = game.playerPositions[playerId]!;
@@ -338,184 +344,156 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     final goodHabits = game.playerGoodHabits[playerId] ?? 0;
     final badHabits = game.playerBadHabits[playerId] ?? 0;
     
-    return GestureDetector(
-      onTap: () => _showPlayerStats(context, game, playerId),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isActive 
-                ? [
-                    color.withAlpha(230),
-                    color.withAlpha(180),
-                  ]
-                : [
-                    Colors.white,
-                    Colors.grey.shade50,
-                  ],
-          ),
-          borderRadius: BorderRadius.circular(isThreePlayers ? 14 : 16),
-          border: Border.all(
-            color: isActive ? Colors.white : color.withAlpha(100),
-            width: isActive ? 3 : 2,
-          ),
-          boxShadow: isActive
+    final fontSize = isThreePlayers ? (isSmallScreen ? 9.0 : 10.5) : (isSmallScreen ? 11.0 : 12.5);
+    final padding = isThreePlayers ? (isSmallScreen ? 10.0 : 11.0) : (isSmallScreen ? 12.0 : 14.0);
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isActive 
               ? [
-                  BoxShadow(
-                    color: color.withAlpha(120),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                    spreadRadius: 2,
-                  ),
-                  const BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
+                  color.withAlpha(230),
+                  color.withAlpha(180),
                 ]
               : [
-                  const BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
+                  Colors.white,
+                  Colors.grey.shade50,
                 ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(isThreePlayers ? 14 : 16),
-          child: Stack(
-            children: [
-              // Animated glow effect for active player
-              if (isActive)
-                Positioned.fill(
-                  child: AnimatedOpacity(
-                    opacity: 0.15,
-                    duration: const Duration(milliseconds: 1000),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withAlpha(100),
-                            Colors.transparent,
-                          ],
-                        ),
+        borderRadius: BorderRadius.circular(isThreePlayers ? 14 : 16),
+        border: Border.all(
+          color: isActive ? Colors.white : color.withAlpha(100),
+          width: isActive ? (isSmallScreen ? 2.5 : 3) : 2,
+        ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: color.withAlpha(120),
+                  blurRadius: isSmallScreen ? 12 : 16,
+                  offset: Offset(0, isSmallScreen ? 4 : 6),
+                  spreadRadius: 2,
+                ),
+                const BoxShadow(
+                  color: Color(0x1A000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ]
+            : [
+                const BoxShadow(
+                  color: Color(0x0D000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(isThreePlayers ? 14 : 16),
+        child: Stack(
+          children: [
+            if (isActive)
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  opacity: 0.15,
+                  duration: const Duration(milliseconds: 1000),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withAlpha(100),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
                   ),
                 ),
-              
-              Padding(
-                padding: EdgeInsets.all(isThreePlayers ? 10 : 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header: Avatar + Name (NO play button indicator)
-                    Row(
-                      children: [
-                        // Avatar Circle
-                        Container(
-                          width: isThreePlayers ? 32 : 38,
-                          height: isThreePlayers ? 32 : 38,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: isActive
-                                  ? [Colors.white, Colors.white.withAlpha(200)]
-                                  : [color, color.withAlpha(200)],
-                            ),
-                            border: Border.all(
-                              color: isActive ? color : Colors.white,
-                              width: 2.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isActive ? color : Colors.black).withAlpha(40),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              playerId == 'player3' && game.hasBot ? '🤖' : 'P${playerId.replaceAll('player', '')}',
-                              style: TextStyle(
-                                fontSize: isThreePlayers ? 12 : 14,
-                                fontWeight: FontWeight.bold,
-                                color: isActive ? color : Colors.white,
-                              ),
-                            ),
-                          ),
+              ),
+            
+            Padding(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header: Player Name and Position (CENTERED)
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: fontSize + 2,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? Colors.white : color,
+                          letterSpacing: 0.3,
                         ),
-                        const SizedBox(width: 8),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: isSmallScreen ? 2 : 3),
+                      Text(
+                        'Position: ${position == 0 ? 'Start' : position}',
+                        style: TextStyle(
+                          fontSize: fontSize - 1,
+                          fontWeight: FontWeight.w600,
+                          color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(180),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                  
+                  SizedBox(height: isSmallScreen ? 8 : (isThreePlayers ? 9 : 11)),
+                  
+                  // Quick Stats with Clickable Emojis
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+                      vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive 
+                          ? Colors.white.withAlpha(150)
+                          : color.withAlpha(25),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                      border: Border.all(
+                        color: isActive 
+                            ? Colors.white.withAlpha(200)
+                            : color.withAlpha(50),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildQuickStat('🪙', '$coins', isActive, const Color(0xFFF59E0B), isCompact: isThreePlayers, isSmallScreen: isSmallScreen),
                         
-                        // Name + Position
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                style: TextStyle(
-                                  fontSize: isThreePlayers ? 11 : 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isActive ? Colors.white : color,
-                                  letterSpacing: 0.3,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Pos: ${position == 0 ? 'Start' : position}',
-                                style: TextStyle(
-                                  fontSize: isThreePlayers ? 9 : 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(180),
-                                ),
-                              ),
-                            ],
-                          ),
+                        // GOOD HABITS - CLICKABLE
+                        GestureDetector(
+                          onTap: () => _showHabitsDialog(context, game, playerId, true),
+                          child: _buildQuickStat('😊', '$goodHabits', isActive, const Color(0xFF4CAF50), isCompact: isThreePlayers, isSmallScreen: isSmallScreen, isClickable: true),
+                        ),
+                        
+                        // BAD HABITS - CLICKABLE
+                        GestureDetector(
+                          onTap: () => _showHabitsDialog(context, game, playerId, false),
+                          child: _buildQuickStat('😞', '$badHabits', isActive, const Color(0xFFE74C3C), isCompact: isThreePlayers, isSmallScreen: isSmallScreen, isClickable: true),
                         ),
                       ],
                     ),
-                    
-                    SizedBox(height: isThreePlayers ? 8 : 10),
-                    
-                    // Quick Stats Display
-                    Container(
-                      padding: EdgeInsets.all(isThreePlayers ? 6 : 8),
-                      decoration: BoxDecoration(
-                        color: isActive 
-                            ? Colors.white.withAlpha(150)
-                            : color.withAlpha(25),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isActive 
-                              ? Colors.white.withAlpha(200)
-                              : color.withAlpha(50),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildQuickStat('🪙', '$coins', isActive, color, isCompact: isThreePlayers),
-                          _buildQuickStat('😊', '$goodHabits', isActive, const Color(0xFF4CAF50), isCompact: isThreePlayers),
-                          _buildQuickStat('😞', '$badHabits', isActive, const Color(0xFFE74C3C), isCompact: isThreePlayers),
-                        ],
-                      ),
-                    ),
-                    
-                    SizedBox(height: isThreePlayers ? 6 : 8),
-                    
-                    // View Stats Button
-                    Container(
+                  ),
+                  
+                  SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
+                  
+                  // View Stats Button
+                  GestureDetector(
+                    onTap: () => _showPlayerStats(context, game, playerId),
+                    child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: isThreePlayers ? 8 : 10,
-                        vertical: isThreePlayers ? 4 : 6,
+                        horizontal: isSmallScreen ? 8 : (isThreePlayers ? 9 : 11),
+                        vertical: isSmallScreen ? 4 : (isThreePlayers ? 5 : 7),
                       ),
                       decoration: BoxDecoration(
                         color: isActive 
@@ -533,14 +511,14 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                         children: [
                           Icon(
                             Icons.bar_chart_rounded,
-                            size: isThreePlayers ? 12 : 14,
+                            size: isSmallScreen ? 11 : (isThreePlayers ? 12 : 14),
                             color: isActive ? color : color.withAlpha(200),
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: isSmallScreen ? 4 : 5),
                           Text(
                             'View Stats',
                             style: TextStyle(
-                              fontSize: isThreePlayers ? 9 : 10,
+                              fontSize: isSmallScreen ? 8.5 : (isThreePlayers ? 9.5 : 10.5),
                               fontWeight: FontWeight.bold,
                               color: isActive ? color : color.withAlpha(200),
                               letterSpacing: 0.3,
@@ -549,32 +527,243 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // Simple stat display
-  Widget _buildQuickStat(String icon, String value, bool isActive, Color color, {bool isCompact = false}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(icon, style: TextStyle(fontSize: isCompact ? 14 : 16)),
-        SizedBox(height: isCompact ? 2 : 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: isCompact ? 11 : 13,
-            fontWeight: FontWeight.bold,
-            color: isActive ? color : color.withAlpha(220),
+  Widget _buildQuickStat(String icon, String value, bool isActive, Color color, {
+    bool isCompact = false,
+    required bool isSmallScreen,
+    bool isClickable = false,
+  }) {
+    final iconSize = isSmallScreen ? 13.0 : (isCompact ? 15.0 : 17.0);
+    final valueSize = isSmallScreen ? 11.0 : (isCompact ? 12.0 : 14.0);
+    
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 3 : (isCompact ? 4 : 5),
+        vertical: isSmallScreen ? 2 : (isCompact ? 3 : 4),
+      ),
+      decoration: isClickable ? BoxDecoration(
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withAlpha(50), width: 1),
+      ) : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: TextStyle(fontSize: iconSize)),
+          SizedBox(height: isSmallScreen ? 1 : (isCompact ? 2 : 3)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: valueSize,
+              fontWeight: FontWeight.bold,
+              color: isActive ? color : color.withAlpha(220),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showHabitsDialog(BuildContext context, GameService game, String playerId, bool isGoodHabits) {
+    final playerName = game.playerNames[playerId]!;
+    final playerColor = game.playerColors[playerId]!;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450, maxHeight: 600),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isGoodHabits ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    isGoodHabits ? '😊' : '😞',
+                    style: const TextStyle(fontSize: 32),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: playerColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        playerName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: playerColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                Text(
+                  isGoodHabits ? 'Good Habits Earned' : 'Bad Habits to Avoid',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isGoodHabits ? const Color(0xFF2E7D32) : const Color(0xFFB91C1C),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Vertical Category List
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildVerticalCategorySection(game, playerId, 'nutrition', '🎯 Nutrition', isGoodHabits),
+                        const SizedBox(height: 16),
+                        _buildVerticalCategorySection(game, playerId, 'exercise', '💪 Exercise', isGoodHabits),
+                        const SizedBox(height: 16),
+                        _buildVerticalCategorySection(game, playerId, 'sleep', '😴 Sleep', isGoodHabits),
+                        const SizedBox(height: 16),
+                        _buildVerticalCategorySection(game, playerId, 'mental', '🧘 Mental', isGoodHabits),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isGoodHabits ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVerticalCategorySection(GameService game, String playerId, String category, String title, bool isGoodHabits) {
+    final habits = isGoodHabits 
+        ? game.getPlayerGoodHabits(playerId, category)
+        : game.getPlayerBadHabits(playerId, category);
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isGoodHabits 
+            ? const Color(0xFF4CAF50).withAlpha(15)
+            : const Color(0xFFE74C3C).withAlpha(15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isGoodHabits 
+              ? const Color(0xFF4CAF50).withAlpha(76)
+              : const Color(0xFFE74C3C).withAlpha(76),
         ),
-      ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Category Title
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isGoodHabits ? const Color(0xFF2E7D32) : const Color(0xFFB91C1C),
+            ),
+          ),
+          const SizedBox(height: 10),
+          
+          // Habits List
+          if (habits.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Text(
+                    isGoodHabits ? '🌟' : '⚠️',
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isGoodHabits ? 'No good habits earned yet' : 'No bad habits recorded yet',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...habits.map((habit) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isGoodHabits 
+                    ? const Color(0xFF4CAF50).withAlpha(40)
+                    : const Color(0xFFE74C3C).withAlpha(40),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isGoodHabits ? Icons.check_circle : Icons.cancel,
+                    color: isGoodHabits ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      habit,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF2C3E50),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+        ],
+      ),
     );
   }
 

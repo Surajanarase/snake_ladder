@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import '../services/game_service.dart';
 
-
 class KnowledgeByteDialog extends StatefulWidget {
   final String player;
   final String playerName;
@@ -67,12 +66,22 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
   @override
   Widget build(BuildContext context) {
     final categoryColor = _getCategoryColor();
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    final isTablet = size.width >= 600;
+    
+    final maxWidth = isTablet ? 550.0 : (isSmallScreen ? size.width * 0.9 : 500.0);
+    final maxHeight = isTablet ? 750.0 : (isSmallScreen ? size.height * 0.8 : 700.0);
+    final padding = isTablet ? 28.0 : (isSmallScreen ? 16.0 : 22.0);
+    final iconSize = isTablet ? 56.0 : (isSmallScreen ? 40.0 : 48.0);
+    final titleSize = isTablet ? 26.0 : (isSmallScreen ? 18.0 : 22.0);
+    final textSize = isTablet ? 17.0 : (isSmallScreen ? 13.0 : 15.0);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isTablet ? 28 : 22)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -82,7 +91,7 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
               categoryColor.withAlpha(25),
             ],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(isTablet ? 28 : 22),
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -95,7 +104,7 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                   return Transform.scale(
                     scale: _bounceAnimation.value,
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [categoryColor, categoryColor.withAlpha(204)],
@@ -104,56 +113,62 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                         boxShadow: [
                           BoxShadow(
                             color: categoryColor.withAlpha(102),
-                            blurRadius: 20,
-                            spreadRadius: 5,
+                            blurRadius: isSmallScreen ? 15 : 20,
+                            spreadRadius: isSmallScreen ? 3 : 5,
                           ),
                         ],
                       ),
                       child: Text(
                         widget.isLadder ? '✅' : '❌',
-                        style: const TextStyle(fontSize: 48),
+                        style: TextStyle(fontSize: iconSize),
                       ),
                     ),
                   );
                 },
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 10 : 14),
 
               // Player Info
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 12,
-                    height: 12,
+                    width: isSmallScreen ? 10 : 12,
+                    height: isSmallScreen ? 10 : 12,
                     decoration: BoxDecoration(
                       color: widget.playerColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                           color: widget.playerColor.withAlpha(127),
-                          blurRadius: 8,
+                          blurRadius: isSmallScreen ? 6 : 8,
                           spreadRadius: 2,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.playerName,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: widget.playerColor,
+                  SizedBox(width: isSmallScreen ? 6 : 8),
+                  Flexible(
+                    child: Text(
+                      widget.playerName,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 15 : 17,
+                        fontWeight: FontWeight.bold,
+                        color: widget.playerColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: isSmallScreen ? 8 : 10),
 
               // Type Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 14,
+                  vertical: isSmallScreen ? 6 : 7,
+                ),
                 decoration: BoxDecoration(
                   color: widget.isLadder 
                       ? const Color(0xFF4CAF50)
@@ -162,34 +177,37 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                 ),
                 child: Text(
                   widget.isLadder ? 'DO' : "DON'T",
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 11,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                     letterSpacing: 1,
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: isSmallScreen ? 14 : 18),
 
               // Title
-              Text(
-                widget.knowledge.title,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C3E50),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 0),
+                child: Text(
+                  widget.knowledge.title,
+                  style: TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2C3E50),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 14),
 
               // Main Content
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: categoryColor.withAlpha(76), width: 2),
                   boxShadow: const [
                     BoxShadow(
@@ -204,19 +222,19 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                   children: [
                     Text(
                       widget.knowledge.text,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: textSize,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF2C3E50),
+                        color: const Color(0xFF2C3E50),
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: isSmallScreen ? 8 : 10),
                     Text(
                       widget.knowledge.reason,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 13,
+                        color: const Color(0xFF666666),
                         fontStyle: FontStyle.italic,
                         height: 1.4,
                       ),
@@ -224,11 +242,11 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: isSmallScreen ? 14 : 18),
 
               // Tips Section
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -244,22 +262,25 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.lightbulb, color: categoryColor, size: 20),
-                        const SizedBox(width: 8),
+                        Icon(Icons.lightbulb, 
+                          color: categoryColor, 
+                          size: isSmallScreen ? 18 : 20,
+                        ),
+                        SizedBox(width: isSmallScreen ? 6 : 8),
                         Text(
                           'Quick Tips:',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: isSmallScreen ? 12 : 13,
                             fontWeight: FontWeight.bold,
                             color: categoryColor,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: isSmallScreen ? 8 : 10),
                     ...widget.knowledge.tips.map((tip) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(10),
+                      margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 7),
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 9),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -270,15 +291,15 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                         children: [
                           Text(
                             tip.split(' ')[0],
-                            style: const TextStyle(fontSize: 16),
+                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: isSmallScreen ? 6 : 8),
                           Expanded(
                             child: Text(
                               tip.substring(tip.indexOf(' ') + 1),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF2C3E50),
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: const Color(0xFF2C3E50),
                               ),
                             ),
                           ),
@@ -288,7 +309,7 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isSmallScreen ? 18 : 22),
 
               // Continue Button
               ElevatedButton(
@@ -299,16 +320,19 @@ class _KnowledgeByteDialogState extends State<KnowledgeByteDialog> with SingleTi
                 style: ElevatedButton.styleFrom(
                   backgroundColor: categoryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 32 : 44,
+                    vertical: isSmallScreen ? 12 : 14,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
                   elevation: 4,
                 ),
-                child: const Text(
+                child: Text(
                   'I Understand!',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: isSmallScreen ? 15 : 17,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -371,19 +395,31 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    final isTablet = size.width >= 600;
+    
+    final padding = isTablet ? 34.0 : (isSmallScreen ? 20.0 : 28.0);
+    final iconSize = isTablet ? 56.0 : (isSmallScreen ? 40.0 : 48.0);
+    final titleSize = isTablet ? 26.0 : (isSmallScreen ? 19.0 : 22.0);
+    final textSize = isTablet ? 17.0 : (isSmallScreen ? 14.0 : 15.0);
+
     return SlideTransition(
       position: _slideAnimation,
       child: Dialog(
         alignment: Alignment.bottomCenter,
-        insetPadding: EdgeInsets.zero,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16,
+          vertical: isSmallScreen ? 16 : 20,
+        ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         child: Container(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.6,
+            maxHeight: size.height * (isSmallScreen ? 0.7 : 0.65),
           ),
-          padding: const EdgeInsets.all(30),
+          padding: EdgeInsets.all(padding),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
@@ -394,7 +430,7 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
               children: [
                 // Icon
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
@@ -403,77 +439,83 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFFFBBF24).withAlpha(102),
-                        blurRadius: 20,
-                        spreadRadius: 5,
+                        blurRadius: isSmallScreen ? 15 : 20,
+                        spreadRadius: isSmallScreen ? 3 : 5,
                       ),
                     ],
                   ),
                   child: Text(
                     widget.advice.icon,
-                    style: const TextStyle(fontSize: 48),
+                    style: TextStyle(fontSize: iconSize),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 10 : 14),
 
                 // Player Info
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 12,
-                      height: 12,
+                      width: isSmallScreen ? 10 : 12,
+                      height: isSmallScreen ? 10 : 12,
                       decoration: BoxDecoration(
                         color: widget.playerColor,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: widget.playerColor.withAlpha(127),
-                            blurRadius: 8,
+                            blurRadius: isSmallScreen ? 6 : 8,
                             spreadRadius: 2,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.playerName,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: widget.playerColor,
+                    SizedBox(width: isSmallScreen ? 6 : 8),
+                    Flexible(
+                      child: Text(
+                        widget.playerName,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 15 : 17,
+                          fontWeight: FontWeight.bold,
+                          color: widget.playerColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 12 : 14),
 
                 // Title
-                Text(
-                  widget.advice.title,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 0),
+                  child: Text(
+                    widget.advice.title,
+                    style: TextStyle(
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2C3E50),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 12 : 14),
 
                 // Main Text
                 Text(
                   widget.advice.text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF666666),
+                  style: TextStyle(
+                    fontSize: textSize,
+                    color: const Color(0xFF666666),
                     height: 1.6,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isSmallScreen ? 14 : 18),
 
                 // Tip Box
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -490,53 +532,63 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.tips_and_updates, 
-                            color: Color(0xFFF59E0B), size: 20),
-                          SizedBox(width: 8),
+                          Icon(
+                            Icons.tips_and_updates, 
+                            color: const Color(0xFFF59E0B),
+                            size: isSmallScreen ? 18 : 20,
+                          ),
+                          SizedBox(width: isSmallScreen ? 6 : 8),
                           Text(
                             'Quick Tip:',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isSmallScreen ? 12 : 13,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFF59E0B),
+                              color: const Color(0xFFF59E0B),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isSmallScreen ? 6 : 8),
                       Text(
                         widget.advice.tip,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF2C3E50),
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 12 : 13,
+                          color: const Color(0xFF2C3E50),
                           height: 1.4,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: isSmallScreen ? 18 : 22),
 
                 // Coin Reward Indicator
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 12 : 14,
+                    vertical: isSmallScreen ? 8 : 9,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
                     ),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.monetization_on, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
+                      Icon(
+                        Icons.monetization_on,
+                        color: Colors.white,
+                        size: isSmallScreen ? 18 : 20,
+                      ),
+                      SizedBox(width: isSmallScreen ? 6 : 8),
                       Text(
                         '+5 Coins Earned!',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isSmallScreen ? 12 : 13,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -544,7 +596,7 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isSmallScreen ? 16 : 18),
 
                 // Got it Button
                 ElevatedButton(
@@ -555,16 +607,19 @@ class _HealthAdviceDialogState extends State<HealthAdviceDialog> with SingleTick
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF667eea),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 32 : 44,
+                      vertical: isSmallScreen ? 12 : 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
                     elevation: 4,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Got it!',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: isSmallScreen ? 15 : 17,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
