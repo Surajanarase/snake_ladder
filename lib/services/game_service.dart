@@ -2369,74 +2369,72 @@ playerBadHabitsList = {
     }
   }
 
-  Future<void> _botHandleLadder(int position, String player, String category, Function(String, String) onNotify) async {
+    Future<void> _botHandleLadder(
+    int position,
+    String player,
+    String category,
+    Function(String, String) onNotify,
+  ) async {
     final ladder = ladders[position]!;
-    
-    final success = _random.nextInt(100) < 70;
-    
-    if (success) {
-      playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
-      playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
-      playerCoins[player] = (playerCoins[player] ?? 0) + 20;
 
-      animatingLadder = position;
-      lastAnimationTime = DateTime.now();
-      notifyListeners();
+    // Bot ALWAYS climbs the ladder (no quiz / knowledge popup).
+    // Keep same rewards & stats as earlier "success" path.
+    playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+    playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
+    playerCoins[player] = (playerCoins[player] ?? 0) + 20;
 
-      onNotify('🤖 Bot climbed the ladder!', '✅');
+    // Animate ladder climb
+    animatingLadder = position;
+    lastAnimationTime = DateTime.now();
+    notifyListeners();
 
-      await Future.delayed(const Duration(milliseconds: 1500));
+    onNotify('🤖 Bot climbed the ladder!', '✅');
 
-      playerPositions[player] = ladder['end'];
-      animatingLadder = null;
-      notifyListeners();
-    } else {
-      playerCoins[player] = (playerCoins[player] ?? 0) - 10;
-      if (playerCoins[player]! < 0) playerCoins[player] = 0;
-      
-      onNotify('🤖 Bot missed the ladder', '❌');
-    }
+    await Future.delayed(const Duration(milliseconds: 1500));
 
+    playerPositions[player] = ladder['end'];
+    animatingLadder = null;
+    notifyListeners();
+
+    // Check win after moving to ladder end
     checkWinCondition(onNotify);
   }
 
-  Future<void> _botHandleSnake(int position, String player, String category, Function(String, String) onNotify) async {
-    final snake = snakes[position]!;
-    
-    final avoided = _random.nextInt(100) < 50;
-    
-    if (avoided) {
-      playerCoins[player] = (playerCoins[player] ?? 0) + 30;
-      onNotify('🤖 Bot avoided the snake!', '✅');
-      switchTurn(onNotify);
-    } else {
-      playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
-      playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
-      playerCoins[player] = (playerCoins[player] ?? 0) - 15;
-      if (playerCoins[player]! < 0) playerCoins[player] = 0;
+Future<void> _botHandleSnake(
+  int position,
+  String player,
+  String category,
+  Function(String, String) onNotify,
+) async {
+  final snake = snakes[position]!;
 
-      final String badCat = (snake['category'] as String?) ?? 'mental';
-      final String badText = '${snake['icon']} ${snake['message']}';
-      final list = playerBadEvents[player]![badCat]!;
-      if (!list.contains(badText)) {
-        list.insert(0, badText);
-      }
+  // Bot ALWAYS gets bitten by the snake – no random avoid.
+  playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+  playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
+  playerCoins[player] = (playerCoins[player] ?? 0) - 15;
+  if (playerCoins[player]! < 0) playerCoins[player] = 0;
 
-      animatingSnake = position;
-      lastAnimationTime = DateTime.now();
-      notifyListeners();
-
-      onNotify('🤖 Bot hit the snake!', '❌');
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      playerPositions[player] = snake['end'];
-      animatingSnake = null;
-      notifyListeners();
-
-      checkWinCondition(onNotify);
-    }
+  final String badCat = (snake['category'] as String?) ?? 'mental';
+  final String badText = '${snake['icon']} ${snake['message']}';
+  final list = playerBadEvents[player]![badCat]!;
+  if (!list.contains(badText)) {
+    list.insert(0, badText);
   }
+
+  animatingSnake = position;
+  lastAnimationTime = DateTime.now();
+  notifyListeners();
+
+  onNotify('🤖 Bot hit the snake!', '❌');
+
+  await Future.delayed(const Duration(milliseconds: 1500));
+
+  playerPositions[player] = snake['end'];
+  animatingSnake = null;
+  notifyListeners();
+
+  checkWinCondition(onNotify);
+}
 
   Future<void> onLadderQuizSuccess(int position, String player, Function(String, String) onNotify) async {
   final ladder = ladders[position]!;

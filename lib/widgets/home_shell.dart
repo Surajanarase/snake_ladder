@@ -582,7 +582,7 @@ class _HomeShellState extends State<HomeShell> {
                     ),
                   ),
                   child: Text(
-                    'Close (Stay)',
+                    'Retain',
                     style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
                   ),
                 ),
@@ -964,12 +964,18 @@ class _HomeShellState extends State<HomeShell> {
       };
     }
 
-    // Handle LADDER_QUIZ trigger
+   // Handle LADDER_QUIZ trigger
     if (message.startsWith('LADDER_QUIZ::')) {
       try {
         final parts = message.split('::');
         if (parts.length >= 4) {
           final playerId = parts[1];
+
+          // NEW: do not show quiz dialog for bot player
+          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+            return;
+          }
+
           final position = int.parse(parts[2]);
           final category = parts[3];
           
@@ -1012,6 +1018,12 @@ class _HomeShellState extends State<HomeShell> {
         final parts = message.split('::');
         if (parts.length >= 4) {
           final playerId = parts[1];
+
+          // NEW: do not show quiz dialog for bot player
+          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+            return;
+          }
+
           final position = int.parse(parts[2]);
           final category = parts[3];
           
@@ -1054,6 +1066,12 @@ class _HomeShellState extends State<HomeShell> {
         final parts = message.split('::');
         if (parts.length >= 4) {
           final playerId = parts[1];
+
+          // NEW: do not show knowledge dialog for bot player
+          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+            return;
+          }
+
           final position = int.parse(parts[2]);
           final category = parts[3];
           
@@ -1090,6 +1108,12 @@ class _HomeShellState extends State<HomeShell> {
         final parts = message.split('::');
         if (parts.length >= 4) {
           final playerId = parts[1];
+
+          // NEW: do not show knowledge dialog for bot player
+          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+            return;
+          }
+
           final position = int.parse(parts[2]);
           final category = parts[3];
           
@@ -1126,6 +1150,11 @@ class _HomeShellState extends State<HomeShell> {
         final parts = message.split('::');
         if (parts.length >= 3) {
           final playerId = parts[1];
+
+          // NEW: no health advice dialog for bot
+          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+            return;
+          }
           
           final advice = game.getRandomHealthAdvice();
           

@@ -17,7 +17,7 @@ class PlayerStatsDialog extends StatelessWidget {
     final playerName = game.playerNames[playerId]!;
     final playerColor = game.playerColors[playerId]!;
     final position = game.playerPositions[playerId]!;
-    final score = game.playerScores[playerId]!;
+    
     final goodHabits = game.playerGoodHabits[playerId] ?? 0;
     final badHabits = game.playerBadHabits[playerId] ?? 0;
 
@@ -85,90 +85,86 @@ class PlayerStatsDialog extends StatelessWidget {
 
                     // Game Progress Section
                     _buildPremiumSection(
-                      title: 'Game Progress',
-                      icon: Icons.trending_up_rounded,
-                      iconColor: playerColor,
-                      isTablet: isTablet,
-                      isSmallScreen: isSmallScreen,
-                      child: Column(
-                        children: [
-                          // Top Stats Row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildCompactStatChip(
-                                  icon: Icons.location_on_rounded,
-                                  label: 'Position',
-                                  value: '#$position',
-                                  color: playerColor,
-                                  isSmallScreen: isSmallScreen,
-                                ),
-                              ),
-                              SizedBox(width: isSmallScreen ? 6 : 8),
-                              Expanded(
-                                child: _buildCompactStatChip(
-                                  icon: Icons.stars_rounded,
-                                  label: 'Score',
-                                  value: '$score',
-                                  color: const Color(0xFFFFB800),
-                                  isSmallScreen: isSmallScreen,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: isSmallScreen ? 6 : 8),
-                          // Middle Stats Row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildCompactStatChip(
-                                  icon: Icons.favorite_rounded,
-                                  label: 'Good',
-                                  value: '$goodHabits',
-                                  color: const Color(0xFF4CAF50),
-                                  isSmallScreen: isSmallScreen,
-                                ),
-                              ),
-                              SizedBox(width: isSmallScreen ? 6 : 8),
-                              Expanded(
-                                child: _buildCompactStatChip(
-                                  icon: Icons.warning_rounded,
-                                  label: 'Bad',
-                                  value: '$badHabits',
-                                  color: const Color(0xFFEF5350),
-                                  isSmallScreen: isSmallScreen,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: isSmallScreen ? 8 : 10),
-                          // Game Actions Row
-                          _buildGameActionRow(
-                            icon: '🪙',
-                            label: 'Coins',
-                            value: '${game.playerCoins[playerId]}',
-                            color: const Color(0xFFF59E0B),
-                            isSmallScreen: isSmallScreen,
-                          ),
-                          SizedBox(height: isSmallScreen ? 6 : 7),
-                          _buildGameActionRow(
-                            icon: '🪜',
-                            label: 'Ladders',
-                            value: '${game.playerLaddersHit[playerId]}',
-                            color: const Color(0xFF4CAF50),
-                            isSmallScreen: isSmallScreen,
-                          ),
-                          SizedBox(height: isSmallScreen ? 6 : 7),
-                          _buildGameActionRow(
-                            icon: '🐍',
-                            label: 'Snakes',
-                            value: '${game.playerSnakesHit[playerId]}',
-                            color: const Color(0xFFE74C3C),
-                            isSmallScreen: isSmallScreen,
-                          ),
-                        ],
-                      ),
-                    ),
+  title: 'Game Progress',
+  icon: Icons.trending_up_rounded,
+  iconColor: playerColor,
+  isTablet: isTablet,
+  isSmallScreen: isSmallScreen,
+  child: Column(
+    children: [
+      // Row 1: Position + Coins
+      Row(
+        children: [
+          Expanded(
+            child: _buildCompactStatChip(
+              icon: Icons.location_on_rounded,
+              label: 'Position',
+              value: '#$position',
+              color: playerColor,
+              isSmallScreen: isSmallScreen,
+            ),
+          ),
+          SizedBox(width: isSmallScreen ? 6 : 8),
+          Expanded(
+            child: _buildCompactStatChip(
+              icon: Icons.monetization_on_rounded,
+              label: 'Coins',
+              value: '${game.playerCoins[playerId]}',
+              color: const Color(0xFFF59E0B),
+              isSmallScreen: isSmallScreen,
+            ),
+          ),
+        ],
+      ),
+      SizedBox(height: isSmallScreen ? 6 : 8),
+      
+      // Row 2: Good + Bad
+      Row(
+        children: [
+          Expanded(
+            child: _buildCompactStatChip(
+              icon: Icons.favorite_rounded,
+              label: 'Good',
+              value: '$goodHabits',
+              color: const Color(0xFF4CAF50),
+              isSmallScreen: isSmallScreen,
+            ),
+          ),
+          SizedBox(width: isSmallScreen ? 6 : 8),
+          Expanded(
+            child: _buildCompactStatChip(
+              icon: Icons.warning_rounded,
+              label: 'Bad',
+              value: '$badHabits',
+              color: const Color(0xFFEF5350),
+              isSmallScreen: isSmallScreen,
+            ),
+          ),
+        ],
+      ),
+      SizedBox(height: isSmallScreen ? 8 : 10),
+      
+      // Row 3: Ladders (unchanged)
+      _buildGameActionRow(
+        icon: '🪜',
+        label: 'Ladders',
+        value: '${game.playerLaddersHit[playerId]}',
+        color: const Color(0xFF4CAF50),
+        isSmallScreen: isSmallScreen,
+      ),
+      SizedBox(height: isSmallScreen ? 6 : 7),
+      
+      // Row 4: Snakes (unchanged)
+      _buildGameActionRow(
+        icon: '🐍',
+        label: 'Snakes',
+        value: '${game.playerSnakesHit[playerId]}',
+        color: const Color(0xFFE74C3C),
+        isSmallScreen: isSmallScreen,
+      ),
+    ],
+  ),
+),
                     SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
 
                     // Quiz Performance

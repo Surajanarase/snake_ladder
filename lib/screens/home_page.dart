@@ -926,36 +926,49 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Row(
-          children: [
-            Text('💚'),
-            SizedBox(width: 10),
-            Text('About Health Quest'),
-          ],
-        ),
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('💚'),
+          SizedBox(width: 10),
+          Text('About Health Quest'),
+        ],
+      ),
         content: const Text(
           'Health Quest is an educational game that makes learning about health fun! '
           'Play snake and ladder while answering health quizzes and collecting knowledge bytes.\n\n'
           'Version 1.0.0',
           style: TextStyle(height: 1.6, fontSize: 15),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF667eea),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: const Text(
-              'Close',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
+       actions: [
+  Center(
+    child: ElevatedButton(
+      onPressed: () => Navigator.pop(context),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF667eea),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(50),
+        ),
+        elevation: 4,
+      ),
+      child: const Text(
+        'Close',
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 16,
+          letterSpacing: 0.5,
+        ),
+      ),
+    ),
+  ),
+  const SizedBox(height: 8),
+],
       ),
     );
   }
