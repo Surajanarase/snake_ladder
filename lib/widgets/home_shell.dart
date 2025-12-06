@@ -560,163 +560,163 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Widget _buildWinnerButtons(GameService game, bool isSmallScreen) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 400) {
-          return Column(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _suppressWinOverlay = true;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.black87,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'Retain',
-                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth < 400) {
+        // Small screen: Stack buttons vertically
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _suppressWinOverlay = true;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.black87,
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _saveGameResult(game);
-                    setState(() {
-                      _suppressWinOverlay = false;
-                    });
-                    game.resetGame();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF667eea),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.close_rounded, size: isSmallScreen ? 18 : 20),
+                    SizedBox(width: isSmallScreen ? 6 : 8),
+                    Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    'Play Again',
-                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _saveGameResult(game);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9E9E9E),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await _saveGameResult(game);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF667eea),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.home_rounded, size: isSmallScreen ? 18 : 20),
+                    SizedBox(width: isSmallScreen ? 6 : 8),
+                    Text(
+                      'Back to Home',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    'Back to Home',
-                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
-                  ),
+                  ],
                 ),
               ),
-            ],
-          );
-        } else {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _suppressWinOverlay = true;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.black87,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 10 : 12,
-                      vertical: isSmallScreen ? 10 : 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+            ),
+          ],
+        );
+      } else {
+        // Larger screen: Show buttons side by side
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _suppressWinOverlay = true;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.black87,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 14 : 18,
+                    vertical: isSmallScreen ? 12 : 14,
                   ),
-                  child: Text('Close', style: TextStyle(fontSize: isSmallScreen ? 12 : 13)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.close_rounded, size: isSmallScreen ? 16 : 18),
+                    SizedBox(width: isSmallScreen ? 4 : 6),
+                    Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _saveGameResult(game);
-                    setState(() {
-                      _suppressWinOverlay = false;
-                    });
-                    game.resetGame();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF667eea),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 10 : 12,
-                      vertical: isSmallScreen ? 10 : 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () async {
+                  await _saveGameResult(game);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF667eea),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 14 : 18,
+                    vertical: isSmallScreen ? 12 : 14,
                   ),
-                  child: Text('Play Again', style: TextStyle(fontSize: isSmallScreen ? 12 : 13)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 3,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.home_rounded, size: isSmallScreen ? 16 : 18),
+                    SizedBox(width: isSmallScreen ? 4 : 6),
+                    Text(
+                      'Home',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _saveGameResult(game);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9E9E9E),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 10 : 12,
-                      vertical: isSmallScreen ? 10 : 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text('Home', style: TextStyle(fontSize: isSmallScreen ? 12 : 13)),
-                ),
-              ),
-            ],
-          );
-        }
-      },
-    );
-  }
-
+            ),
+          ],
+        );
+      }
+    },
+  );
+}
   Future<void> _saveGameResult(GameService game) async {
     final winner = game.getWinner();
     if (winner == null) return;

@@ -597,12 +597,11 @@ else
 
 
 
-              SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
+           SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
 
-              // View Stats Button - for bot it will be invisible but still occupy same space
-              Opacity(
-                opacity: isBotPlayer ? 0.0 : 1.0,
-                child: GestureDetector(
+              // View Stats Button - completely disabled for bot
+              if (!isBotPlayer)
+                GestureDetector(
                   onTap: () => _showPlayerStats(context, game, playerId),
                   child: Container(
                     padding: EdgeInsets.symmetric(
@@ -665,7 +664,6 @@ else
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

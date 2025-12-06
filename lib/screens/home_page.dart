@@ -37,50 +37,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isSmallScreen = size.width < 360;
-    final isTablet = size.width >= 600;
-    
-    return Scaffold(
-      backgroundColor: const Color(0xFF667eea),
-      drawer: _buildDrawer(),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _loadData,
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                : SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Padding(
-                      padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 12 : 16)),
-                      child: Column(
-                        children: [
-                          _buildHeader(isTablet, isSmallScreen),
-                          SizedBox(height: isTablet ? 40 : (isSmallScreen ? 20 : 30)),
-                          _buildStatsCard(isTablet, isSmallScreen),
-                          SizedBox(height: isTablet ? 24 : (isSmallScreen ? 12 : 16)),
-                          _buildPlayButton(isTablet, isSmallScreen),
-                          SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
-                          _buildHistoryButton(isTablet, isSmallScreen),
-                        ],
-                      ),
-                    ),
-                  ),
-          ),
+Widget build(BuildContext context) {
+  final size = MediaQuery.of(context).size;
+  final isSmallScreen = size.width < 360;
+  final isTablet = size.width >= 600;
+  
+  return Scaffold(
+    backgroundColor: const Color(0xFF667eea),
+    drawer: _buildDrawer(),
+    body: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
         ),
       ),
-    );
-  }
-
+      child: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 12 : 16)),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              _buildHeader(isTablet, isSmallScreen),
+                              SizedBox(height: isTablet ? 40 : (isSmallScreen ? 20 : 30)),
+                              _buildStatsCard(isTablet, isSmallScreen),
+                              SizedBox(height: isTablet ? 24 : (isSmallScreen ? 12 : 16)),
+                              _buildPlayButton(isTablet, isSmallScreen),
+                              SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+                              _buildHistoryButton(isTablet, isSmallScreen),
+                              SizedBox(height: isTablet ? 24 : (isSmallScreen ? 16 : 20)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+    ),
+  );
+}
   Widget _buildDrawer() {
     return Drawer(
       child: ListView(
