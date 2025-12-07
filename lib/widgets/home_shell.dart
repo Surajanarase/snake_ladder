@@ -718,48 +718,66 @@ class _HomeShellState extends State<HomeShell> {
   );
 }
   Future<void> _saveGameResult(GameService game) async {
-    final winner = game.getWinner();
-    if (winner == null) return;
+  final winner = game.getWinner();
+  if (winner == null) return;
 
-    final duration = DateTime.now().difference(_gameStartTime);
-    
-    int quizCorrect = 0;
-    int quizTotal = 0;
-    final stats = game.playerQuizStats['player1'];
-    if (stats != null) {
-      for (var categoryStats in stats.values) {
-        quizCorrect += categoryStats.correctAnswers;
-        quizTotal += categoryStats.totalAttempts;
-      }
+  final duration = DateTime.now().difference(_gameStartTime);
+  
+  int quizCorrect = 0;
+  int quizTotal = 0;
+  final stats = game.playerQuizStats['player1'];
+  if (stats != null) {
+    for (var categoryStats in stats.values) {
+      quizCorrect += categoryStats.correctAnswers;
+      quizTotal += categoryStats.totalAttempts;
     }
+  }
 
-    await DatabaseHelper.instance.updateGameResult(
-      gameMode: game.currentMode == GameMode.quiz ? 'quiz' : 'knowledge',
-      opponentType: widget.withBot ? 'bot' : 'player',
-      won: winner == 'player1',
-      playerPosition: game.playerPositions['player1'] ?? 0,
-      opponentPosition: game.playerPositions['player2'] ?? 0,
-      coinsEarned: game.playerCoins['player1'] ?? 0,
-      goodHabits: game.playerGoodHabits['player1'] ?? 0,
-      badHabits: game.playerBadHabits['player1'] ?? 0,
-      quizCorrect: quizCorrect,
-      quizTotal: quizTotal,
-      durationSeconds: duration.inSeconds,
-    );
+  // ⬅️ NEW: Collect all habits from player1 across all categories
+  List<String> allGoodHabits = [];
+  List<String> allBadHabits = [];
+  
+  final categories = ['nutrition', 'exercise', 'sleep', 'mental'];
+  for (var category in categories) {
+    // Get good habits for this category
+    final goodHabits = game.getPlayerGoodHabits('player1', category);
+    allGoodHabits.addAll(goodHabits);
+    
+    // Get bad habits for this category
+    final badHabits = game.getPlayerBadHabits('player1', category);
+    allBadHabits.addAll(badHabits);
+  }
 
-    if (game.currentMode == GameMode.quiz && stats != null) {
-      for (var entry in stats.entries) {
-        final category = entry.key;
-        final categoryStats = entry.value;
-        for (int i = 0; i < categoryStats.totalAttempts; i++) {
-          await DatabaseHelper.instance.updateQuizStats(
-            category,
-            i < categoryStats.correctAnswers,
-          );
-        }
+  // Save to database with habit lists
+  await DatabaseHelper.instance.updateGameResult(
+    gameMode: game.currentMode == GameMode.quiz ? 'quiz' : 'knowledge',
+    opponentType: widget.withBot ? 'bot' : 'player',
+    won: winner == 'player1',
+    playerPosition: game.playerPositions['player1'] ?? 0,
+    opponentPosition: game.playerPositions['player2'] ?? 0,
+    coinsEarned: game.playerCoins['player1'] ?? 0,
+    goodHabits: game.playerGoodHabits['player1'] ?? 0,
+    badHabits: game.playerBadHabits['player1'] ?? 0,
+    quizCorrect: quizCorrect,
+    quizTotal: quizTotal,
+    durationSeconds: duration.inSeconds,
+    goodHabitsList: allGoodHabits,  // ⬅️ NEW: Pass actual habits
+    badHabitsList: allBadHabits,    // ⬅️ NEW: Pass actual habits
+  );
+
+  if (game.currentMode == GameMode.quiz && stats != null) {
+    for (var entry in stats.entries) {
+      final category = entry.key;
+      final categoryStats = entry.value;
+      for (int i = 0; i < categoryStats.totalAttempts; i++) {
+        await DatabaseHelper.instance.updateQuizStats(
+          category,
+          i < categoryStats.correctAnswers,
+        );
       }
     }
   }
+}
 
   void _showExitConfirmation() {
     showDialog(
@@ -954,350 +972,368 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _showToast(BuildContext context, String message, String icon) {
-    final game = Provider.of<GameService>(context, listen: false);
+  final game = Provider.of<GameService>(context, listen: false);
 
-    void Function(String, String) makeCallback() {
-      return (msg, ic) {
-        if (mounted) {
-          _showToast(context, msg, ic);
-        }
-      };
-    }
+  void Function(String, String) makeCallback() {
+    return (msg, ic) {
+      if (mounted) {
+        _showToast(context, msg, ic);
+      }
+    };
+  }
 
-   // Handle LADDER_QUIZ trigger
-    if (message.startsWith('LADDER_QUIZ::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
+  // ✅ NEW: Filter out bot messages before showing any toasts
+  final isBot = game.isCurrentPlayerBot();
+  
+  // Skip bot-specific toast messages
+  if (isBot && (
+    message.contains('Bot rolled') ||
+    message.contains('🤖 Bot') ||
+    message.toLowerCase().contains('bot climbed') ||
+    message.toLowerCase().contains('bot hit')
+  )) {
+    return; // Don't show any toast for bot actions
+  }
 
-          // NEW: do not show quiz dialog for bot player
-          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
-            return;
-          }
+  // Handle LADDER_QUIZ trigger
+  if (message.startsWith('LADDER_QUIZ::')) {
+    try {
+      final parts = message.split('::');
+      if (parts.length >= 4) {
+        final playerId = parts[1];
 
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final question = game.getRandomQuizQuestion(category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return QuizDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                category: category,
-                question: question,
-                isLadder: true,
-                onAnswer: (bool correct) {
-                  game.recordQuizResult(playerId, category, correct);
-                  if (correct) {
-                    game.onLadderQuizSuccess(position, playerId, makeCallback());
-                  } else {
-                    game.onLadderQuizFailed(playerId, makeCallback());
-                  }
-                },
-              );
-            },
-          );
+        // Skip quiz dialog for bot player
+        if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
           return;
         }
-      } catch (e) {
-        // Fall back to toast
-      }
-    }
 
-    // Handle SNAKE_QUIZ trigger
-    if (message.startsWith('SNAKE_QUIZ::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-
-          // NEW: do not show quiz dialog for bot player
-          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
-            return;
-          }
-
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final question = game.getRandomQuizQuestion(category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return QuizDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                category: category,
-                question: question,
-                isLadder: false,
-                onAnswer: (bool correct) {
-                  game.recordQuizResult(playerId, category, correct);
-                  if (correct) {
-                    game.onSnakeQuizSuccess(position, playerId, makeCallback());
-                  } else {
-                    game.onSnakeQuizFailed(position, playerId, makeCallback());
-                  }
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to toast
-      }
-    }
-
-    // Handle LADDER_KNOWLEDGE trigger
-    if (message.startsWith('LADDER_KNOWLEDGE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-
-          // NEW: do not show knowledge dialog for bot player
-          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
-            return;
-          }
-
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final knowledge = game.getKnowledgeByte(true, category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return KnowledgeByteDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                isLadder: true,
-                knowledge: knowledge,
-                onContinue: () {
-                  game.onLadderKnowledge(position, playerId, knowledge, makeCallback());
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to toast
-      }
-    }
-
-    // Handle SNAKE_KNOWLEDGE trigger
-    if (message.startsWith('SNAKE_KNOWLEDGE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 4) {
-          final playerId = parts[1];
-
-          // NEW: do not show knowledge dialog for bot player
-          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
-            return;
-          }
-
-          final position = int.parse(parts[2]);
-          final category = parts[3];
-          
-          final knowledge = game.getKnowledgeByte(false, category);
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return KnowledgeByteDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                position: position,
-                isLadder: false,
-                knowledge: knowledge,
-                onContinue: () {
-                  game.onSnakeKnowledge(position, playerId, knowledge, makeCallback());
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to toast
-      }
-    }
-
-    // Handle ADVICE trigger
-    if (message.startsWith('ADVICE::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 3) {
-          final playerId = parts[1];
-
-          // NEW: no health advice dialog for bot
-          if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
-            return;
-          }
-          
-          final advice = game.getRandomHealthAdvice();
-          
-          if (!mounted) return;
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return HealthAdviceDialog(
-                player: playerId,
-                playerName: game.playerNames[playerId]!,
-                playerColor: game.playerColors[playerId]!,
-                advice: advice,
-                onContinue: () {
-                  game.onAdviceRead(playerId);
-                  game.switchTurn(makeCallback());
-                },
-              );
-            },
-          );
-          return;
-        }
-      } catch (e) {
-        // Fall back to toast
-      }
-    }
-
-    // Handle REWARD message
-    if (message.startsWith('REWARD::')) {
-      try {
-        final parts = message.split('::');
-        if (parts.length >= 3) {
-          if (parts.length >= 4 && parts[1].startsWith('player')) {
-            final playerId = parts[1];
-            final category = parts[2];
-            final rewardText = parts.sublist(3).join('::');
-
-            game.addRewardForPlayer(playerId, category, rewardText);
-
-            if (!mounted) return;
-            showDialog<void>(
-              context: context,
-              barrierDismissible: false,
-              builder: (dialogContext) {
-                final isSmallScreen = MediaQuery.of(dialogContext).size.width < 400;
-                return Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(icon, style: TextStyle(fontSize: isSmallScreen ? 24 : 28)),
-                        SizedBox(height: isSmallScreen ? 10 : 12),
-                        Text(
-                          '${game.playerNames[playerId]} earned a reward!',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF667eea),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: isSmallScreen ? 6 : 8),
-                        Text(
-                          rewardText,
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF2C3E50),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: isSmallScreen ? 12 : 14),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF667eea),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 20 : 24,
-                              vertical: isSmallScreen ? 8 : 10,
-                            ),
-                          ),
-                          child: Text(
-                            'OK',
-                            style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+        final position = int.parse(parts[2]);
+        final category = parts[3];
+        
+        final question = game.getRandomQuizQuestion(category);
+        
+        if (!mounted) return;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return QuizDialog(
+              player: playerId,
+              playerName: game.playerNames[playerId]!,
+              playerColor: game.playerColors[playerId]!,
+              position: position,
+              category: category,
+              question: question,
+              isLadder: true,
+              onAnswer: (bool correct) {
+                game.recordQuizResult(playerId, category, correct);
+                if (correct) {
+                  game.onLadderQuizSuccess(position, playerId, makeCallback());
+                } else {
+                  game.onLadderQuizFailed(playerId, makeCallback());
+                }
               },
             );
-            return;
-          }
-        }
-      } catch (_) {
-        // Fall back to snackbar
+          },
+        );
+        return;
       }
+    } catch (e) {
+      // Fall back to toast
     }
-
-    // Default: floating SnackBar
-    final messenger = ScaffoldMessenger.of(context);
-    final isSmallScreen = MediaQuery.of(context).size.width < 400;
-    
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF667eea).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(icon, style: TextStyle(fontSize: isSmallScreen ? 18 : 20)),
-            ),
-            SizedBox(width: isSmallScreen ? 10 : 12),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF2C3E50),
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.white,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-        margin: EdgeInsets.all(isSmallScreen ? 12 : 16),
-        elevation: 8,
-      ),
-    );
   }
+
+  // Handle SNAKE_QUIZ trigger
+  if (message.startsWith('SNAKE_QUIZ::')) {
+    try {
+      final parts = message.split('::');
+      if (parts.length >= 4) {
+        final playerId = parts[1];
+
+        // Skip quiz dialog for bot player
+        if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+          return;
+        }
+
+        final position = int.parse(parts[2]);
+        final category = parts[3];
+        
+        final question = game.getRandomQuizQuestion(category);
+        
+        if (!mounted) return;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return QuizDialog(
+              player: playerId,
+              playerName: game.playerNames[playerId]!,
+              playerColor: game.playerColors[playerId]!,
+              position: position,
+              category: category,
+              question: question,
+              isLadder: false,
+              onAnswer: (bool correct) {
+                game.recordQuizResult(playerId, category, correct);
+                if (correct) {
+                  game.onSnakeQuizSuccess(position, playerId, makeCallback());
+                } else {
+                  game.onSnakeQuizFailed(position, playerId, makeCallback());
+                }
+              },
+            );
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      // Fall back to toast
+    }
+  }
+
+  // Handle LADDER_KNOWLEDGE trigger
+  if (message.startsWith('LADDER_KNOWLEDGE::')) {
+    try {
+      final parts = message.split('::');
+      if (parts.length >= 4) {
+        final playerId = parts[1];
+
+        // Skip knowledge dialog for bot player
+        if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+          return;
+        }
+
+        final position = int.parse(parts[2]);
+        final category = parts[3];
+        
+        final knowledge = game.getKnowledgeByte(true, category);
+        
+        if (!mounted) return;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return KnowledgeByteDialog(
+              player: playerId,
+              playerName: game.playerNames[playerId]!,
+              playerColor: game.playerColors[playerId]!,
+              position: position,
+              isLadder: true,
+              knowledge: knowledge,
+              onContinue: () {
+                game.onLadderKnowledge(position, playerId, knowledge, makeCallback());
+              },
+            );
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      // Fall back to toast
+    }
+  }
+
+  // Handle SNAKE_KNOWLEDGE trigger
+  if (message.startsWith('SNAKE_KNOWLEDGE::')) {
+    try {
+      final parts = message.split('::');
+      if (parts.length >= 4) {
+        final playerId = parts[1];
+
+        // Skip knowledge dialog for bot player
+        if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+          return;
+        }
+
+        final position = int.parse(parts[2]);
+        final category = parts[3];
+        
+        final knowledge = game.getKnowledgeByte(false, category);
+        
+        if (!mounted) return;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return KnowledgeByteDialog(
+              player: playerId,
+              playerName: game.playerNames[playerId]!,
+              playerColor: game.playerColors[playerId]!,
+              position: position,
+              isLadder: false,
+              knowledge: knowledge,
+              onContinue: () {
+                game.onSnakeKnowledge(position, playerId, knowledge, makeCallback());
+              },
+            );
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      // Fall back to toast
+    }
+  }
+
+  // Handle ADVICE trigger
+  if (message.startsWith('ADVICE::')) {
+    try {
+      final parts = message.split('::');
+      if (parts.length >= 3) {
+        final playerId = parts[1];
+
+        // Skip health advice dialog for bot
+        if (game.hasBot && playerId == 'player${game.numberOfPlayers}') {
+          return;
+        }
+        
+        final advice = game.getRandomHealthAdvice();
+        
+        if (!mounted) return;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return HealthAdviceDialog(
+              player: playerId,
+              playerName: game.playerNames[playerId]!,
+              playerColor: game.playerColors[playerId]!,
+              advice: advice,
+              onContinue: () {
+                game.onAdviceRead(playerId);
+                game.switchTurn(makeCallback());
+              },
+            );
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      // Fall back to toast
+    }
+  }
+
+  // Handle REWARD message
+  if (message.startsWith('REWARD::')) {
+    try {
+      final parts = message.split('::');
+      if (parts.length >= 3) {
+        if (parts.length >= 4 && parts[1].startsWith('player')) {
+          final playerId = parts[1];
+          final category = parts[2];
+          final rewardText = parts.sublist(3).join('::');
+
+          game.addRewardForPlayer(playerId, category, rewardText);
+
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              final isSmallScreen = MediaQuery.of(dialogContext).size.width < 400;
+              return Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(icon, style: TextStyle(fontSize: isSmallScreen ? 24 : 28)),
+                      SizedBox(height: isSmallScreen ? 10 : 12),
+                      Text(
+                        '${game.playerNames[playerId]} earned a reward!',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF667eea),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: isSmallScreen ? 6 : 8),
+                      Text(
+                        rewardText,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2C3E50),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: isSmallScreen ? 12 : 14),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF667eea),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 20 : 24,
+                            vertical: isSmallScreen ? 8 : 10,
+                          ),
+                        ),
+                        child: Text(
+                          'OK',
+                          style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+          return;
+        }
+      }
+    } catch (_) {
+      // Fall back to snackbar
+    }
+  }
+
+  // ✅ FINAL CHECK: Don't show regular toast for bot messages
+  if (isBot || message.contains('🤖') || message.toLowerCase().contains('bot')) {
+    return;
+  }
+
+  // Default: floating SnackBar (only for human players now)
+  final messenger = ScaffoldMessenger.of(context);
+  final isSmallScreen = MediaQuery.of(context).size.width < 400;
+  
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(icon, style: TextStyle(fontSize: isSmallScreen ? 18 : 20)),
+          ),
+          SizedBox(width: isSmallScreen ? 10 : 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF2C3E50),
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: Colors.white,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      duration: const Duration(seconds: 3),
+      margin: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      elevation: 8,
+    ),
+  );
+}
 }
 
 // Health Advice Dialog (with responsive sizing)

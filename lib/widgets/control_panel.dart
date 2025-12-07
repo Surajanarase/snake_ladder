@@ -332,7 +332,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
     );
   }
 
-    Widget _buildRefinedPlayerCard(
+ Widget _buildRefinedPlayerCard(
   GameService game,
   String playerId, {
   required bool isActive,
@@ -477,164 +477,159 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                 ],
               ),
 
-              // Keep layout size identical for bot by rendering placeholders
               SizedBox(height: isSmallScreen ? 8 : (isThreePlayers ? 9 : 11)),
 
-              // Quick Stats container: show real stats for humans, invisible placeholders for bot
-            // If bot → show bot-info panel instead of empty blank space
-// Find this section (around line 455) and ONLY change the padding values:
-
-if (isBotPlayer)
-  Container(
-    padding: EdgeInsets.symmetric(
-      horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
-      vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
-    ),
-    decoration: BoxDecoration(
-      color: isActive
-          ? Colors.white.withAlpha(150)
-          : color.withAlpha(25),
-      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-      border: Border.all(
-        color: isActive
-            ? Colors.white.withAlpha(200)
-            : color.withAlpha(50),
-      ),
-    ),
-    child: SizedBox(
-      height: isSmallScreen
-          ? 55
-          : (isThreePlayers ? 60 : 65),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Padding(
-          padding: EdgeInsets.only(
-            top: isSmallScreen ? 6 : 8,
-            bottom: isSmallScreen ? 6 : 10,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.smart_toy_rounded,
-                size: isSmallScreen ? 30 : 36,
-                color: color.withAlpha(200),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "AI Auto-Play",
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 13 : 15,
-                  fontWeight: FontWeight.w600,
-                  color: color.withAlpha(200),
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                "Bot Mode Active",
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 11.5 : 13.5,
-                  color: color.withAlpha(180),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  )
-else
-  // ORIGINAL stats container for human players
-  Container(
-    padding: EdgeInsets.symmetric(
-      horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
-      vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
-    ),
-    decoration: BoxDecoration(
-      color: isActive
-          ? Colors.white.withAlpha(150)
-          : color.withAlpha(25),
-      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-      border: Border.all(
-        color: isActive
-            ? Colors.white.withAlpha(200)
-            : color.withAlpha(50),
-      ),
-    ),
-    child: SizedBox(
-      height: isSmallScreen
-          ? 55
-          : (isThreePlayers ? 60 : 65),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildQuickStat('🪙', '$coins', isActive, const Color(0xFFF59E0B),
-              isCompact: isThreePlayers,
-              isSmallScreen: isSmallScreen),
-          GestureDetector(
-            onTap: () => _showHabitsDialog(context, game, playerId, true),
-            child: _buildQuickStat('😊', '$goodHabits', isActive,
-                const Color(0xFF4CAF50),
-                isCompact: isThreePlayers,
-                isSmallScreen: isSmallScreen,
-                isClickable: true),
-          ),
-          GestureDetector(
-            onTap: () => _showHabitsDialog(context, game, playerId, false),
-            child: _buildQuickStat(
-                '😞', '$badHabits', isActive, const Color(0xFFE74C3C),
-                isCompact: isThreePlayers,
-                isSmallScreen: isSmallScreen,
-                isClickable: true),
-          ),
-        ],
-      ),
-    ),
-  ),
-
-
-
-
-
-           SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
-
-              // View Stats Button - completely disabled for bot
-              if (!isBotPlayer)
-                GestureDetector(
-                  onTap: () => _showPlayerStats(context, game, playerId),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 10 : (isThreePlayers ? 12 : 14),
-                      vertical: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+              // Stats/Info Container - IDENTICAL height for both bot and human
+              if (isBotPlayer)
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+                    vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
+                  ),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white.withAlpha(150)
+                        : color.withAlpha(25),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                    border: Border.all(
+                      color: isActive
+                          ? Colors.white.withAlpha(200)
+                          : color.withAlpha(50),
                     ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isActive
-                            ? [
-                                Colors.white,
-                                Colors.white.withAlpha(240),
-                              ]
-                            : [
-                                color.withAlpha(230),
-                                color.withAlpha(200),
-                              ],
+                  ),
+                  child: SizedBox(
+                    height: isSmallScreen
+                        ? 55
+                        : (isThreePlayers ? 60 : 65),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.smart_toy_rounded,
+                            size: isSmallScreen ? 24 : (isThreePlayers ? 26 : 28),
+                            color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(200),
+                          ),
+                          SizedBox(height: isSmallScreen ? 4 : 6),
+                          Text(
+                            "AI Auto-Play",
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 10.5 : (isThreePlayers ? 11.5 : 12.5),
+                              fontWeight: FontWeight.w700,
+                              color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(200),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: isSmallScreen ? 1 : 2),
+                          Text(
+                            "Bot Mode Active",
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 9 : (isThreePlayers ? 9.5 : 10),
+                              fontWeight: FontWeight.w600,
+                              color: isActive ? Colors.white.withAlpha(200) : color.withAlpha(180),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isActive ? color.withAlpha(150) : Colors.white.withAlpha(200),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isActive ? color : Colors.black).withAlpha(40),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
+                    ),
+                  ),
+                )
+              else
+                // Stats container for human players
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+                    vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
+                  ),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white.withAlpha(150)
+                        : color.withAlpha(25),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                    border: Border.all(
+                      color: isActive
+                          ? Colors.white.withAlpha(200)
+                          : color.withAlpha(50),
+                    ),
+                  ),
+                  child: SizedBox(
+                    height: isSmallScreen
+                        ? 55
+                        : (isThreePlayers ? 60 : 65),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildQuickStat('🪙', '$coins', isActive, const Color(0xFFF59E0B),
+                            isCompact: isThreePlayers,
+                            isSmallScreen: isSmallScreen),
+                        GestureDetector(
+                          onTap: () => _showHabitsDialog(context, game, playerId, true),
+                          child: _buildQuickStat('😊', '$goodHabits', isActive,
+                              const Color(0xFF4CAF50),
+                              isCompact: isThreePlayers,
+                              isSmallScreen: isSmallScreen,
+                              isClickable: true),
+                        ),
+                        GestureDetector(
+                          onTap: () => _showHabitsDialog(context, game, playerId, false),
+                          child: _buildQuickStat(
+                              '😞', '$badHabits', isActive, const Color(0xFFE74C3C),
+                              isCompact: isThreePlayers,
+                              isSmallScreen: isSmallScreen,
+                              isClickable: true),
                         ),
                       ],
                     ),
+                  ),
+                ),
+
+              SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
+
+              // View Stats Button - For human players (clickable), For bot (invisible placeholder for height matching)
+              GestureDetector(
+                onTap: isBotPlayer ? null : () => _showPlayerStats(context, game, playerId),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 10 : (isThreePlayers ? 12 : 14),
+                    vertical: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isBotPlayer
+                          ? [Colors.transparent, Colors.transparent] // Invisible for bot
+                          : isActive
+                              ? [
+                                  Colors.white,
+                                  Colors.white.withAlpha(240),
+                                ]
+                              : [
+                                  color.withAlpha(230),
+                                  color.withAlpha(200),
+                                ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: isBotPlayer
+                        ? null // No border for bot
+                        : Border.all(
+                            color: isActive ? color.withAlpha(150) : Colors.white.withAlpha(200),
+                            width: 1.5,
+                          ),
+                    boxShadow: isBotPlayer
+                        ? null // No shadow for bot
+                        : [
+                            BoxShadow(
+                              color: (isActive ? color : Colors.black).withAlpha(40),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                  ),
+                  child: Opacity(
+                    opacity: isBotPlayer ? 0.0 : 1.0, // Invisible content for bot
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -664,6 +659,7 @@ else
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -671,7 +667,6 @@ else
     ),
   );
 }
-
 
   Widget _buildQuickStat(String icon, String value, bool isActive, Color color, {
     bool isCompact = false,

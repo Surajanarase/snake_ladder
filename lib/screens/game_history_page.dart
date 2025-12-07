@@ -1,7 +1,9 @@
-// lib/screens/game_history_page.dart
+// lib/screens/game_history_page.dart - UPDATED VERSION
+// Shows actual habits earned/encountered during each game
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
+import 'dart:convert';
 
 class GameHistoryPage extends StatefulWidget {
   const GameHistoryPage({super.key});
@@ -55,11 +57,9 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
     );
 
     if (confirmed == true) {
-      // Delete all game history
       final db = await DatabaseHelper.instance.database;
       await db.delete('game_history');
       
-      // Reload history
       await _loadHistory();
       
       if (mounted) {
@@ -71,6 +71,610 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
         );
       }
     }
+  }
+
+  // NEW: Show Good Habits Dialog
+  void _showGoodHabitsDialog(Map<String, dynamic> game) {
+    final goodHabits = game['good_habits'] as int? ?? 0;
+    
+    // Parse the stored habits from JSON
+    List<String> habitsList = [];
+    try {
+      final habitsJson = game['good_habits_list'] as String?;
+      if (habitsJson != null && habitsJson.isNotEmpty) {
+        habitsList = List<String>.from(jsonDecode(habitsJson));
+      }
+    } catch (e) {
+      // If parsing fails, show empty list
+      habitsList = [];
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4CAF50),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.sentiment_satisfied_alt,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Good Habits Earned',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Total: $goodHabits habits',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Content
+              Expanded(
+                child: habitsList.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 48,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No good habits recorded',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Start earning habits by playing!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHabitInfo(
+                                'During this game, you earned these good health habits:',
+                                Icons.celebration,
+                                const Color(0xFF4CAF50),
+                              ),
+                              const SizedBox(height: 16),
+                              // Show actual habits earned
+                              ...habitsList.map((habit) => Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Color(0xFF4CAF50),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        habit,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF2C3E50),
+                                          height: 1.3,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )).toList(),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Close Button
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CAF50),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Show Bad Habits Dialog
+  void _showBadHabitsDialog(Map<String, dynamic> game) {
+    final badHabits = game['bad_habits'] as int? ?? 0;
+    
+    // Parse the stored habits from JSON
+    List<String> habitsList = [];
+    try {
+      final habitsJson = game['bad_habits_list'] as String?;
+      if (habitsJson != null && habitsJson.isNotEmpty) {
+        habitsList = List<String>.from(jsonDecode(habitsJson));
+      }
+    } catch (e) {
+      // If parsing fails, show empty list
+      habitsList = [];
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE74C3C),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.sentiment_dissatisfied,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Bad Habits to Avoid',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFC0392B),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Total: $badHabits habits',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Content
+              Expanded(
+                child: habitsList.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 48,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No bad habits recorded',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Great job avoiding bad habits!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                           color: const Color(0xFFE74C3C).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFE74C3C).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHabitInfo(
+                                'You encountered these bad habits during this game. Learn from them!',
+                                Icons.warning_rounded,
+                                const Color(0xFFE74C3C),
+                              ),
+                              const SizedBox(height: 16),
+                              // Show actual habits encountered
+                              ...habitsList.map((habit) => Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFFE74C3C).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(
+                                      Icons.cancel,
+                                      color: Color(0xFFE74C3C),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        habit,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF2C3E50),
+                                          height: 1.3,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )).toList(),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Close Button
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE74C3C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Show Quiz Details Dialog
+  void _showQuizDetailsDialog(Map<String, dynamic> game) {
+    final quizCorrect = game['quiz_correct'] as int? ?? 0;
+    final quizTotal = game['quiz_total'] as int? ?? 0;
+    final accuracy = quizTotal > 0 ? (quizCorrect / quizTotal * 100).toStringAsFixed(1) : '0.0';
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF9C27B0),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.quiz,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Quiz Performance',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7B1FA2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Score: $quizCorrect/$quizTotal',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Accuracy Circle
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF9C27B0),
+                            const Color(0xFF9C27B0).withValues(alpha: 0.7),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF9C27B0).withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '$accuracy%',
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const Text(
+                                'Accuracy',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Stats Cards
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuizStatCard(
+                              'Correct',
+                              '$quizCorrect',
+                              Icons.check_circle,
+                              const Color(0xFF4CAF50),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildQuizStatCard(
+                              'Incorrect',
+                              '${quizTotal - quizCorrect}',
+                              Icons.cancel,
+                              const Color(0xFFE74C3C),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Performance Message
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF9C27B0).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              _getPerformanceIcon(double.parse(accuracy)),
+                              size: 32,
+                              color: const Color(0xFF9C27B0),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _getPerformanceMessage(double.parse(accuracy)),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF7B1FA2),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Close Button
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9C27B0),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHabitInfo(String text, IconData icon, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2C3E50),
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  
+
+  Widget _buildQuizStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+       color: Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getPerformanceIcon(double accuracy) {
+    if (accuracy >= 90) return Icons.emoji_events;
+    if (accuracy >= 70) return Icons.thumb_up;
+    if (accuracy >= 50) return Icons.trending_up;
+    return Icons.school;
+  }
+
+  String _getPerformanceMessage(double accuracy) {
+    if (accuracy >= 90) return 'Excellent! You\'re a health quiz master! 🏆';
+    if (accuracy >= 70) return 'Great job! Keep up the good work! 👍';
+    if (accuracy >= 50) return 'Good effort! You\'re learning! 📈';
+    return 'Keep practicing to improve your score! 💪';
   }
 
   @override
@@ -142,6 +746,7 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
     final dateTime = DateTime.parse(game['game_date']);
     final formattedDate = DateFormat('MMM dd, yyyy • hh:mm a').format(dateTime);
     final won = game['result'] == 'won';
+    final isQuizMode = game['game_mode'] == 'quiz';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -154,7 +759,7 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: const Color(0xFF667eea).withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -165,10 +770,9 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row: Result, Mode, Date
+            // Header Row
             Row(
               children: [
-                // Result Icon
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -182,8 +786,6 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                
-                // Result Text
                 Text(
                   won ? 'Victory! 🎉' : 'Try Again 💪',
                   style: TextStyle(
@@ -192,14 +794,11 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     color: won ? const Color(0xFF4CAF50) : const Color(0xFFE74C3C),
                   ),
                 ),
-                
                 const Spacer(),
-                
-                // Game Mode Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withValues(alpha: 0.15),
+                    color: const Color(0xFF667eea).withValues(alpha:0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -213,10 +812,7 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                 ),
               ],
             ),
-            
             const SizedBox(height: 8),
-            
-            // Date
             Text(
               formattedDate,
               style: TextStyle(
@@ -224,13 +820,11 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                 color: Colors.grey.shade600,
               ),
             ),
-            
             const SizedBox(height: 10),
             
-            // Stats Row
+            // Stats Row - NOW WITH TAP HANDLERS
             Row(
               children: [
-                // Position (only if lost)
                 if (!won)
                   Expanded(
                     child: _buildStatChip(
@@ -239,11 +833,11 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                       Icons.flag,
                       const Color(0xFF667eea),
                       isCompact: true,
+                      onTap: null,
                     ),
                   ),
                 if (!won) const SizedBox(width: 6),
                 
-                // Coins
                 Expanded(
                   child: _buildStatChip(
                     'Coins',
@@ -251,11 +845,12 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     Icons.monetization_on,
                     const Color(0xFFF59E0B),
                     isCompact: true,
+                    onTap: null,
                   ),
                 ),
                 const SizedBox(width: 6),
                 
-                // Good Habits
+                // Good Habits - TAPPABLE
                 Expanded(
                   child: _buildStatChip(
                     'Good',
@@ -263,11 +858,12 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     Icons.sentiment_satisfied_alt,
                     const Color(0xFF4CAF50),
                     isCompact: true,
+                    onTap: () => _showGoodHabitsDialog(game),
                   ),
                 ),
                 const SizedBox(width: 6),
                 
-                // Bad Habits
+                // Bad Habits - TAPPABLE
                 Expanded(
                   child: _buildStatChip(
                     'Bad',
@@ -275,11 +871,12 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     Icons.sentiment_dissatisfied,
                     const Color(0xFFE74C3C),
                     isCompact: true,
+                    onTap: () => _showBadHabitsDialog(game),
                   ),
                 ),
                 const SizedBox(width: 6),
                 
-                // Quiz Score
+                // Quiz Score - TAPPABLE (only if quiz mode)
                 Expanded(
                   child: _buildStatChip(
                     'Quiz',
@@ -287,11 +884,11 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     Icons.quiz,
                     const Color(0xFF9C27B0),
                     isCompact: true,
+                    onTap: isQuizMode ? () => _showQuizDetailsDialog(game) : null,
                   ),
                 ),
               ],
             ),
-            
             const SizedBox(height: 8),
             
             // Opponent Info
@@ -334,9 +931,9 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
     String value, 
     IconData icon, 
     Color color, 
-    {bool isCompact = false}
+    {bool isCompact = false, VoidCallback? onTap}
   ) {
-    return Container(
+    final chip = Container(
       padding: EdgeInsets.all(isCompact ? 6 : 12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -368,5 +965,15 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
         ],
       ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: chip,
+      );
+    }
+
+    return chip;
   }
 }
