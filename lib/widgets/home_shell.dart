@@ -569,10 +569,14 @@ class _HomeShellState extends State<HomeShell> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _suppressWinOverlay = true;
-                  });
+                onPressed: () async {
+                  // ✅ SAVE GAME before closing
+                  await _saveGameResult(game);
+                  if (mounted) {
+                    setState(() {
+                      _suppressWinOverlay = true;
+                    });
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade300,
@@ -642,10 +646,14 @@ class _HomeShellState extends State<HomeShell> {
           children: [
             Expanded(
               child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _suppressWinOverlay = true;
-                  });
+                onPressed: () async {
+                  // ✅ SAVE GAME before closing
+                  await _saveGameResult(game);
+                  if (mounted) {
+                    setState(() {
+                      _suppressWinOverlay = true;
+                    });
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade300,
@@ -717,6 +725,7 @@ class _HomeShellState extends State<HomeShell> {
     },
   );
 }
+
   Future<void> _saveGameResult(GameService game) async {
   final winner = game.getWinner();
   if (winner == null) return;

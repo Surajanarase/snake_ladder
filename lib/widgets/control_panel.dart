@@ -781,7 +781,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
                         const SizedBox(height: 16),
                         _buildVerticalCategorySection(game, playerId, 'sleep', '😴 Sleep', isGoodHabits),
                         const SizedBox(height: 16),
-                        _buildVerticalCategorySection(game, playerId, 'mindfulness', '🧘 Mindfulness', isGoodHabits),
+                        _buildVerticalCategorySection(game, playerId, 'mental', '🧘 Mindfulness', isGoodHabits),
                       ],
                     ),
                   ),

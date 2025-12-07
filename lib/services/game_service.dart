@@ -2370,35 +2370,36 @@ playerBadHabitsList = {
   }
 
     Future<void> _botHandleLadder(
-    int position,
-    String player,
-    String category,
-    Function(String, String) onNotify,
-  ) async {
-    final ladder = ladders[position]!;
+  int position,
+  String player,
+  String category,
+  Function(String, String) onNotify,
+) async {
+  final ladder = ladders[position]!;
 
-    // Bot ALWAYS climbs the ladder (no quiz / knowledge popup).
-    // Keep same rewards & stats as earlier "success" path.
-    playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
-    playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
-    playerCoins[player] = (playerCoins[player] ?? 0) + 20;
+  // ✅ Bot climbs the ladder AND earns good habit
+  final goodHabit = getRandomGoodHabit(category);
+  addGoodHabit(player, category, goodHabit);
+  
+  playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
+  playerCoins[player] = (playerCoins[player] ?? 0) + 20;
 
-    // Animate ladder climb
-    animatingLadder = position;
-    lastAnimationTime = DateTime.now();
-    notifyListeners();
+  // Animate ladder climb
+  animatingLadder = position;
+  lastAnimationTime = DateTime.now();
+  notifyListeners();
 
-    onNotify('🤖 Bot climbed the ladder!', '✅');
+  onNotify('🤖 Bot climbed the ladder!', '✅');
 
-    await Future.delayed(const Duration(milliseconds: 1500));
+  await Future.delayed(const Duration(milliseconds: 1500));
 
-    playerPositions[player] = ladder['end'];
-    animatingLadder = null;
-    notifyListeners();
+  playerPositions[player] = ladder['end'];
+  animatingLadder = null;
+  notifyListeners();
 
-    // Check win after moving to ladder end
-    checkWinCondition(onNotify);
-  }
+  // Check win after moving to ladder end
+  checkWinCondition(onNotify);
+}
 
 Future<void> _botHandleSnake(
   int position,
@@ -2408,8 +2409,10 @@ Future<void> _botHandleSnake(
 ) async {
   final snake = snakes[position]!;
 
-  // Bot ALWAYS gets bitten by the snake – no random avoid.
-  playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+  // ✅ Bot gets bitten by snake AND earns bad habit
+  final badHabit = getRandomBadHabit(category);
+  addBadHabit(player, category, badHabit);
+  
   playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
   playerCoins[player] = (playerCoins[player] ?? 0) - 15;
   if (playerCoins[player]! < 0) playerCoins[player] = 0;
@@ -2440,10 +2443,11 @@ Future<void> onLadderQuizSuccess(int position, String player, Function(String, S
   final ladder = ladders[position]!;
   final category = ladder['category'] as String;
   
-  // ADD GOOD HABIT
+  // ✅ ADD GOOD HABIT - This increments playerGoodHabits counter
   final goodHabit = getRandomGoodHabit(category);
   addGoodHabit(player, category, goodHabit);
   
+  // ✅ Track ladder climbs separately (should match good habits count)
   playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
   playerCoins[player] = (playerCoins[player] ?? 0) + 20;
 
@@ -2453,18 +2457,17 @@ Future<void> onLadderQuizSuccess(int position, String player, Function(String, S
 
   onNotify('Correct! You climbed the ladder, earned 20 coins, and gained: $goodHabit', '✅');
 
-  // ✅ FIX: Wait for animation to complete
   await Future.delayed(const Duration(milliseconds: 1500));
 
   playerPositions[player] = ladder['end'];
   animatingLadder = null;
   notifyListeners();
 
-  // ✅ FIX: Additional delay to ensure position is visible before checking win
   await Future.delayed(const Duration(milliseconds: 500));
 
   checkWinCondition(onNotify);
 }
+
 
 void onLadderQuizFailed(String player, Function(String, String) onNotify) {
   playerCoins[player] = (playerCoins[player] ?? 0) - 10;
@@ -2493,10 +2496,11 @@ Future<void> onSnakeQuizFailed(int position, String player, Function(String, Str
   final snake = snakes[position]!;
   final category = (snake['category'] as String?) ?? 'mental';
 
-  // ADD BAD HABIT
+  // ✅ ADD BAD HABIT - This increments playerBadHabits counter
   final badHabit = getRandomBadHabit(category);
   addBadHabit(player, category, badHabit);
   
+  // ✅ Track snake hits separately (should match bad habits count)
   playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
   playerCoins[player] = (playerCoins[player] ?? 0) - 15;
   if (playerCoins[player]! < 0) playerCoins[player] = 0;
@@ -2514,26 +2518,26 @@ Future<void> onSnakeQuizFailed(int position, String player, Function(String, Str
 
   onNotify('Incorrect! The snake got you and you developed: $badHabit', '❌');
 
-  // ✅ FIX: Wait for animation to complete
   await Future.delayed(const Duration(milliseconds: 1500));
 
   playerPositions[player] = snake['end'];
   animatingSnake = null;
   notifyListeners();
 
-  // ✅ FIX: Additional delay to ensure position is visible before checking win
   await Future.delayed(const Duration(milliseconds: 500));
 
   checkWinCondition(onNotify);
 }
 
+
 // ✅ ALSO UPDATE: Knowledge mode handlers for consistency
 
 Future<void> onLadderKnowledge(int position, String player, KnowledgeByte knowledge, Function(String, String) onNotify) async {
   final ladder = ladders[position]!;
-  // ADD GOOD HABIT from knowledge byte
+  // ✅ ADD GOOD HABIT from knowledge byte - This increments playerGoodHabits counter
   addGoodHabit(player, knowledge.category, knowledge.habitName);
   
+  // ✅ Track ladder climbs (should match good habits count)
   playerLaddersHit[player] = (playerLaddersHit[player] ?? 0) + 1;
   playerCoins[player] = (playerCoins[player] ?? 0) + 25;
 
@@ -2541,24 +2545,24 @@ Future<void> onLadderKnowledge(int position, String player, KnowledgeByte knowle
   lastAnimationTime = DateTime.now();
   notifyListeners();
 
-  // ✅ FIX: Wait for animation to complete
   await Future.delayed(const Duration(milliseconds: 1500));
 
   playerPositions[player] = ladder['end'];
   animatingLadder = null;
   notifyListeners();
 
-  // ✅ FIX: Additional delay to ensure position is visible before checking win
   await Future.delayed(const Duration(milliseconds: 500));
 
   checkWinCondition(onNotify);
 }
 
+
 Future<void> onSnakeKnowledge(int position, String player, KnowledgeByte knowledge, Function(String, String) onNotify) async {
   final snake = snakes[position]!;
-  // ADD BAD HABIT from knowledge byte
+  // ✅ ADD BAD HABIT from knowledge byte - This increments playerBadHabits counter
   addBadHabit(player, knowledge.category, knowledge.habitName);
   
+  // ✅ Track snake hits (should match bad habits count)
   playerSnakesHit[player] = (playerSnakesHit[player] ?? 0) + 1;
   playerCoins[player] = (playerCoins[player] ?? 0) - 15;
   if (playerCoins[player]! < 0) playerCoins[player] = 0;
@@ -2574,19 +2578,16 @@ Future<void> onSnakeKnowledge(int position, String player, KnowledgeByte knowled
   lastAnimationTime = DateTime.now();
   notifyListeners();
 
-  // ✅ FIX: Wait for animation to complete
   await Future.delayed(const Duration(milliseconds: 1500));
 
   playerPositions[player] = snake['end'];
   animatingSnake = null;
   notifyListeners();
 
-  // ✅ FIX: Additional delay to ensure position is visible before checking win
   await Future.delayed(const Duration(milliseconds: 500));
 
   checkWinCondition(onNotify);
 }
-
   void updateHealthProgress(String category) {
     if (category == 'nutrition') {
       healthProgress['nutrition'] = (healthProgress['nutrition']! + 25).clamp(0, 100);
