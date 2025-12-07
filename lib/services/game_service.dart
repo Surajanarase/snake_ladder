@@ -621,7 +621,12 @@ String getRandomBadHabit(String category) {
 void addGoodHabit(String player, String category, String habit) {
   if (!playerGoodHabitsList[player]![category]!.contains(habit)) {
     playerGoodHabitsList[player]![category]!.add(habit);
-    playerGoodHabits[player] = (playerGoodHabits[player] ?? 0) + 1;
+    // ✅ Recalculate total from actual lists
+    int total = 0;
+    for (var cat in ['nutrition', 'exercise', 'sleep', 'mental']) {
+      total += playerGoodHabitsList[player]![cat]!.length;
+    }
+    playerGoodHabits[player] = total;
     notifyListeners();
   }
 }
@@ -630,11 +635,15 @@ void addGoodHabit(String player, String category, String habit) {
 void addBadHabit(String player, String category, String habit) {
   if (!playerBadHabitsList[player]![category]!.contains(habit)) {
     playerBadHabitsList[player]![category]!.add(habit);
-    playerBadHabits[player] = (playerBadHabits[player] ?? 0) + 1;
+    // ✅ Recalculate total from actual lists
+    int total = 0;
+    for (var cat in ['nutrition', 'exercise', 'sleep', 'mental']) {
+      total += playerBadHabitsList[player]![cat]!.length;
+    }
+    playerBadHabits[player] = total;
     notifyListeners();
   }
 }
-
 // Get player's good habits for a category
 List<String> getPlayerGoodHabits(String player, String category) {
   return playerGoodHabitsList[player]?[category] ?? [];
