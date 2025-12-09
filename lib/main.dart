@@ -1,8 +1,7 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/game_service.dart';
-import 'screens/home_page.dart';
+import 'screens/profile_check_page.dart'; // 
 
 void main() {
   runApp(const MyApp());
@@ -23,7 +22,7 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
           fontFamily: 'Roboto',
         ),
-        home: const HomePage(),
+        home: const ProfileCheckPage(), 
       ),
     );
   }

@@ -37,60 +37,61 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-Widget build(BuildContext context) {
-  final size = MediaQuery.of(context).size;
-  final isSmallScreen = size.width < 360;
-  final isTablet = size.width >= 600;
-  
-  return Scaffold(
-    backgroundColor: const Color(0xFF667eea),
-    drawer: _buildDrawer(),
-    body: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
+    final isTablet = size.width >= 600;
+    
+    return Scaffold(
+      backgroundColor: const Color(0xFF667eea),
+      drawer: _buildDrawer(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          ),
         ),
-      ),
-      child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadData,
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: Colors.white))
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 12 : 16)),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              _buildHeader(isTablet, isSmallScreen),
-                              SizedBox(height: isTablet ? 40 : (isSmallScreen ? 20 : 30)),
-                              _buildStatsCard(isTablet, isSmallScreen),
-                              SizedBox(height: isTablet ? 24 : (isSmallScreen ? 12 : 16)),
-                              _buildPlayButton(isTablet, isSmallScreen),
-                              SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
-                              _buildHistoryButton(isTablet, isSmallScreen),
-                              SizedBox(height: isTablet ? 24 : (isSmallScreen ? 16 : 20)),
-                            ],
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _loadData,
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(isTablet ? 24 : (isSmallScreen ? 12 : 16)),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                _buildHeader(isTablet, isSmallScreen),
+                                SizedBox(height: isTablet ? 40 : (isSmallScreen ? 20 : 30)),
+                                _buildStatsCard(isTablet, isSmallScreen),
+                                SizedBox(height: isTablet ? 24 : (isSmallScreen ? 12 : 16)),
+                                _buildPlayButton(isTablet, isSmallScreen),
+                                SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+                                _buildHistoryButton(isTablet, isSmallScreen),
+                                SizedBox(height: isTablet ? 24 : (isSmallScreen ? 16 : 20)),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _buildDrawer() {
     return Drawer(
       child: ListView(
@@ -443,28 +444,31 @@ Widget build(BuildContext context) {
                         scrollDirection: Axis.horizontal,
                         itemCount: _badges.length > 6 ? 6 : _badges.length,
                         itemBuilder: (context, index) {
-                          return Container(
-                            width: badgeSize,
-                            margin: EdgeInsets.only(right: isSmallScreen ? 8 : 10),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFf5576c).withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
+                          return GestureDetector(
+                            onTap: () => _showBadgeInfo(_badges[index], isSmallScreen),
+                            child: Container(
+                              width: badgeSize,
+                              margin: EdgeInsets.only(right: isSmallScreen ? 8 : 10),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                _badges[index]['badge_icon'] ?? '🏆',
-                                style: TextStyle(fontSize: badgeSize * 0.45),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFf5576c).withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _badges[index]['badge_icon'] ?? '🏆',
+                                  style: TextStyle(fontSize: badgeSize * 0.45),
+                                ),
                               ),
                             ),
                           );
@@ -936,50 +940,211 @@ Widget build(BuildContext context) {
   }
 
   void _showAboutDialog() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      title: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('💚'),
-          SizedBox(width: 10),
-          Text('About Health Quest'),
-        ],
-      ),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('💚'),
+            SizedBox(width: 10),
+            Text('About Health Quest'),
+          ],
+        ),
         content: const Text(
           'Health Quest is an educational game that makes learning about health fun! '
           'Play snake and ladder while answering health quizzes and collecting knowledge bytes.\n\n'
           'Version 1.0.0',
           style: TextStyle(height: 1.6, fontSize: 15),
         ),
-       actions: [
-  Center(
-    child: ElevatedButton(
-      onPressed: () => Navigator.pop(context),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(50),
-        ),
-        elevation: 4,
-      ),
-      child: const Text(
-        'Close',
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 16,
-          letterSpacing: 0.5,
-        ),
-      ),
-    ),
-  ),
-  const SizedBox(height: 8),
-],
+        actions: [
+          Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF667eea),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                elevation: 4,
+              ),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
+  }
+
+  void _showBadgeInfo(Map<String, dynamic> badge, bool isSmallScreen) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: isSmallScreen ? 300 : 340,
+          ),
+          padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Badge Icon
+              Container(
+                width: isSmallScreen ? 60 : 70,
+                height: isSmallScreen ? 60 : 70,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFf5576c).withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    badge['badge_icon'] ?? '🏆',
+                    style: TextStyle(fontSize: isSmallScreen ? 32 : 36),
+                  ),
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 14 : 16),
+              
+              // Badge Name
+              Text(
+                badge['badge_name'] ?? 'Badge',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 17 : 19,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF2C3E50),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: isSmallScreen ? 8 : 10),
+              
+              // Badge Description
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFf093fb).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFf5576c).withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  badge['description'] ?? 'Achievement unlocked!',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    color: const Color(0xFF2C3E50),
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+              
+              // Earned Date
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 8 : 10,
+                  vertical: isSmallScreen ? 5 : 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: isSmallScreen ? 11 : 12,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Earned: ${_formatDate(badge['earned_date'])}',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 14 : 16),
+              
+              // Close Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF667eea),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isSmallScreen ? 11 : 13,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: Text(
+                    'Got it!',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'Recently';
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      if (difference.inDays == 0) {
+        return 'Today';
+      } else if (difference.inDays == 1) {
+        return 'Yesterday';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else {
+        return '${date.day}/${date.month}/${date.year}';
+      }
+    } catch (e) {
+      return 'Recently';
+    }
   }
 }

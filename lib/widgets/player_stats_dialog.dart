@@ -21,6 +21,9 @@ class PlayerStatsDialog extends StatelessWidget {
     final goodHabits = game.playerGoodHabits[playerId] ?? 0;
     final badHabits = game.playerBadHabits[playerId] ?? 0;
 
+     // ✅ CHECK GAME MODE
+  final isQuizMode = game.currentMode == GameMode.quiz;
+
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 360;
     final isTablet = size.width >= 600;
@@ -167,26 +170,27 @@ class PlayerStatsDialog extends StatelessWidget {
 ),
                     SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
 
-                    // Quiz Performance
-                    _buildPremiumSection(
-                      title: 'Quiz Performance',
-                      icon: Icons.psychology_rounded,
-                      iconColor: const Color(0xFF667eea),
-                      isTablet: isTablet,
-                      isSmallScreen: isSmallScreen,
-                      child: Column(
-                        children: [
-                          _buildQuizStats('🎯 Nutrition', game.playerQuizStats[playerId]?['nutrition'], isSmallScreen),
-                          SizedBox(height: isSmallScreen ? 6 : 7),
-                          _buildQuizStats('💪 Exercise', game.playerQuizStats[playerId]?['exercise'], isSmallScreen),
-                          SizedBox(height: isSmallScreen ? 6 : 7),
-                          _buildQuizStats('😴 Sleep', game.playerQuizStats[playerId]?['sleep'], isSmallScreen),
-                          SizedBox(height: isSmallScreen ? 6 : 7),
-                          _buildQuizStats('🧘 Mindfulness', game.playerQuizStats[playerId]?['mental'], isSmallScreen),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+                     if (isQuizMode) ...[
+            _buildPremiumSection(
+              title: 'Quiz Performance',
+              icon: Icons.psychology_rounded,
+              iconColor: const Color(0xFF667eea),
+              isTablet: isTablet,
+              isSmallScreen: isSmallScreen,
+              child: Column(
+                children: [
+                  _buildQuizStats('🎯 Nutrition', game.playerQuizStats[playerId]?['nutrition'], isSmallScreen),
+                  SizedBox(height: isSmallScreen ? 6 : 7),
+                  _buildQuizStats('💪 Exercise', game.playerQuizStats[playerId]?['exercise'], isSmallScreen),
+                  SizedBox(height: isSmallScreen ? 6 : 7),
+                  _buildQuizStats('😴 Sleep', game.playerQuizStats[playerId]?['sleep'], isSmallScreen),
+                  SizedBox(height: isSmallScreen ? 6 : 7),
+                  _buildQuizStats('🧘 Mindfulness', game.playerQuizStats[playerId]?['mental'], isSmallScreen),
+                ],
+              ),
+            ),
+            SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+          ],
 
                     // Good Habits Section
                     _buildPremiumSection(
@@ -477,75 +481,86 @@ class PlayerStatsDialog extends StatelessWidget {
   }
 
   Widget _buildPremiumSection({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required Widget child,
-    required bool isTablet,
-    required bool isSmallScreen,
-  }) {
-    final titleSize = isTablet ? 15.0 : (isSmallScreen ? 12.0 : 13.5);
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(6),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+  required String title,
+  required IconData icon,
+  required Color iconColor,
+  required Widget child,
+  required bool isTablet,
+  required bool isSmallScreen,
+}) {
+  final titleSize = isTablet ? 15.0 : (isSmallScreen ? 12.0 : 13.5);
+  
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
+      // ✅ ADD BORDER HERE
+      border: Border.all(
+        color: iconColor.withAlpha(100),
+        width: 2,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 12 : 14,
-              vertical: isSmallScreen ? 10 : 11,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withAlpha(6),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+        // ✅ ADD COLORED SHADOW
+        BoxShadow(
+          color: iconColor.withAlpha(40),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 12 : 14,
+            vertical: isSmallScreen ? 10 : 11,
+          ),
+          decoration: BoxDecoration(
+            color: iconColor.withAlpha(12),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(isTablet ? 20 : 16),
+              topRight: Radius.circular(isTablet ? 20 : 16),
             ),
-            decoration: BoxDecoration(
-              color: iconColor.withAlpha(12),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isTablet ? 20 : 16),
-                topRight: Radius.circular(isTablet ? 20 : 16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 5 : 6),
+                decoration: BoxDecoration(
+                  color: iconColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 7 : 8),
+                ),
+                child: Icon(icon, color: iconColor, size: isSmallScreen ? 14 : 15),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 5 : 6),
-                  decoration: BoxDecoration(
-                    color: iconColor.withAlpha(25),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 7 : 8),
-                  ),
-                  child: Icon(icon, color: iconColor, size: isSmallScreen ? 14 : 15),
-                ),
-                SizedBox(width: isSmallScreen ? 8 : 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: titleSize,
-                      fontWeight: FontWeight.w700,
-                      color: iconColor,
-                      letterSpacing: 0.2,
-                    ),
+              SizedBox(width: isSmallScreen ? 8 : 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w700,
+                    color: iconColor,
+                    letterSpacing: 0.2,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-            child: child,
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        Padding(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+          child: child,
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildQuizStats(String categoryLabel, QuizStats? stats, bool isSmallScreen) {
     if (stats == null || stats.totalAttempts == 0) {

@@ -348,21 +348,40 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
 }
 
   Future<void> _checkAndAwardBadges(int gamesWon, int totalCoins, double quizAccuracy) async {
-    final badges = [
-      if (gamesWon >= 1 && !await hasBadge('First Victory'))
-        {'badge_name': 'First Victory', 'badge_icon': '🏆', 'description': 'Won your first game'},
-      if (gamesWon >= 10 && !await hasBadge('Champion'))
-        {'badge_name': 'Champion', 'badge_icon': '👑', 'description': 'Won 10 games'},
-      if (totalCoins >= 500 && !await hasBadge('Coin Collector'))
-        {'badge_name': 'Coin Collector', 'badge_icon': '💰', 'description': 'Collected 500 coins'},
-      if (quizAccuracy >= 90 && !await hasBadge('Quiz Master'))
-        {'badge_name': 'Quiz Master', 'badge_icon': '🧠', 'description': '90% quiz accuracy'},
-    ];
-
-    for (var badge in badges) {
-      await insertBadge(badge);
+  // ✅ Get ALL game history to calculate total wins properly
+  final allGames = await database.then((db) => db.query('game_history'));
+  
+  // Calculate actual total wins from database
+  int actualWins = 0;
+  for (var game in allGames) {
+    if (game['result'] == 'won') {
+      actualWins++;
     }
   }
+  
+  final badges = [
+    if (actualWins >= 1 && !await hasBadge('First Victory'))
+      {'badge_name': 'First Victory', 'badge_icon': '🏆', 'description': 'Won your first game'},
+    if (actualWins >= 5 && !await hasBadge('5 Wins'))
+      {'badge_name': '5 Wins', 'badge_icon': '🌟', 'description': 'Won 5 games'},
+    if (actualWins >= 10 && !await hasBadge('Champion'))
+      {'badge_name': 'Champion', 'badge_icon': '👑', 'description': 'Won 10 games'},
+    if (totalCoins >= 100 && !await hasBadge('Coin Starter'))
+      {'badge_name': 'Coin Starter', 'badge_icon': '🪙', 'description': 'Collected 100 coins'},
+    if (totalCoins >= 500 && !await hasBadge('Coin Collector'))
+      {'badge_name': 'Coin Collector', 'badge_icon': '💰', 'description': 'Collected 500 coins'},
+    if (totalCoins >= 1000 && !await hasBadge('Coin Master'))
+      {'badge_name': 'Coin Master', 'badge_icon': '💎', 'description': 'Collected 1000 coins'},
+    if (quizAccuracy >= 70 && !await hasBadge('Quiz Novice'))
+      {'badge_name': 'Quiz Novice', 'badge_icon': '📚', 'description': '70% quiz accuracy'},
+    if (quizAccuracy >= 90 && !await hasBadge('Quiz Master'))
+      {'badge_name': 'Quiz Master', 'badge_icon': '🧠', 'description': '90% quiz accuracy'},
+  ];
+
+  for (var badge in badges) {
+    await insertBadge(badge);
+  }
+}
 
   Future close() async {
     final db = await instance.database;
