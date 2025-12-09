@@ -109,6 +109,7 @@ Map<String, Map<String, List<String>>> playerBadHabitsList = {
   };
   
   bool isRolling = false;
+  bool isTurnLocked = false;
   int moveCount = 0;
   bool gameActive = false;
   int lastRoll = 0;
@@ -2153,6 +2154,8 @@ List<String> getPlayerBadHabits(String player, String category) {
     gameActive = true;
     currentPlayer = 'player1';
     currentMode = mode;
+    isRolling = false;
+    isTurnLocked = false; 
     // RESET HABIT LISTS
 playerGoodHabitsList = {
   'player1': {'nutrition': [], 'exercise': [], 'sleep': [], 'mental': []},
@@ -2264,6 +2267,8 @@ playerBadHabitsList = {
     gameActive = false;
     lastRoll = 0;
     hasBot = false;
+    isRolling = false;
+    isTurnLocked = false;
     animatingSnake = null;
     animatingLadder = null;
     healthProgress = {'nutrition': 0, 'exercise': 0, 'sleep': 0, 'mental': 0};
@@ -2279,8 +2284,10 @@ playerBadHabitsList = {
     return hasBot && currentPlayer == 'player$numberOfPlayers';
   }
 
-  Future<int> rollDice() async {
-    if (isRolling || !gameActive) return 0;
+   Future<int> rollDice() async {
+   
+    if (isRolling || !gameActive || isTurnLocked) return 0;
+
     isRolling = true;
     notifyListeners();
     
@@ -2292,9 +2299,14 @@ playerBadHabitsList = {
     
     lastRoll = roll;
     isRolling = false;
+
+    
+    isTurnLocked = true;
     notifyListeners();
+
     return roll;
   }
+
 
   Future<void> movePlayer(String player, int steps, {required Function(String, String) onNotify}) async {
     moveCount++;
@@ -2636,10 +2648,12 @@ Future<void> onSnakeKnowledge(int position, String player, KnowledgeByte knowled
     return playerBadEvents[player]?[category] ?? const [];
   }
 
-  void checkWinCondition(Function(String, String) onNotify) {
+    void checkWinCondition(Function(String, String) onNotify) {
     for (var entry in playerPositions.entries) {
       if (entry.value == 100) {
         gameActive = false;
+        isTurnLocked = false;   
+        isRolling = false;
         notifyListeners();
         return;
       }
@@ -2647,7 +2661,11 @@ Future<void> onSnakeKnowledge(int position, String player, KnowledgeByte knowled
     switchTurn(onNotify);
   }
 
-  void switchTurn(Function(String, String) onNotify) {
+
+   void switchTurn(Function(String, String) onNotify) {
+    
+    isTurnLocked = false;
+
     if (numberOfPlayers == 2) {
       currentPlayer = currentPlayer == 'player1' ? 'player2' : 'player1';
     } else {
@@ -2661,6 +2679,7 @@ Future<void> onSnakeKnowledge(int position, String player, KnowledgeByte knowled
     }
     notifyListeners();
   }
+
 
   String? getWinner() {
     for (var entry in playerPositions.entries) {
