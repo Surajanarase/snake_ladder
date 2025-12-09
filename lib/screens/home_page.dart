@@ -6,6 +6,8 @@ import '../services/game_service.dart';
 import '../widgets/home_shell.dart';
 import 'user_profile_page.dart';
 import 'game_history_page.dart';
+import 'package:intl/intl.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -382,7 +384,7 @@ class _HomePageState extends State<HomePage> {
           
           SizedBox(height: isTablet ? 24 : (isSmallScreen ? 14 : 18)),
 
-          // Badges Section
+                    // Badges Section
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -419,10 +421,18 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               SizedBox(height: isTablet ? 16 : (isSmallScreen ? 10 : 12)),
+
+              // 🔥 UPDATED: include wins-trophy card with counter
               SizedBox(
                 height: badgeSize,
-                child: _badges.isEmpty
-                    ? Center(
+                child: Builder(
+                  builder: (context) {
+                    final int gamesWon = (_profile['games_won'] as int?) ?? 0;
+                    final bool hasWinTrophy = gamesWon > 0;
+
+                    // If absolutely nothing to show
+                    if (_badges.isEmpty && !hasWinTrophy) {
+                      return Center(
                         child: Container(
                           padding: EdgeInsets.all(isSmallScreen ? 10 : 14),
                           decoration: BoxDecoration(
@@ -439,44 +449,91 @@ class _HomePageState extends State<HomePage> {
                             textAlign: TextAlign.center,
                           ),
                         ),
-                      )
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _badges.length > 6 ? 6 : _badges.length,
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onTap: () => _showBadgeInfo(_badges[index], isSmallScreen),
-                            child: Container(
-                              width: badgeSize,
-                              margin: EdgeInsets.only(right: isSmallScreen ? 8 : 10),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFf5576c).withValues(alpha: 0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  _badges[index]['badge_icon'] ?? '🏆',
-                                  style: TextStyle(fontSize: badgeSize * 0.45),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                      );
+                    }
+
+                    const int maxItems = 6;
+                    final int availableForBadges =
+                        hasWinTrophy ? maxItems - 1 : maxItems;
+                    final int badgesToShow = _badges.length > availableForBadges
+                        ? availableForBadges
+                        : _badges.length;
+                    final int itemCount =
+                        badgesToShow + (hasWinTrophy ? 1 : 0);
+
+                    return ListView.builder(
+  scrollDirection: Axis.horizontal,
+  itemCount: itemCount,
+  itemBuilder: (context, index) {
+    final int gamesWonLocal =
+        (_profile['games_won'] as int?) ?? 0;
+    final bool showWinTrophy = gamesWonLocal > 0;
+
+    // First card = special wins trophy card
+    if (showWinTrophy && index == 0) {
+      return _buildWinTrophyCard(badgeSize, isSmallScreen);
+    }
+
+    final int badgeIndex = index - (showWinTrophy ? 1 : 0);
+    final badge = _badges[badgeIndex];
+
+    // 👑 SPECIAL DESIGN for "First Victory" badge only
+    final String badgeName =
+        (badge['badge_name'] ?? '').toString();
+    final bool isFirstWinBadge =
+        badgeName.toLowerCase() == 'first victory';
+
+    if (isFirstWinBadge) {
+      return _buildFirstWinBadgeCard(
+        badgeSize,
+        isSmallScreen,
+        badge,
+      );
+    }
+
+    // Default design for other badges
+    return GestureDetector(
+      onTap: () => _showBadgeInfo(badge, isSmallScreen),
+      child: Container(
+        width: badgeSize,
+        margin: EdgeInsets.only(
+          right: isSmallScreen ? 8 : 10,
+        ),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFf5576c)
+                  .withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            badge['badge_icon'] ?? '🏆',
+            style: TextStyle(
+              fontSize: badgeSize * 0.45,
+            ),
+          ),
+        ),
+      ),
+    );
+  },
+);
+
+                  },
+                ),
               ),
             ],
           ),
+
         ],
       ),
     );
@@ -543,6 +600,148 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+  // 🔥 Special compact card for total game wins (trophy with small count)
+  Widget _buildWinTrophyCard(double badgeSize, bool isSmallScreen) {
+    final int gamesWon = (_profile['games_won'] as int?) ?? 0;
+    if (gamesWon <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: () => _showWinTrophyDialog(isSmallScreen),
+      child: Container(
+        width: badgeSize,
+        margin: EdgeInsets.only(right: isSmallScreen ? 8 : 10),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFf5576c).withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  '🏆',
+                  style: TextStyle(
+                    fontSize: badgeSize * 0.45,
+                  ),
+                ),
+              ),
+            ),
+
+            // Small stylish counter in the corner (x2, x5, etc.)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 5 : 6,
+                  vertical: isSmallScreen ? 2 : 3,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'x$gamesWon',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 11,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF4CAF50),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🎖 Special golden design for FIRST WIN badge only
+Widget _buildFirstWinBadgeCard(
+  double badgeSize,
+  bool isSmallScreen,
+  Map<String, dynamic> badge,
+) {
+  return GestureDetector(
+    onTap: () => _showBadgeInfo(badge, isSmallScreen),
+    child: Container(
+      width: badgeSize,
+      margin: EdgeInsets.only(right: isSmallScreen ? 8 : 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFD54F), Color(0xFFFFB300)], // golden
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFFFF59D),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFB300).withValues(alpha: 0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Different trophy icon for first win
+          Text(
+            '🥇',
+            style: TextStyle(
+              fontSize: badgeSize * 0.45,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 6 : 8,
+              vertical: isSmallScreen ? 2 : 3,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '1st Win',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 9 : 10,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFF57F17),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 
   Widget _buildPlayButton(bool isTablet, bool isSmallScreen) {
     final fontSize = isTablet ? 18.0 : (isSmallScreen ? 14.0 : 15.5);
@@ -1127,6 +1326,154 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+    // 🔥 Dialog that opens when user taps the wins trophy card
+  Future<void> _showWinTrophyDialog(bool isSmallScreen) async {
+  final int gamesWon = (_profile['games_won'] as int?) ?? 0;
+  if (gamesWon <= 0) return;
+
+  // Load full game history and filter only wins
+  final allGames = await DatabaseHelper.instance.getAllGameHistory();
+  final winGames = allGames.where((g) => g['result'] == 'won').toList();
+
+  if (!mounted) return;
+
+  // Limit how many wins to show inside compact window
+  const int maxToShow = 20;
+  final int displayCount =
+      winGames.length > maxToShow ? maxToShow : winGames.length;
+
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: isSmallScreen ? 320 : 360,
+          maxHeight: isSmallScreen ? 420 : 460,
+        ),
+        padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header trophy
+            Container(
+              width: isSmallScreen ? 70 : 80,
+              height: isSmallScreen ? 70 : 80,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFD700), Color(0xFFFFA000)],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text(
+                  '🏆',
+                  style: TextStyle(fontSize: 40),
+                ),
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+
+            Text(
+              'Match Trophies',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 18 : 20,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2C3E50),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isSmallScreen ? 6 : 8),
+
+            Text(
+              'You have won $gamesWon game${gamesWon == 1 ? '' : 's'}.',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 13,
+                color: Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 14),
+
+            // 👉 Compact window showing WHICH games were won
+            if (displayCount == 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'No win details found yet.',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              SizedBox(
+                height: isSmallScreen ? 220 : 240,
+                child: ListView.builder(
+                  itemCount: displayCount,
+                  itemBuilder: (context, index) {
+                    final game = winGames[index];
+                    return _buildWinGameItem(game, index, isSmallScreen);
+                  },
+                ),
+              ),
+
+            if (winGames.length > displayCount) ...[
+              const SizedBox(height: 6),
+              Text(
+                '+${winGames.length - displayCount} more wins',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+
+            SizedBox(height: isSmallScreen ? 14 : 16),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF667eea),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen ? 11 : 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+
+
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Recently';
     try {
@@ -1147,4 +1494,142 @@ class _HomePageState extends State<HomePage> {
       return 'Recently';
     }
   }
+
+  Widget _buildWinGameItem(
+  Map<String, dynamic> game,
+  int index,
+  bool isSmallScreen,
+) {
+  final dateTime = DateTime.tryParse(game['game_date'] ?? '') ?? DateTime.now();
+  final formattedDate =
+      DateFormat('MMM dd, yyyy • hh:mm a').format(dateTime);
+
+  final bool isQuizMode = game['game_mode'] == 'quiz';
+  final bool opponentIsBot = game['opponent_type'] == 'bot';
+
+  final int coins = (game['coins_earned'] as int?) ?? 0;
+  final int goodHabits = (game['good_habits'] as int?) ?? 0;
+  final int badHabits = (game['bad_habits'] as int?) ?? 0;
+  final int quizCorrect = (game['quiz_correct'] as int?) ?? 0;
+  final int quizTotal = (game['quiz_total'] as int?) ?? 0;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: const Color(0xFF4CAF50),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF667eea).withValues(alpha: 0.08),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Top row: Game number + mode chip
+        Row(
+          children: [
+            const Text('🏆', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 6),
+            Text(
+              'Win ${index + 1}',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2E7D32),
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF667eea).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                isQuizMode ? '🧠 Quiz' : '📚 Knowledge',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF667eea),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+
+        // Date
+        Text(
+          formattedDate,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // vs Bot / Player info
+        Text(
+          'vs ${opponentIsBot ? 'Bot' : 'Player 2'} • Coins: +$coins',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade800,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        // Extra small stats row (good/bad habits + quiz)
+        Row(
+          children: [
+            const Icon(Icons.sentiment_satisfied_alt,
+                size: 14, color: Color(0xFF4CAF50)),
+            const SizedBox(width: 3),
+            Text(
+              '$goodHabits good',
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFF2E7D32),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.sentiment_dissatisfied,
+                size: 14, color: Color(0xFFE74C3C)),
+            const SizedBox(width: 3),
+            Text(
+              '$badHabits bad',
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFFB91C1C),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (quizTotal > 0) ...[
+              const Icon(Icons.quiz, size: 14, color: Color(0xFF9C27B0)),
+              const SizedBox(width: 3),
+              Text(
+                '$quizCorrect/$quizTotal quiz',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF6A1B9A),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 }

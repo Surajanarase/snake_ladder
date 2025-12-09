@@ -420,24 +420,35 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
   }
 
   // NEW: Show Quiz Details Dialog
-  void _showQuizDetailsDialog(Map<String, dynamic> game) {
-    final quizCorrect = game['quiz_correct'] as int? ?? 0;
-    final quizTotal = game['quiz_total'] as int? ?? 0;
-    final accuracy = quizTotal > 0 ? (quizCorrect / quizTotal * 100).toStringAsFixed(1) : '0.0';
-    
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
+  // NEW: Compact Quiz Details Dialog (responsive, no scrolling)
+void _showQuizDetailsDialog(Map<String, dynamic> game) {
+  final quizCorrect = game['quiz_correct'] as int? ?? 0;
+  final quizTotal = game['quiz_total'] as int? ?? 0;
+
+  final double accuracyValue =
+      quizTotal > 0 ? (quizCorrect / quizTotal * 100) : 0.0;
+  final String accuracyText = accuracyValue.toStringAsFixed(1);
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      final size = MediaQuery.of(context).size;
+
+      return Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
-          padding: const EdgeInsets.all(20),
+          // 🔥 Responsive: up to 90% width and 70% height of screen
+          constraints: BoxConstraints(
+            maxWidth: size.width * 0.9,
+            maxHeight: size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
+              // Header icon
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: const BoxDecoration(
                   color: Color(0xFF9C27B0),
                   shape: BoxShape.circle,
@@ -445,161 +456,162 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                 child: const Icon(
                   Icons.quiz,
                   color: Colors.white,
-                  size: 32,
+                  size: 26,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
+
               const Text(
                 'Quiz Performance',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF7B1FA2),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
+
               Text(
                 'Score: $quizCorrect/$quizTotal',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.grey.shade700,
                 ),
               ),
-              const SizedBox(height: 20),
-              
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
+              const SizedBox(height: 12),
+
+              // Smaller accuracy circle
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF9C27B0),
+                      const Color(0xFF9C27B0).withValues(alpha: 0.7),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF9C27B0).withValues(alpha: 0.25),
+                      blurRadius: 14,
+                      spreadRadius: 3,
+                    ),
+                  ],
+                ),
+                child: Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Accuracy Circle
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF9C27B0),
-                            const Color(0xFF9C27B0).withValues(alpha: 0.7),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF9C27B0).withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '$accuracy%',
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const Text(
-                                'Accuracy',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Text(
+                        '$accuracyText%',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      
-                      // Stats Cards
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildQuizStatCard(
-                              'Correct',
-                              '$quizCorrect',
-                              Icons.check_circle,
-                              const Color(0xFF4CAF50),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildQuizStatCard(
-                              'Incorrect',
-                              '${quizTotal - quizCorrect}',
-                              Icons.cancel,
-                              const Color(0xFFE74C3C),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Performance Message
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF9C27B0).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              _getPerformanceIcon(double.parse(accuracy)),
-                              size: 32,
-                              color: const Color(0xFF9C27B0),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _getPerformanceMessage(double.parse(accuracy)),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF7B1FA2),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                      const Text(
+                        'Accuracy',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white70,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              
-              // Close Button
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF9C27B0),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
+              const SizedBox(height: 12),
+
+              // Compact stats row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuizStatCard(
+                      'Correct',
+                      '$quizCorrect',
+                      Icons.check_circle,
+                      const Color(0xFF4CAF50),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildQuizStatCard(
+                      'Incorrect',
+                      '${quizTotal - quizCorrect}',
+                      Icons.cancel,
+                      const Color(0xFFE74C3C),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Short performance message
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF9C27B0).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF9C27B0).withValues(alpha: 0.25),
                   ),
                 ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getPerformanceIcon(accuracyValue),
+                      size: 22,
+                      color: const Color(0xFF9C27B0),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getPerformanceMessage(accuracyValue),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF7B1FA2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Close button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF9C27B0),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
 
   Widget _buildHabitInfo(String text, IconData icon, Color color) {
     return Row(
