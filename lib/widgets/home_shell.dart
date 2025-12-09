@@ -398,41 +398,47 @@ class _HomeShellState extends State<HomeShell> {
                               ),
                             ),
 
-                            // Game Board
-                            Expanded(
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: isSmallScreen ? 4 : 6,
-                                        horizontal: isSmallScreen ? 2 : 4,
-                                      ),
-                                      child: LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          final boardSize = (constraints.maxWidth * 1.08).clamp(
-                                            280.0,
-                                            isTablet ? 600.0 : 500.0,
-                                          );
-                                          return Center(
-                                            child: SizedBox(
-                                              width: boardSize,
-                                              height: boardSize,
-                                              child: const BoardWidget(),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-
-                                    ControlPanel(
-                                      onNotify: (m, i) => _showToast(context, m, i),
-                                    ),
-                                    SizedBox(height: isSmallScreen ? 8 : 12),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            // Game Board - NO SCROLLING
+Expanded(
+  child: LayoutBuilder(
+    builder: (context, layoutConstraints) {
+      // Calculate available space
+      final availableHeight = layoutConstraints.maxHeight;
+      final availableWidth = layoutConstraints.maxWidth;
+      
+      // Reserve space for control panel (estimated height)
+      final controlPanelHeight = isSmallScreen ? 200.0 : (isTablet ? 280.0 : 240.0);
+      final paddingSpace = isSmallScreen ? 16.0 : 24.0;
+      
+      // Calculate board size to fit in remaining space
+      final maxBoardHeight = availableHeight - controlPanelHeight - paddingSpace;
+      final maxBoardWidth = availableWidth - (isSmallScreen ? 8.0 : 16.0);
+      
+      // Board should be square, so use the smaller dimension
+      final boardSize = (maxBoardHeight < maxBoardWidth ? maxBoardHeight : maxBoardWidth)
+          .clamp(240.0, isTablet ? 550.0 : 450.0);
+      
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Board container with fixed size
+          SizedBox(
+            width: boardSize,
+            height: boardSize,
+            child: const BoardWidget(),
+          ),
+          
+          SizedBox(height: isSmallScreen ? 6 : 8),
+          
+          // Control Panel
+          ControlPanel(
+            onNotify: (m, i) => _showToast(context, m, i),
+          ),
+        ],
+      );
+    },
+  ),
+),
                           ],
                         ),
 

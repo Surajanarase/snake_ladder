@@ -117,11 +117,13 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    
     final game = Provider.of<GameService>(context);
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 400;
     final isVerySmallScreen = size.width < 360;
-    final diceSize = isVerySmallScreen ? 70.0 : (isSmallScreen ? 80.0 : (size.width * 0.16).clamp(80.0, 110.0));
+    final diceSize = isVerySmallScreen ? 65.0 : (isSmallScreen ? 72.0 : (size.width * 0.14).clamp(72.0, 95.0));
+    final isTablet = size.width >= 600;
 
     if (game.isCurrentPlayerBot() && game.gameActive && !game.isRolling && _displayedRoll == null) {
       Future.microtask(() => _handleBotTurn(game));
@@ -140,162 +142,166 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Dice row
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    if (!game.gameActive) {
-                      widget.onNotify('Start a game first', '⚠️');
-                      return;
-                    }
-                    if (game.isRolling || game.isCurrentPlayerBot() || _displayedRoll != null) return;
+          // Dice row - More compact
+ConstrainedBox(
+  constraints: BoxConstraints(
+    maxHeight: isSmallScreen ? 90 : (isTablet ? 120 : 100),
+  ),
+  child: Center(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        GestureDetector(
+          onTap: () async {
+            if (!game.gameActive) {
+              widget.onNotify('Start a game first', '⚠️');
+              return;
+            }
+            if (game.isRolling || game.isCurrentPlayerBot() || _displayedRoll != null) return;
 
-                    setState(() {
-                      _playerWhoRolled = game.currentPlayer;
-                      _displayedRoll = null;
-                    });
+            setState(() {
+              _playerWhoRolled = game.currentPlayer;
+              _displayedRoll = null;
+            });
 
-                    _diceController.forward(from: 0);
-                    final roll = await game.rollDice();
-                    if (roll == 0) {
-                      setState(() {
-                        _playerWhoRolled = null;
-                      });
-                      return;
-                    }
+            _diceController.forward(from: 0);
+            final roll = await game.rollDice();
+            if (roll == 0) {
+              setState(() {
+                _playerWhoRolled = null;
+              });
+              return;
+            }
 
-                    setState(() {
-                      _displayedRoll = roll;
-                    });
+            setState(() {
+              _displayedRoll = roll;
+            });
 
-                    await game.movePlayer(game.currentPlayer, roll, onNotify: (msg, ic) => widget.onNotify(msg, ic));
-                    await Future.delayed(const Duration(milliseconds: 1000));
-                    await _resetDice();
-                    await Future.delayed(const Duration(milliseconds: 200));
-                  },
-                  child: AnimatedBuilder(
-                    animation: _diceRotation,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: game.isRolling ? _diceRotation.value : 0,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                          width: diceSize,
-                          height: diceSize,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Colors.white, Color(0xFFFAFAFA)],
-                            ),
-                            borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
-                            border: Border.all(color: diceColor, width: isSmallScreen ? 2.5 : 3.5),
-                            boxShadow: [
-                              const BoxShadow(
-                                color: Color(0x1A000000),
-                                blurRadius: 15,
-                                offset: Offset(0, 5),
-                              ),
-                              BoxShadow(
-                                color: diceColor.withAlpha(76),
-                                blurRadius: 25,
-                                spreadRadius: -3,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              transitionBuilder: (child, animation) => ScaleTransition(
-                                scale: animation,
-                                child: FadeTransition(opacity: animation, child: child),
-                              ),
-                              child: game.isRolling
-                                  ? Icon(
-                                      key: const ValueKey('rolling'),
-                                      Icons.casino_outlined,
-                                      color: diceColor,
-                                      size: diceSize * 0.5,
-                                    )
-                                  : _displayedRoll != null
-                                      ? _buildStandardDiceFace(_displayedRoll!, diceSize * 0.7, diceColor)
-                                      : Icon(
-                                          key: const ValueKey('ready'),
-                                          Icons.casino_outlined,
-                                          size: diceSize * 0.5,
-                                          color: Colors.grey.shade400,
-                                        ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+            await game.movePlayer(game.currentPlayer, roll, onNotify: (msg, ic) => widget.onNotify(msg, ic));
+            await Future.delayed(const Duration(milliseconds: 1000));
+            await _resetDice();
+            await Future.delayed(const Duration(milliseconds: 200));
+          },
+          child: AnimatedBuilder(
+            animation: _diceRotation,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: game.isRolling ? _diceRotation.value : 0,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOut,
+                  width: diceSize,
+                  height: diceSize,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.white, Color(0xFFFAFAFA)],
+                    ),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+                    border: Border.all(color: diceColor, width: isSmallScreen ? 2.5 : 3.5),
+                    boxShadow: [
+                      const BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                      BoxShadow(
+                        color: diceColor.withAlpha(76),
+                        blurRadius: 25,
+                        spreadRadius: -3,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: game.isRolling
+                          ? Icon(
+                              key: const ValueKey('rolling'),
+                              Icons.casino_outlined,
+                              color: diceColor,
+                              size: diceSize * 0.5,
+                            )
+                          : _displayedRoll != null
+                              ? _buildStandardDiceFace(_displayedRoll!, diceSize * 0.7, diceColor)
+                              : Icon(
+                                  key: const ValueKey('ready'),
+                                  Icons.casino_outlined,
+                                  size: diceSize * 0.5,
+                                  color: Colors.grey.shade400,
+                                ),
+                    ),
                   ),
                 ),
+              );
+            },
+          ),
+        ),
 
-                if (_displayedRoll != null)
-                  AnimatedBuilder(
-                    animation: _resultFadeController,
-                    builder: (context, child) {
-                      if (_resultFadeController.value >= 0.99) return const SizedBox.shrink();
-                      return Opacity(
-                        opacity: _resultOpacity.value,
-                        child: Transform.scale(
-                          scale: _resultScale.value,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(width: isSmallScreen ? 8 : 12),
-                              Container(
-                                width: isSmallScreen ? 48 : 56,
-                                height: isSmallScreen ? 48 : 56,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [diceColor.withAlpha(230), diceColor],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: isSmallScreen ? 2.5 : 3),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: diceColor.withAlpha(127),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '$_displayedRoll',
-                                    style: TextStyle(
-                                      fontSize: isSmallScreen ? 24 : 28,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.0,
-                                      shadows: const [Shadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2))],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+        if (_displayedRoll != null)
+          AnimatedBuilder(
+            animation: _resultFadeController,
+            builder: (context, child) {
+              if (_resultFadeController.value >= 0.99) return const SizedBox.shrink();
+              return Opacity(
+                opacity: _resultOpacity.value,
+                child: Transform.scale(
+                  scale: _resultScale.value,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(width: isSmallScreen ? 8 : 12),
+                      Container(
+                        width: isSmallScreen ? 48 : 56,
+                        height: isSmallScreen ? 48 : 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [diceColor.withAlpha(230), diceColor],
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: isSmallScreen ? 2.5 : 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: diceColor.withAlpha(127),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$_displayedRoll',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 24 : 28,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              height: 1.0,
+                              shadows: const [Shadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2))],
+                            ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+              );
+            },
           ),
-
-          SizedBox(height: isSmallScreen ? 12 : 16),
+      ],
+    ),
+  ),
+),
+          SizedBox(height: isSmallScreen ? 8 : 10),
 
           // Player cards
           if (game.numberOfPlayers == 2)
@@ -345,6 +351,7 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
   final coins = game.playerCoins[playerId] ?? 0;
   final goodHabits = game.playerGoodHabits[playerId] ?? 0;
   final badHabits = game.playerBadHabits[playerId] ?? 0;
+ 
 
   // detect bot player (always last player when hasBot == true)
   final bool isBotPlayer = game.hasBot && playerId == 'player${game.numberOfPlayers}';
@@ -353,9 +360,9 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
   final fontSize = isThreePlayers
       ? (isSmallScreen ? 9.0 : 10.5)
       : (isSmallScreen ? 11.0 : 12.5);
-  final padding = isThreePlayers
-      ? (isSmallScreen ? 10.0 : 11.0)
-      : (isSmallScreen ? 12.0 : 14.0);
+ final padding = isThreePlayers
+    ? (isSmallScreen ? 8.0 : 9.0)
+    : (isSmallScreen ? 10.0 : 12.0);
 
   return AnimatedContainer(
     duration: const Duration(milliseconds: 300),
@@ -481,110 +488,109 @@ class _ControlPanelState extends State<ControlPanel> with TickerProviderStateMix
 
               // Stats/Info Container - IDENTICAL height for both bot and human
               if (isBotPlayer)
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
-                    vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Colors.white.withAlpha(150)
-                        : color.withAlpha(25),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-                    border: Border.all(
-                      color: isActive
-                          ? Colors.white.withAlpha(200)
-                          : color.withAlpha(50),
-                    ),
-                  ),
-                  child: SizedBox(
-                    height: isSmallScreen
-                        ? 55
-                        : (isThreePlayers ? 60 : 65),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.smart_toy_rounded,
-                            size: isSmallScreen ? 24 : (isThreePlayers ? 26 : 28),
-                            color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(200),
-                          ),
-                          SizedBox(height: isSmallScreen ? 4 : 6),
-                          Text(
-                            "AI Auto-Play",
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 10.5 : (isThreePlayers ? 11.5 : 12.5),
-                              fontWeight: FontWeight.w700,
-                              color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(200),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: isSmallScreen ? 1 : 2),
-                          Text(
-                            "Bot Mode Active",
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 9 : (isThreePlayers ? 9.5 : 10),
-                              fontWeight: FontWeight.w600,
-                              color: isActive ? Colors.white.withAlpha(200) : color.withAlpha(180),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              else
-                // Stats container for human players
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
-                    vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Colors.white.withAlpha(150)
-                        : color.withAlpha(25),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-                    border: Border.all(
-                      color: isActive
-                          ? Colors.white.withAlpha(200)
-                          : color.withAlpha(50),
-                    ),
-                  ),
-                  child: SizedBox(
-                    height: isSmallScreen
-                        ? 55
-                        : (isThreePlayers ? 60 : 65),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildQuickStat('🪙', '$coins', isActive, const Color(0xFFF59E0B),
-                            isCompact: isThreePlayers,
-                            isSmallScreen: isSmallScreen),
-                        GestureDetector(
-                          onTap: () => _showHabitsDialog(context, game, playerId, true),
-                          child: _buildQuickStat('😊', '$goodHabits', isActive,
-                              const Color(0xFF4CAF50),
-                              isCompact: isThreePlayers,
-                              isSmallScreen: isSmallScreen,
-                              isClickable: true),
-                        ),
-                        GestureDetector(
-                          onTap: () => _showHabitsDialog(context, game, playerId, false),
-                          child: _buildQuickStat(
-                              '😞', '$badHabits', isActive, const Color(0xFFE74C3C),
-                              isCompact: isThreePlayers,
-                              isSmallScreen: isSmallScreen,
-                              isClickable: true),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
+  Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+      vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
+    ),
+    decoration: BoxDecoration(
+      color: isActive
+          ? Colors.white.withAlpha(150)
+          : color.withAlpha(25),
+      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+      border: Border.all(
+        color: isActive
+            ? Colors.white.withAlpha(200)
+            : color.withAlpha(50),
+      ),
+    ),
+    child: SizedBox(
+      height: isSmallScreen
+          ? 54  // Increased from 48 to 54
+          : (isThreePlayers ? 58 : 64),  // Increased from 52/58 to 58/64
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.smart_toy_rounded,
+              size: isSmallScreen ? 22 : (isThreePlayers ? 24 : 26),  // Slightly reduced icon
+              color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(200),
+            ),
+            SizedBox(height: isSmallScreen ? 5 : 7),  // Increased spacing
+            Text(
+              "AI Auto-Play",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 10.5 : (isThreePlayers ? 11.5 : 12.5),
+                fontWeight: FontWeight.w700,
+                color: isActive ? Colors.white.withAlpha(230) : color.withAlpha(200),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isSmallScreen ? 2 : 3),  // Increased spacing
+            Text(
+              "Bot Mode Active",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 9 : (isThreePlayers ? 9.5 : 10),
+                fontWeight: FontWeight.w600,
+                color: isActive ? Colors.white.withAlpha(200) : color.withAlpha(180),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    ),
+  )
+else
+  // Stats container for human players - NOW MATCHES BOT HEIGHT
+  Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9),
+      vertical: isSmallScreen ? 5 : (isThreePlayers ? 6 : 7),
+    ),
+    decoration: BoxDecoration(
+      color: isActive
+          ? Colors.white.withAlpha(150)
+          : color.withAlpha(25),
+      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+      border: Border.all(
+        color: isActive
+            ? Colors.white.withAlpha(200)
+            : color.withAlpha(50),
+      ),
+    ),
+    child: SizedBox(
+      height: isSmallScreen
+          ? 54  // Increased from 48 to 54 (matches bot)
+          : (isThreePlayers ? 58 : 64),  // Increased from 52/58 to 58/64 (matches bot)
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildQuickStat('🪙', '$coins', isActive, const Color(0xFFF59E0B),
+              isCompact: isThreePlayers,
+              isSmallScreen: isSmallScreen),
+          GestureDetector(
+            onTap: () => _showHabitsDialog(context, game, playerId, true),
+            child: _buildQuickStat('😊', '$goodHabits', isActive,
+                const Color(0xFF4CAF50),
+                isCompact: isThreePlayers,
+                isSmallScreen: isSmallScreen,
+                isClickable: true),
+          ),
+          GestureDetector(
+            onTap: () => _showHabitsDialog(context, game, playerId, false),
+            child: _buildQuickStat(
+                '😞', '$badHabits', isActive, const Color(0xFFE74C3C),
+                isCompact: isThreePlayers,
+                isSmallScreen: isSmallScreen,
+                isClickable: true),
+          ),
+        ],
+      ),
+    ),
+  ),
               SizedBox(height: isSmallScreen ? 6 : (isThreePlayers ? 7 : 9)),
 
               // View Stats Button - For human players (clickable), For bot (invisible placeholder for height matching)
